@@ -263,7 +263,7 @@ func TestDigitalArchivePaymentRailsAndQuantity(t *testing.T) {
 		t.Fatalf("digital stock decremented: %d", got)
 	}
 	_, err := orders.CreateOrder(ctx, &storage.Order{UserID: 800, TotalUSD: 20, TotalStars: 1000, Status: storage.OrderStatusPending}, []storage.OrderItem{{ProductID: e.prodReg, ProductName: "Plane", Quantity: 2, PriceUSD: 10}})
-	if !errors.Is(err, storage.ErrDigitalArchiveNotReady) {
+	if !errors.Is(err, storage.ErrSingleItemLimit) {
 		t.Fatalf("digital quantity accepted: %v", err)
 	}
 }

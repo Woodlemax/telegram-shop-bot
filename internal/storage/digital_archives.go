@@ -45,7 +45,11 @@ func (s *DigitalArchiveStore) Add(ctx context.Context, productID int64, fileID, 
 		return 0, err
 	}
 	defer tx.Rollback()
-	res, err := tx.ExecContext(ctx, `UPDATE products SET is_digital=1, digital_content='', stock=MAX(stock,1)
+	res, err := tx.ExecContext(ctx, `UPDATE products SET
+        infinite_stock=CASE WHEN is_digital=0 THEN 1 ELSE infinite_stock END,
+        single_in_cart=CASE WHEN is_digital=0 THEN 1 ELSE single_in_cart END,
+        stock=CASE WHEN is_digital=0 THEN MAX(stock,1) ELSE stock END,
+        is_digital=1, digital_content=''
         WHERE id=? AND COALESCE(sub_period_days,0)=0`, productID)
 	if err != nil {
 		return 0, err
@@ -104,19 +108,19 @@ func (s *DigitalArchiveStore) CancelUpload(ctx context.Context, adminID int64) e
 // snapshotDigitalArchive creates the durable delivery in the order transaction.
 // Replacing the product archive also updates these rows for existing purchases.
 func snapshotDigitalArchive(ctx context.Context, tx *sql.Tx, orderID int64, item OrderItem) error {
-	var digital bool
-	err := tx.QueryRowContext(ctx, `SELECT is_digital FROM products WHERE id=?`, item.ProductID).Scan(&digital)
+	var digital, single bool
+	err := tx.QueryRowContext(ctx, `SELECT is_digital,single_in_cart FROM products WHERE id=?`, item.ProductID).Scan(&digital, &single)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil
 	}
 	if err != nil {
 		return err
 	}
+	if item.Quantity <= 0 || (single && item.Quantity > 1) {
+		return ErrSingleItemLimit
+	}
 	if !digital {
 		return nil
-	}
-	if item.Quantity != 1 {
-		return ErrDigitalArchiveNotReady
 	}
 	res, err := tx.ExecContext(ctx, `INSERT INTO digital_deliveries(order_id,product_id,archive_id)
         SELECT ?,?,id FROM digital_archives WHERE product_id=? ORDER BY id DESC LIMIT 1`, orderID, item.ProductID, item.ProductID)

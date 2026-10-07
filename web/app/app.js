@@ -256,8 +256,10 @@
       if (p.description) {
         screenEl.appendChild(el('p', 'product-desc', p.description));
       }
-      screenEl.appendChild(el('div', 'product-stock', p.is_digital ? t('digital_product') : tf('webapp_stock', p.stock)));
+      screenEl.appendChild(el('div', 'product-stock', p.infinite_stock ? t('product_infinite_stock') : tf('webapp_stock', p.stock)));
 
+      if (p.is_digital) { screenEl.appendChild(el('div', 'product-stock', t('digital_product'))); }
+      if (p.single_in_cart) { screenEl.appendChild(el('div', 'product-stock', t('product_single_in_cart'))); }
       var add = el('button', 'btn primary', t('webapp_add_to_cart'));
       add.type = 'button';
       add.onclick = function () {
@@ -307,7 +309,7 @@
           var qty = el('span', 'qty', String(item.quantity));
           var plus = el('button', 'icon-btn', '+');
           plus.type = 'button';
-          plus.disabled = !!item.is_digital;
+          plus.disabled = !!item.single_in_cart;
           plus.onclick = function () { changeQty(item.product_id, 1); };
           var del = el('button', 'icon-btn danger', '\u00d7');
           del.type = 'button';

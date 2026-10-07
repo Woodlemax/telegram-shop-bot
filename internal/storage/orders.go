@@ -529,8 +529,7 @@ func (s *SQLOrderStore) updateOrderStatusOnce(ctx context.Context, id int64, fro
 
 		// 1. Get items (use internal method but with tx)
 		rows, err := tx.QueryContext(ctx,
-			`SELECT product_id, quantity FROM order_items i WHERE order_id = ?
-			 AND NOT EXISTS(SELECT 1 FROM digital_deliveries d WHERE d.order_id=i.order_id AND d.product_id=i.product_id)`, id)
+			`SELECT product_id, quantity FROM order_items i WHERE order_id = ?`, id)
 		if err != nil {
 			return fmt.Errorf("order store: get items for stock update: %w", err)
 		}
@@ -552,7 +551,7 @@ func (s *SQLOrderStore) updateOrderStatusOnce(ctx context.Context, id int64, fro
 		// 2. Decrement stock for each item atomically; fail if stock would go negative.
 		for _, i := range items {
 			res, err := tx.ExecContext(ctx,
-				`UPDATE products SET stock = stock - ? WHERE id = ? AND stock >= ?`,
+				`UPDATE products SET stock = CASE WHEN infinite_stock=1 THEN stock ELSE stock - ? END WHERE id = ? AND (infinite_stock=1 OR stock >= ?)`,
 				i.quantity, i.productID, i.quantity)
 			if err != nil {
 				return fmt.Errorf("order store: decrement stock for product %d: %w", i.productID, err)

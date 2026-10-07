@@ -217,6 +217,11 @@ func (b *Bot) handleCallback(ctx context.Context, cb *tgbotapi.CallbackQuery) {
 		if b.isAdmin(userID) {
 			b.onAdminOpenPrice(ctx, chatID, data, lang)
 		}
+	case strings.HasPrefix(data, "admin:infinitestock:"), strings.HasPrefix(data, "admin:singleincart:"):
+		b.ack(cb.ID)
+		if b.isAdmin(userID) {
+			b.onAdminQuantitySetting(ctx, chatID, data, lang)
+		}
 	case data == "digital:library":
 		b.ack(cb.ID)
 		b.sendDigitalLibrary(ctx, chatID, userID, lang)

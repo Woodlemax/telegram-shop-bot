@@ -42,8 +42,8 @@ func (b *Bot) sendCart(ctx context.Context, chatID, userID int64, msgID int, lan
 				b.styledBtn(BtnKeyCartRemove, "🗑 Убрать", "cart:del:"+pid, StyleDanger),
 			},
 		)
-		if item.Product.IsDigital {
-			kb[len(kb)-1] = []StyledButton{Btn(b.t(lang, "digital_product"), "noop"), b.styledBtn(BtnKeyCartRemove, "🗑", "cart:del:"+pid, StyleDanger)}
+		if item.Product.SingleInCart {
+			kb[len(kb)-1] = []StyledButton{Btn(b.t(lang, "product_single_in_cart"), "noop"), b.styledBtn(BtnKeyCartRemove, "🗑", "cart:del:"+pid, StyleDanger)}
 		}
 		if item.Product.OpenPrice {
 			kb = append(kb, []StyledButton{Btn(b.t(lang, "open_price_button"), "price:enter:"+pid)})

@@ -13,8 +13,8 @@ func (s *SQLCartStore) SetPrice(ctx context.Context, userID, productID int64, am
 		return ErrInvalidMoney
 	}
 	res, err := s.db.ExecContext(ctx, `INSERT INTO cart_items(user_id,product_id,quantity,custom_price)
- SELECT ?,id,1,? FROM products WHERE id=? AND open_price=1 AND is_active=1 AND sub_period_days=0 AND (is_digital=1 OR stock>0)
- ON CONFLICT(user_id,product_id) DO UPDATE SET custom_price=excluded.custom_price`, userID, amount, productID)
+ SELECT ?,id,1,? FROM products WHERE id=? AND open_price=1 AND is_active=1 AND sub_period_days=0 AND (infinite_stock=1 OR stock>0)
+ ON CONFLICT(user_id,product_id) DO UPDATE SET custom_price=excluded.custom_price, quantity=CASE WHEN EXISTS(SELECT 1 FROM products WHERE id=excluded.product_id AND single_in_cart=1) THEN 1 ELSE cart_items.quantity END`, userID, amount, productID)
 	if err != nil {
 		return err
 	}
@@ -110,8 +110,7 @@ func (s *SQLOrderStore) confirmFreeOrderOnce(ctx context.Context, id, userID int
 	if n != 1 {
 		return ErrOrderStatusConflict
 	}
-	rows, err := tx.QueryContext(ctx, `SELECT i.product_id,i.quantity FROM order_items i WHERE i.order_id=?
- AND NOT EXISTS(SELECT 1 FROM digital_deliveries d WHERE d.order_id=i.order_id AND d.product_id=i.product_id)`, id)
+	rows, err := tx.QueryContext(ctx, `SELECT i.product_id,i.quantity FROM order_items i WHERE i.order_id=?`, id)
 	if err != nil {
 		return err
 	}
@@ -134,7 +133,7 @@ func (s *SQLOrderStore) confirmFreeOrderOnce(ctx context.Context, id, userID int
 		return err
 	}
 	for _, item := range items {
-		res, err := tx.ExecContext(ctx, `UPDATE products SET stock=stock-? WHERE id=? AND is_active=1 AND stock>=?`, item.qty, item.id, item.qty)
+		res, err := tx.ExecContext(ctx, `UPDATE products SET stock=CASE WHEN infinite_stock=1 THEN stock ELSE stock-? END WHERE id=? AND is_active=1 AND (infinite_stock=1 OR stock>=?)`, item.qty, item.id, item.qty)
 		if err != nil {
 			return err
 		}

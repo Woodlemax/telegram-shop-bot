@@ -262,7 +262,7 @@ func (b *Bot) productKeyboard(p *storage.Product, inWishlist bool, quantity int,
 			Btn(b.t(lang, "btn_menu"), "back:menu"),
 		},
 	}
-	if p.IsDigital {
+	if p.SingleInCart {
 		kb = kb[1:]
 	}
 	if p.OpenPrice {

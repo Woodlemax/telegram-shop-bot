@@ -53,13 +53,13 @@ func (s *CartService) Add(ctx context.Context, userID, productID int64) error {
 	if err != nil {
 		return err
 	}
-	if !(p.IsActive && (p.IsDigital || p.Stock > 0)) {
+	if !(p.IsActive && (p.InfiniteStock || p.Stock > 0)) {
 		return storage.ErrProductOutOfStock
 	}
 	if err := s.cart.AddItem(ctx, userID, productID); err != nil {
 		return err
 	}
-	if p.IsDigital {
+	if p.SingleInCart {
 		return s.cart.UpdateQuantity(ctx, userID, productID, 1)
 	}
 	return nil
@@ -161,10 +161,17 @@ func (s *CartService) ChangeQuantity(ctx context.Context, userID, productID int6
 		if err != nil {
 			return fmt.Errorf("cart service: get product %d for quantity change: %w", productID, err)
 		}
-		if p.IsDigital && newQty > 1 {
-			return storage.ErrDigitalArchiveNotReady
+		if !p.IsActive || (!p.InfiniteStock && p.Stock <= 0) {
+			return storage.ErrProductOutOfStock
 		}
-		if !(p.IsActive && (p.IsDigital || p.Stock >= newQty)) {
+		if p.SingleInCart && newQty > 1 {
+			// Repeated add actions are idempotent for a single-unit product.
+			if currentQty == 1 && delta == 1 {
+				return nil
+			}
+			return storage.ErrSingleItemLimit
+		}
+		if !(p.IsActive && (p.InfiniteStock || p.Stock >= newQty)) {
 			return storage.ErrProductOutOfStock
 		}
 	}

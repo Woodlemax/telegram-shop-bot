@@ -216,6 +216,10 @@ func (b *Bot) onOrderConfirm(ctx context.Context, chatID, userID int64, msgID in
 	orderID, err := b.order.CreateFromCart(ctx, userID, view, promo)
 	if err != nil {
 		var stockErr *shop.ErrInsufficientStock
+		if errors.Is(err, storage.ErrSingleItemLimit) {
+			b.sendOrEditStyled(chatID, msgID, b.t(lang, "product_single_in_cart"), "", nil)
+			return
+		}
 		if errors.Is(err, storage.ErrDigitalArchiveNotReady) {
 			b.sendOrEditStyled(chatID, msgID, b.t(lang, "digital_archive_unavailable"), "", nil)
 			return

@@ -26,7 +26,7 @@ func (s *SQLCartStore) AddItem(ctx context.Context, userID, productID int64) err
 		INSERT INTO cart_items (user_id, product_id, quantity)
 		VALUES (?, ?, 1)
 		ON CONFLICT(user_id, product_id) DO UPDATE SET
-			quantity = CASE WHEN EXISTS(SELECT 1 FROM products WHERE id=excluded.product_id AND is_digital=1)
+			quantity = CASE WHEN EXISTS(SELECT 1 FROM products WHERE id=excluded.product_id AND single_in_cart=1)
 			 THEN 1 ELSE cart_items.quantity + 1 END
 	`
 	_, err := s.db.ExecContext(ctx, query, userID, productID)
@@ -37,7 +37,7 @@ func (s *SQLCartStore) UpdateQuantity(ctx context.Context, userID, productID int
 	if quantity <= 0 {
 		return s.RemoveItem(ctx, userID, productID)
 	}
-	query := `UPDATE cart_items SET quantity = ? WHERE user_id = ? AND product_id = ?`
+	query := `UPDATE cart_items SET quantity = CASE WHEN EXISTS(SELECT 1 FROM products WHERE id=cart_items.product_id AND single_in_cart=1) THEN 1 ELSE ? END WHERE user_id = ? AND product_id = ?`
 	_, err := s.db.ExecContext(ctx, query, quantity, userID, productID)
 	return err
 }

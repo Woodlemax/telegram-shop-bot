@@ -37,7 +37,7 @@ func (b *Bot) handleInlineQuery(ctx context.Context, iq *tgbotapi.InlineQuery) {
 	results := make([]interface{}, 0, len(products))
 	for i := range products {
 		p := &products[i]
-		if !p.IsActive || p.Stock <= 0 {
+		if !p.IsActive || (!p.InfiniteStock && p.Stock <= 0) {
 			continue
 		}
 		cover := p.PhotoURL
@@ -88,6 +88,10 @@ func (b *Bot) formatProductCaption(lang string, p *storage.Product) string {
 	starsText := ""
 	if p.PriceStars > 0 {
 		starsText = fmt.Sprintf(" / %d ⭐", p.PriceStars)
+	}
+	if p.InfiniteStock || p.SingleInCart {
+		return fmt.Sprintf(currencyText("<b>%s</b>\n%s\n\n💵 $%.2f%s\n%s", p.PriceRUB != nil),
+			p.Name, p.Description, productAmount(p), starsText, b.productAvailabilityText(lang, p))
 	}
 	return fmt.Sprintf(
 		currencyText("<b>%s</b>\n%s\n\n💵 $%.2f%s\n📦 %s: %d", p.PriceRUB != nil),

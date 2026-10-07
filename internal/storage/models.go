@@ -129,6 +129,8 @@ type Product struct {
 	OpenPrice      bool      `db:"open_price"`
 	PriceRUB       *float64  `db:"price_rub"`
 	Stock          int       `db:"stock"`
+	InfiniteStock  bool      `db:"infinite_stock"`
+	SingleInCart   bool      `db:"single_in_cart"`
 	IsDigital      bool      `db:"is_digital"`
 	DigitalContent string    `db:"digital_content"`
 	IsActive       bool      `db:"is_active"`

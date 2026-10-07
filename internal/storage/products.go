@@ -40,7 +40,7 @@ func (s *SQLProductStore) GetCategories(ctx context.Context) ([]Category, error)
 func (s *SQLProductStore) GetProductsByCategory(ctx context.Context, categoryID int64) ([]Product, error) {
 	rows, err := s.db.QueryContext(ctx,
 		`SELECT id, category_id, name, COALESCE(description, ''), COALESCE(photo_url, ''),
-		        price_usd, COALESCE(price_stars, 0), stock, is_digital, COALESCE(digital_content, ''), is_active, sub_period_days, open_price, price_rub, created_at
+		        price_usd, COALESCE(price_stars, 0), stock, is_digital, COALESCE(digital_content, ''), is_active, sub_period_days, open_price, price_rub, infinite_stock, single_in_cart, created_at
 		 FROM products WHERE category_id = ? AND is_active = 1`, categoryID)
 	if err != nil {
 		return nil, fmt.Errorf("product store: get products by category: %w", err)
@@ -51,7 +51,7 @@ func (s *SQLProductStore) GetProductsByCategory(ctx context.Context, categoryID 
 	for rows.Next() {
 		var p Product
 		if err := rows.Scan(&p.ID, &p.CategoryID, &p.Name, &p.Description, &p.PhotoURL,
-			&p.PriceUSD, &p.PriceStars, &p.Stock, &p.IsDigital, &p.DigitalContent, &p.IsActive, &p.SubPeriodDays, &p.OpenPrice, &p.PriceRUB, &p.CreatedAt); err != nil {
+			&p.PriceUSD, &p.PriceStars, &p.Stock, &p.IsDigital, &p.DigitalContent, &p.IsActive, &p.SubPeriodDays, &p.OpenPrice, &p.PriceRUB, &p.InfiniteStock, &p.SingleInCart, &p.CreatedAt); err != nil {
 			return nil, fmt.Errorf("product store: scan product: %w", err)
 		}
 		products = append(products, p)
@@ -64,15 +64,15 @@ func (s *SQLProductStore) GetProductsByCategory(ctx context.Context, categoryID 
 func (s *SQLProductStore) GetProductsByCategoryPaged(ctx context.Context, categoryID int64, limit, offset int) ([]Product, int, error) {
 	var total int
 	if err := s.db.QueryRowContext(ctx,
-		"SELECT COUNT(*) FROM products WHERE category_id = ? AND is_active = 1 AND (stock > 0 OR is_digital = 1)", categoryID,
+		"SELECT COUNT(*) FROM products WHERE category_id = ? AND is_active = 1 AND (stock > 0 OR infinite_stock = 1)", categoryID,
 	).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("product store: count paged products: %w", err)
 	}
 
 	rows, err := s.db.QueryContext(ctx,
 		`SELECT id, category_id, name, COALESCE(description, ''), COALESCE(photo_url, ''),
-		        price_usd, COALESCE(price_stars, 0), stock, is_digital, COALESCE(digital_content, ''), is_active, sub_period_days, open_price, price_rub, created_at
-		 FROM products WHERE category_id = ? AND is_active = 1 AND (stock > 0 OR is_digital = 1)
+		        price_usd, COALESCE(price_stars, 0), stock, is_digital, COALESCE(digital_content, ''), is_active, sub_period_days, open_price, price_rub, infinite_stock, single_in_cart, created_at
+		 FROM products WHERE category_id = ? AND is_active = 1 AND (stock > 0 OR infinite_stock = 1)
 		 ORDER BY id LIMIT ? OFFSET ?`, categoryID, limit, offset)
 	if err != nil {
 		return nil, 0, fmt.Errorf("product store: get paged products: %w", err)
@@ -83,7 +83,7 @@ func (s *SQLProductStore) GetProductsByCategoryPaged(ctx context.Context, catego
 	for rows.Next() {
 		var p Product
 		if err := rows.Scan(&p.ID, &p.CategoryID, &p.Name, &p.Description, &p.PhotoURL,
-			&p.PriceUSD, &p.PriceStars, &p.Stock, &p.IsDigital, &p.DigitalContent, &p.IsActive, &p.SubPeriodDays, &p.OpenPrice, &p.PriceRUB, &p.CreatedAt); err != nil {
+			&p.PriceUSD, &p.PriceStars, &p.Stock, &p.IsDigital, &p.DigitalContent, &p.IsActive, &p.SubPeriodDays, &p.OpenPrice, &p.PriceRUB, &p.InfiniteStock, &p.SingleInCart, &p.CreatedAt); err != nil {
 			return nil, 0, fmt.Errorf("product store: scan paged product: %w", err)
 		}
 		products = append(products, p)
@@ -97,10 +97,10 @@ func (s *SQLProductStore) GetProduct(ctx context.Context, id int64) (*Product, e
 	var p Product
 	err := s.db.QueryRowContext(ctx,
 		`SELECT id, category_id, name, COALESCE(description, ''), COALESCE(photo_url, ''),
-		        price_usd, COALESCE(price_stars, 0), stock, is_digital, COALESCE(digital_content, ''), is_active, sub_period_days, open_price, price_rub, created_at
+		        price_usd, COALESCE(price_stars, 0), stock, is_digital, COALESCE(digital_content, ''), is_active, sub_period_days, open_price, price_rub, infinite_stock, single_in_cart, created_at
 		 FROM products WHERE id = ?`, id).
 		Scan(&p.ID, &p.CategoryID, &p.Name, &p.Description, &p.PhotoURL,
-			&p.PriceUSD, &p.PriceStars, &p.Stock, &p.IsDigital, &p.DigitalContent, &p.IsActive, &p.SubPeriodDays, &p.OpenPrice, &p.PriceRUB, &p.CreatedAt)
+			&p.PriceUSD, &p.PriceStars, &p.Stock, &p.IsDigital, &p.DigitalContent, &p.IsActive, &p.SubPeriodDays, &p.OpenPrice, &p.PriceRUB, &p.InfiniteStock, &p.SingleInCart, &p.CreatedAt)
 	if err == sql.ErrNoRows {
 		return nil, ErrNotFound
 	}
@@ -112,13 +112,17 @@ func (s *SQLProductStore) GetProduct(ctx context.Context, id int64) (*Product, e
 
 // CreateProduct inserts a new product and returns its ID.
 func (s *SQLProductStore) CreateProduct(ctx context.Context, p *Product) (int64, error) {
+	if p.IsDigital {
+		p.InfiniteStock = true
+		p.SingleInCart = true
+	}
 	if err := validateRUBProduct(p); err != nil {
 		return 0, err
 	}
 	res, err := s.db.ExecContext(ctx,
-		`INSERT INTO products (category_id, name, description, photo_url, price_usd, price_stars, stock, is_digital, digital_content, is_active, sub_period_days, open_price, price_rub)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		p.CategoryID, p.Name, p.Description, p.PhotoURL, p.PriceUSD, p.PriceStars, p.Stock, p.IsDigital, p.DigitalContent, p.IsActive, p.SubPeriodDays, p.OpenPrice, p.PriceRUB)
+		`INSERT INTO products (category_id, name, description, photo_url, price_usd, price_stars, stock, is_digital, digital_content, is_active, sub_period_days, open_price, price_rub, infinite_stock, single_in_cart)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		p.CategoryID, p.Name, p.Description, p.PhotoURL, p.PriceUSD, p.PriceStars, p.Stock, p.IsDigital, p.DigitalContent, p.IsActive, p.SubPeriodDays, p.OpenPrice, p.PriceRUB, p.InfiniteStock, p.SingleInCart)
 	if err != nil {
 		return 0, fmt.Errorf("product store: create product: %w", err)
 	}
@@ -136,9 +140,9 @@ func (s *SQLProductStore) UpdateProduct(ctx context.Context, p *Product) error {
 	}
 	_, err := s.db.ExecContext(ctx,
 		`UPDATE products SET category_id = ?, name = ?, description = ?, photo_url = ?,
-		        price_usd = ?, price_stars = ?, stock = ?, is_digital = ?, digital_content = ?, is_active = ?, sub_period_days = ?, open_price = ?, price_rub = ?
+		        price_usd = ?, price_stars = ?, stock = ?, is_digital = ?, digital_content = ?, is_active = ?, sub_period_days = ?, open_price = ?, price_rub = ?, infinite_stock = ?, single_in_cart = ?
 		 WHERE id = ?`,
-		p.CategoryID, p.Name, p.Description, p.PhotoURL, p.PriceUSD, p.PriceStars, p.Stock, p.IsDigital, p.DigitalContent, p.IsActive, p.SubPeriodDays, p.OpenPrice, p.PriceRUB, p.ID)
+		p.CategoryID, p.Name, p.Description, p.PhotoURL, p.PriceUSD, p.PriceStars, p.Stock, p.IsDigital, p.DigitalContent, p.IsActive, p.SubPeriodDays, p.OpenPrice, p.PriceRUB, p.InfiniteStock, p.SingleInCart, p.ID)
 	if err != nil {
 		return fmt.Errorf("product store: update product: %w", err)
 	}
@@ -219,9 +223,9 @@ func (s *SQLProductStore) SearchProducts(ctx context.Context, query string) ([]P
 	pattern := "%" + query + "%"
 	rows, err := s.db.QueryContext(ctx,
 		`SELECT id, category_id, name, COALESCE(description, ''), COALESCE(photo_url, ''),
-		        price_usd, COALESCE(price_stars, 0), stock, is_digital, COALESCE(digital_content, ''), is_active, sub_period_days, open_price, price_rub, created_at
+		        price_usd, COALESCE(price_stars, 0), stock, is_digital, COALESCE(digital_content, ''), is_active, sub_period_days, open_price, price_rub, infinite_stock, single_in_cart, created_at
 		 FROM products
-		 WHERE is_active = 1 AND (stock > 0 OR is_digital = 1) AND (name LIKE ? OR description LIKE ?)
+		 WHERE is_active = 1 AND (stock > 0 OR infinite_stock = 1) AND (name LIKE ? OR description LIKE ?)
 		 ORDER BY name`,
 		pattern, pattern)
 	if err != nil {
@@ -233,7 +237,7 @@ func (s *SQLProductStore) SearchProducts(ctx context.Context, query string) ([]P
 	for rows.Next() {
 		var p Product
 		if err := rows.Scan(&p.ID, &p.CategoryID, &p.Name, &p.Description, &p.PhotoURL,
-			&p.PriceUSD, &p.PriceStars, &p.Stock, &p.IsDigital, &p.DigitalContent, &p.IsActive, &p.SubPeriodDays, &p.OpenPrice, &p.PriceRUB, &p.CreatedAt); err != nil {
+			&p.PriceUSD, &p.PriceStars, &p.Stock, &p.IsDigital, &p.DigitalContent, &p.IsActive, &p.SubPeriodDays, &p.OpenPrice, &p.PriceRUB, &p.InfiniteStock, &p.SingleInCart, &p.CreatedAt); err != nil {
 			return nil, fmt.Errorf("product store: scan search product: %w", err)
 		}
 		products = append(products, p)

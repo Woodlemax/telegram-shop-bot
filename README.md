@@ -36,6 +36,7 @@ A full-featured e-commerce bot for Telegram — catalog, cart, Telegram Stars & 
 - **Telegram Stars** payments (built-in)
 - **Digital ZIP models** — admin document uploads, automatic delivery after confirmed payment, retries, and downloads of updated archives for existing buyers. [Setup](docs/digital-archives.md).
 - **Ruble catalog and open prices** — set product prices in RUB, let buyers choose a whole-ruble amount from zero, and fulfill zero-total carts without payment. [Setup](docs/open-prices.md).
+- **Product quantity settings** — independent unlimited-stock and one-unit-per-cart switches, managed from the administrator product card. [Setup](docs/product-quantity-settings.md).
 - **Stars subscriptions** — recurring 30-day products, `/mysubs` to manage
 - **USDT via CryptoBot** (optional)
 - **RUB cards via YooKassa** (optional)

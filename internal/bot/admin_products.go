@@ -111,6 +111,10 @@ func (b *Bot) finishAddProduct(ctx context.Context, chatID, userID, categoryID i
 }
 
 func (b *Bot) sendAdminProductDetails(chatID int64, product *storage.Product, lang string) {
+	stockText := strconv.Itoa(product.Stock)
+	if product.InfiniteStock {
+		stockText = "∞"
+	}
 	toggleLabel := b.t(lang, "admin_btn_stock_off")
 	if product.Stock <= 0 {
 		toggleLabel = b.t(lang, "admin_btn_stock_on")
@@ -118,10 +122,25 @@ func (b *Bot) sendAdminProductDetails(chatID int64, product *storage.Product, la
 
 	text := fmt.Sprintf(
 		b.t(lang, "admin_product_details"),
-		product.ID, product.Name, product.Description, productAmount(product), product.Stock, product.CategoryID, product.IsActive,
+		product.ID, product.Name, product.Description, productAmount(product), stockText, product.CategoryID, product.IsActive,
 		product.ID, product.ID, product.ID, product.ID, product.ID, product.ID,
 	)
 	text = currencyText(text, product.PriceRUB != nil)
+	settingState := func(on bool) string {
+		if on {
+			return "✅"
+		}
+		return "❌"
+	}
+	text += "\n" + fmt.Sprintf(b.t(lang, "admin_quantity_settings"), settingState(product.InfiniteStock), settingState(product.SingleInCart))
+	infiniteLabel := b.t(lang, "admin_infinite_stock_on")
+	if product.InfiniteStock {
+		infiniteLabel = b.t(lang, "admin_infinite_stock_off")
+	}
+	singleLabel := b.t(lang, "admin_single_in_cart_on")
+	if product.SingleInCart {
+		singleLabel = b.t(lang, "admin_single_in_cart_off")
+	}
 	openLabel := b.t(lang, "open_price_admin_on")
 	if product.OpenPrice {
 		openLabel = b.t(lang, "open_price_admin_off")
@@ -129,6 +148,8 @@ func (b *Bot) sendAdminProductDetails(chatID int64, product *storage.Product, la
 	}
 
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(infiniteLabel, fmt.Sprintf("admin:infinitestock:%d", product.ID))),
+		tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(singleLabel, fmt.Sprintf("admin:singleincart:%d", product.ID))),
 		tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(openLabel, fmt.Sprintf("admin:openprice:%d", product.ID))),
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData(toggleLabel, fmt.Sprintf("admin:togglestock:%d", product.ID)),
@@ -140,6 +161,9 @@ func (b *Bot) sendAdminProductDetails(chatID int64, product *storage.Product, la
 			tgbotapi.NewInlineKeyboardButtonData(b.t(lang, "digital_admin_upload"), fmt.Sprintf("admin:archive:%d", product.ID)),
 		),
 	)
+	if product.InfiniteStock {
+		keyboard.InlineKeyboard = append(keyboard.InlineKeyboard[:3], keyboard.InlineKeyboard[4:]...)
+	}
 
 	reply := tgbotapi.NewMessage(chatID, text)
 	reply.ReplyMarkup = keyboard
@@ -212,6 +236,17 @@ func (b *Bot) handleEditProductField(ctx context.Context, msg *tgbotapi.Message,
 			product.PriceRUB = &zero
 			product.PriceUSD = 0
 			product.PriceStars = 0
+		}
+	case "infinitestock", "singleincart":
+		on, err := strconv.ParseBool(value)
+		if err != nil {
+			b.send(tgbotapi.NewMessage(msg.Chat.ID, b.t(lang, "admin_invalid_bool")))
+			return
+		}
+		if strings.EqualFold(field, "infinitestock") {
+			product.InfiniteStock = on
+		} else {
+			product.SingleInCart = on
 		}
 	case "stock":
 		stock, err := strconv.Atoi(value)
@@ -308,4 +343,33 @@ func (b *Bot) routeEditProduct(ctx context.Context, msg *tgbotapi.Message) {
 	} else {
 		b.handleEditProductField(ctx, msg, id, args[1], strings.Join(args[2:], " "))
 	}
+}
+
+func (b *Bot) onAdminQuantitySetting(ctx context.Context, chatID int64, data, lang string) {
+	parts := strings.Split(data, ":")
+	if len(parts) != 3 {
+		return
+	}
+	id, err := strconv.ParseInt(parts[2], 10, 64)
+	if err != nil {
+		return
+	}
+	p, err := b.products.GetProduct(ctx, id)
+	if err != nil {
+		b.send(tgbotapi.NewMessage(chatID, b.t(lang, "admin_product_not_found")))
+		return
+	}
+	switch parts[1] {
+	case "infinitestock":
+		p.InfiniteStock = !p.InfiniteStock
+	case "singleincart":
+		p.SingleInCart = !p.SingleInCart
+	default:
+		return
+	}
+	if err := b.products.UpdateProduct(ctx, p); err != nil {
+		b.send(tgbotapi.NewMessage(chatID, b.t(lang, "admin_product_update_failed")))
+		return
+	}
+	b.sendAdminProductDetails(chatID, p, lang)
 }

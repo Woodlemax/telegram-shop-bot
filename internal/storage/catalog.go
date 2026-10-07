@@ -34,7 +34,7 @@ func (s *CatalogStore) ListCategories(ctx context.Context) ([]Category, error) {
 }
 
 func (s *CatalogStore) GetProductsByCategory(ctx context.Context, categoryID int64, limit, offset int) ([]Product, error) {
-	query := `SELECT id, category_id, name, description, photo_url, price_usd, stock, is_digital, is_active, created_at 
+	query := `SELECT id, category_id, name, description, photo_url, price_usd, stock, infinite_stock, single_in_cart, is_digital, is_active, created_at
 	          FROM products WHERE category_id = ? AND is_active = 1 LIMIT ? OFFSET ?`
 	rows, err := s.db.QueryContext(ctx, query, categoryID, limit, offset)
 	if err != nil {
@@ -45,7 +45,7 @@ func (s *CatalogStore) GetProductsByCategory(ctx context.Context, categoryID int
 	var products []Product
 	for rows.Next() {
 		var p Product
-		if err := rows.Scan(&p.ID, &p.CategoryID, &p.Name, &p.Description, &p.PhotoURL, &p.PriceUSD, &p.Stock, &p.IsDigital, &p.IsActive, &p.CreatedAt); err != nil {
+		if err := rows.Scan(&p.ID, &p.CategoryID, &p.Name, &p.Description, &p.PhotoURL, &p.PriceUSD, &p.Stock, &p.InfiniteStock, &p.SingleInCart, &p.IsDigital, &p.IsActive, &p.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scan product: %w", err)
 		}
 		products = append(products, p)
@@ -54,7 +54,7 @@ func (s *CatalogStore) GetProductsByCategory(ctx context.Context, categoryID int
 }
 
 func (s *CatalogStore) SearchProducts(ctx context.Context, queryText string, limit, offset int) ([]Product, error) {
-	query := `SELECT id, category_id, name, description, photo_url, price_usd, stock, is_digital, is_active, created_at 
+	query := `SELECT id, category_id, name, description, photo_url, price_usd, stock, infinite_stock, single_in_cart, is_digital, is_active, created_at
 	          FROM products WHERE (name LIKE ? OR description LIKE ?) AND is_active = 1 LIMIT ? OFFSET ?`
 	searchPattern := "%" + queryText + "%"
 	rows, err := s.db.QueryContext(ctx, query, searchPattern, searchPattern, limit, offset)
@@ -66,7 +66,7 @@ func (s *CatalogStore) SearchProducts(ctx context.Context, queryText string, lim
 	var products []Product
 	for rows.Next() {
 		var p Product
-		if err := rows.Scan(&p.ID, &p.CategoryID, &p.Name, &p.Description, &p.PhotoURL, &p.PriceUSD, &p.Stock, &p.IsDigital, &p.IsActive, &p.CreatedAt); err != nil {
+		if err := rows.Scan(&p.ID, &p.CategoryID, &p.Name, &p.Description, &p.PhotoURL, &p.PriceUSD, &p.Stock, &p.InfiniteStock, &p.SingleInCart, &p.IsDigital, &p.IsActive, &p.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scan product: %w", err)
 		}
 		products = append(products, p)
@@ -76,9 +76,9 @@ func (s *CatalogStore) SearchProducts(ctx context.Context, queryText string, lim
 
 func (s *CatalogStore) GetProductByID(ctx context.Context, id int64) (*Product, error) {
 	var p Product
-	query := `SELECT id, category_id, name, description, photo_url, price_usd, stock, is_digital, digital_content, is_active, created_at FROM products WHERE id = ?`
+	query := `SELECT id, category_id, name, description, photo_url, price_usd, stock, infinite_stock, single_in_cart, is_digital, digital_content, is_active, created_at FROM products WHERE id = ?`
 	err := s.db.QueryRowContext(ctx, query, id).Scan(
-		&p.ID, &p.CategoryID, &p.Name, &p.Description, &p.PhotoURL, &p.PriceUSD, &p.Stock, &p.IsDigital, &p.DigitalContent, &p.IsActive, &p.CreatedAt,
+		&p.ID, &p.CategoryID, &p.Name, &p.Description, &p.PhotoURL, &p.PriceUSD, &p.Stock, &p.InfiniteStock, &p.SingleInCart, &p.IsDigital, &p.DigitalContent, &p.IsActive, &p.CreatedAt,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil

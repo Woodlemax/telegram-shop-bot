@@ -52,7 +52,7 @@ func (s *WishlistStore) GetAllWithProducts(ctx context.Context) ([]WishlistEntry
 		SELECT w.user_id, w.product_id, w.price_at_added, w.stock_at_added,
 		       COALESCE(u.language_code, 'en'),
 		       p.id, p.category_id, p.name, p.description, p.photo_url,
-		       p.price_usd, p.price_stars, p.stock, p.is_digital, p.digital_content,
+		       p.price_usd, p.price_stars, p.stock, p.infinite_stock, p.single_in_cart, p.is_digital, p.digital_content,
 		       p.is_active, p.created_at,
 		       w.price_drop_notified_at, w.back_in_stock_notified_at
 		FROM wishlist w
@@ -73,7 +73,7 @@ func (s *WishlistStore) GetAllWithProducts(ctx context.Context) ([]WishlistEntry
 			&e.UserID, &e.ProductID, &e.PriceAtAdded, &e.StockAtAdded,
 			&e.LanguageCode,
 			&e.Product.ID, &e.Product.CategoryID, &e.Product.Name, &e.Product.Description, &e.Product.PhotoURL,
-			&e.Product.PriceUSD, &e.Product.PriceStars, &e.Product.Stock, &e.Product.IsDigital, &e.Product.DigitalContent,
+			&e.Product.PriceUSD, &e.Product.PriceStars, &e.Product.Stock, &e.Product.InfiniteStock, &e.Product.SingleInCart, &e.Product.IsDigital, &e.Product.DigitalContent,
 			&e.Product.IsActive, &e.Product.CreatedAt,
 			&e.PriceDropNotifiedAt, &e.BackInStockNotifiedAt,
 		); err != nil {
@@ -140,7 +140,7 @@ func (s *WishlistStore) GetUserWishlistIDs(ctx context.Context, userID int64) (m
 
 func (s *WishlistStore) GetUserWishlist(ctx context.Context, userID int64) ([]Product, error) {
 	query := `
-		SELECT p.id, p.category_id, p.name, p.description, p.photo_url, p.price_usd, p.stock, p.is_digital, p.is_active, p.created_at 
+		SELECT p.id, p.category_id, p.name, p.description, p.photo_url, p.price_usd, p.stock, p.infinite_stock, p.single_in_cart, p.is_digital, p.is_active, p.created_at
 		FROM wishlist w
 		JOIN products p ON w.product_id = p.id
 		WHERE w.user_id = ? AND p.is_active = 1
@@ -154,7 +154,7 @@ func (s *WishlistStore) GetUserWishlist(ctx context.Context, userID int64) ([]Pr
 	var products []Product
 	for rows.Next() {
 		var p Product
-		if err := rows.Scan(&p.ID, &p.CategoryID, &p.Name, &p.Description, &p.PhotoURL, &p.PriceUSD, &p.Stock, &p.IsDigital, &p.IsActive, &p.CreatedAt); err != nil {
+		if err := rows.Scan(&p.ID, &p.CategoryID, &p.Name, &p.Description, &p.PhotoURL, &p.PriceUSD, &p.Stock, &p.InfiniteStock, &p.SingleInCart, &p.IsDigital, &p.IsActive, &p.CreatedAt); err != nil {
 			return nil, err
 		}
 		products = append(products, p)

@@ -293,6 +293,8 @@ type productJSON struct {
 	PriceRUB      *float64 `json:"price_rub"`
 	OpenPrice     bool     `json:"open_price"`
 	Stock         int      `json:"stock"`
+	InfiniteStock bool     `json:"infinite_stock"`
+	SingleInCart  bool     `json:"single_in_cart"`
 	IsDigital     bool     `json:"is_digital"`
 	SubPeriodDays int      `json:"sub_period_days,omitempty"`
 }
@@ -309,6 +311,8 @@ func toProductJSON(p *storage.Product) productJSON {
 		PriceRUB:      p.PriceRUB,
 		OpenPrice:     p.OpenPrice,
 		Stock:         p.Stock,
+		InfiniteStock: p.InfiniteStock,
+		SingleInCart:  p.SingleInCart,
 		IsDigital:     p.IsDigital,
 		SubPeriodDays: p.SubPeriodDays,
 	}
@@ -432,15 +436,17 @@ func (s *Server) cartJSON(view *shop.CartView) map[string]any {
 			sub = true
 		}
 		items = append(items, map[string]any{
-			"product_id":  it.Product.ID,
-			"name":        it.Product.Name,
-			"photo":       photoRef(it.Product.PhotoURL),
-			"price_usd":   it.Product.PriceUSD,
-			"price_stars": it.Product.PriceStars,
-			"price_rub":   it.Product.PriceRUB,
-			"open_price":  it.Product.OpenPrice,
-			"quantity":    it.Quantity,
-			"is_digital":  it.Product.IsDigital,
+			"product_id":     it.Product.ID,
+			"name":           it.Product.Name,
+			"photo":          photoRef(it.Product.PhotoURL),
+			"price_usd":      it.Product.PriceUSD,
+			"price_stars":    it.Product.PriceStars,
+			"price_rub":      it.Product.PriceRUB,
+			"open_price":     it.Product.OpenPrice,
+			"quantity":       it.Quantity,
+			"is_digital":     it.Product.IsDigital,
+			"single_in_cart": it.Product.SingleInCart,
+			"infinite_stock": it.Product.InfiniteStock,
 		})
 	}
 	return map[string]any{
@@ -507,6 +513,8 @@ func (s *Server) handleCartPost(w http.ResponseWriter, r *http.Request, auth *Au
 
 	if err := s.deps.Cart.ChangeQuantity(r.Context(), auth.User.ID, req.ProductID, delta); err != nil {
 		switch {
+		case errors.Is(err, storage.ErrSingleItemLimit):
+			s.writeError(w, http.StatusConflict, "product_single_in_cart")
 		case errors.Is(err, storage.ErrProductOutOfStock):
 			s.writeError(w, http.StatusConflict, "webapp_err_out_of_stock")
 		case errors.Is(err, storage.ErrNotFound):
@@ -651,6 +659,8 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request, auth *Au
 	if err != nil {
 		var stockErr *shop.ErrInsufficientStock
 		switch {
+		case errors.Is(err, storage.ErrSingleItemLimit):
+			s.writeError(w, http.StatusConflict, "product_single_in_cart")
 		case errors.As(err, &stockErr):
 			s.writeError(w, http.StatusConflict, "webapp_err_out_of_stock")
 		case errors.Is(err, storage.ErrEmptyCart):
