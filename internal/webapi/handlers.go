@@ -388,14 +388,24 @@ func (s *Server) handleProduct(w http.ResponseWriter, r *http.Request, _ *AuthRe
 		s.logger.Warn("webapi: product rating", "product_id", id, "error", err)
 	}
 	photos := make([]string, 0, 4)
-	if cover := photoRef(p.PhotoURL); cover != "" {
-		photos = append(photos, cover)
+	seen := make(map[string]struct{})
+	addPhoto := func(raw string) {
+		ref := photoRef(raw)
+		if ref == "" {
+			return
+		}
+		if _, exists := seen[ref]; exists {
+			return
+		}
+		seen[ref] = struct{}{}
+		photos = append(photos, ref)
 	}
+	addPhoto(p.PhotoURL)
 	if extra, err := s.deps.Photos.List(ctx, id); err != nil {
 		s.logger.Warn("webapi: product photos", "product_id", id, "error", err)
 	} else {
 		for _, ph := range extra {
-			photos = append(photos, photoRef(ph.FileID))
+			addPhoto(ph.FileID)
 		}
 	}
 
