@@ -97,6 +97,7 @@ type Bot struct {
 	wishlist   *storage.WishlistStore
 	uiSettings storage.UISettingsStore
 	subs       storage.SubscriptionStore
+	archives   *storage.DigitalArchiveStore
 	// tgbotapi v5 omits recurring fields. Reference-counted signals preserve
 	// them across concurrent duplicate deliveries of the same charge.
 	pendingSubSignalsMu sync.Mutex
@@ -226,6 +227,7 @@ func NewWithAPI(cfg *config.Config, api *tgbotapi.BotAPI, db *storage.DB, metric
 		payLedger:       storage.NewSQLPaymentLedgerStore(db),
 		balances:        balanceStore,
 		subs:            storage.NewSQLSubscriptionStore(db),
+		archives:        storage.NewDigitalArchiveStore(db),
 	}
 	// One-time setup at construction: no request/update context exists yet, so
 	// context.Background() is the honest root (not a per-update ctx).

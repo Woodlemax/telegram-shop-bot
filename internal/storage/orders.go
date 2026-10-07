@@ -19,6 +19,12 @@ func NewSQLOrderStore(d *DB) *SQLOrderStore {
 	return &SQLOrderStore{db: d.Conn()}
 }
 
+func (s *SQLOrderStore) HasDigitalArchives(ctx context.Context, orderID int64) (bool, error) {
+	var digital bool
+	err := s.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM digital_deliveries WHERE order_id=?)`, orderID).Scan(&digital)
+	return digital, err
+}
+
 // CreateOrder inserts an order and its items within a transaction. Returns the
 // new order ID.
 func (s *SQLOrderStore) CreateOrder(ctx context.Context, order *Order, items []OrderItem) (int64, error) {
@@ -88,6 +94,9 @@ func (s *SQLOrderStore) createOrderOnce(ctx context.Context, order *Order, items
 	}
 
 	for _, item := range items {
+		if err := snapshotDigitalArchive(ctx, tx, orderID, item); err != nil {
+			return 0, err
+		}
 		_, err := tx.ExecContext(ctx,
 			`INSERT INTO order_items (order_id, product_id, product_name, quantity, price_usd)
 			 VALUES (?, ?, ?, ?, ?)`,
@@ -473,6 +482,13 @@ func (s *SQLOrderStore) updateOrderStatusOnce(ctx context.Context, id int64, fro
 	}
 	var attemptID int64
 	if status == OrderStatusPaid {
+		var digital bool
+		if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM digital_deliveries WHERE order_id=?)`, id).Scan(&digital); err != nil {
+			return err
+		}
+		if digital && methodExpr != PaymentMethodStars {
+			return ErrPaymentReceiptMismatch
+		}
 		var entitlementExpiry *time.Time
 		if sub != nil {
 			entitlementExpiry = &sub.ExpiresAt
@@ -526,7 +542,8 @@ func (s *SQLOrderStore) updateOrderStatusOnce(ctx context.Context, id int64, fro
 
 		// 1. Get items (use internal method but with tx)
 		rows, err := tx.QueryContext(ctx,
-			`SELECT product_id, quantity FROM order_items WHERE order_id = ?`, id)
+			`SELECT product_id, quantity FROM order_items i WHERE order_id = ?
+			 AND NOT EXISTS(SELECT 1 FROM digital_deliveries d WHERE d.order_id=i.order_id AND d.product_id=i.product_id)`, id)
 		if err != nil {
 			return fmt.Errorf("order store: get items for stock update: %w", err)
 		}

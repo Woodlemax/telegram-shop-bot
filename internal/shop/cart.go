@@ -29,6 +29,18 @@ type CartItemView struct {
 	Quantity int
 }
 
+func CartHasDigital(view *CartView) bool {
+	if view == nil {
+		return false
+	}
+	for _, item := range view.Items {
+		if item.Product.IsDigital {
+			return true
+		}
+	}
+	return false
+}
+
 // CartService provides business logic for managing a user's shopping cart.
 type CartService struct {
 	cart     storage.CartStore
@@ -52,10 +64,16 @@ func (s *CartService) Add(ctx context.Context, userID, productID int64) error {
 	if err != nil {
 		return err
 	}
-	if !(p.IsActive && p.Stock > 0) {
+	if !(p.IsActive && (p.IsDigital || p.Stock > 0)) {
 		return storage.ErrProductOutOfStock
 	}
-	return s.cart.AddItem(ctx, userID, productID)
+	if err := s.cart.AddItem(ctx, userID, productID); err != nil {
+		return err
+	}
+	if p.IsDigital {
+		return s.cart.UpdateQuantity(ctx, userID, productID, 1)
+	}
+	return nil
 }
 
 // Get returns an aggregated view of the user's cart including product details
@@ -127,7 +145,10 @@ func (s *CartService) ChangeQuantity(ctx context.Context, userID, productID int6
 		if err != nil {
 			return fmt.Errorf("cart service: get product %d for quantity change: %w", productID, err)
 		}
-		if !(p.IsActive && p.Stock >= newQty) {
+		if p.IsDigital && newQty > 1 {
+			return storage.ErrDigitalArchiveNotReady
+		}
+		if !(p.IsActive && (p.IsDigital || p.Stock >= newQty)) {
 			return storage.ErrProductOutOfStock
 		}
 	}

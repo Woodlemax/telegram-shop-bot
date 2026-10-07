@@ -291,6 +291,7 @@ type productJSON struct {
 	PriceUSD      float64 `json:"price_usd"`
 	PriceStars    int     `json:"price_stars"`
 	Stock         int     `json:"stock"`
+	IsDigital     bool    `json:"is_digital"`
 	SubPeriodDays int     `json:"sub_period_days,omitempty"`
 }
 
@@ -304,6 +305,7 @@ func toProductJSON(p *storage.Product) productJSON {
 		PriceUSD:      p.PriceUSD,
 		PriceStars:    p.PriceStars,
 		Stock:         p.Stock,
+		IsDigital:     p.IsDigital,
 		SubPeriodDays: p.SubPeriodDays,
 	}
 }
@@ -412,7 +414,7 @@ func (s *Server) cartJSON(view *shop.CartView) map[string]any {
 	items := make([]map[string]any, 0, len(view.Items))
 	sub := false
 	for _, it := range view.Items {
-		if it.Product.SubPeriodDays > 0 {
+		if it.Product.SubPeriodDays > 0 || it.Product.IsDigital {
 			sub = true
 		}
 		items = append(items, map[string]any{
@@ -422,10 +424,12 @@ func (s *Server) cartJSON(view *shop.CartView) map[string]any {
 			"price_usd":   it.Product.PriceUSD,
 			"price_stars": it.Product.PriceStars,
 			"quantity":    it.Quantity,
+			"is_digital":  it.Product.IsDigital,
 		})
 	}
 	return map[string]any{
 		"items":               items,
+		"stars_only":          sub,
 		"total_usd":           view.TotalUSD,
 		"total_stars":         view.TotalStars,
 		"total_rub":           view.TotalRUB,
@@ -572,6 +576,10 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request, auth *Au
 		s.writeError(w, http.StatusBadRequest, "webapp_err_empty_cart")
 		return
 	}
+	if shop.CartHasDigital(view) && req.Method != storage.PaymentMethodStars {
+		s.writeError(w, http.StatusBadRequest, "digital_stars_only")
+		return
+	}
 	if err := shop.ValidateSubscriptionCart(view); err != nil {
 		s.writeError(w, http.StatusBadRequest, "webapp_err_sub_alone")
 		return
@@ -605,6 +613,8 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request, auth *Au
 			s.writeError(w, http.StatusConflict, "webapp_err_out_of_stock")
 		case errors.Is(err, storage.ErrEmptyCart):
 			s.writeError(w, http.StatusBadRequest, "webapp_err_empty_cart")
+		case errors.Is(err, storage.ErrDigitalArchiveNotReady):
+			s.writeError(w, http.StatusConflict, "digital_archive_unavailable")
 		case errors.Is(err, storage.ErrSubscriptionOrderConflict):
 			s.writeError(w, http.StatusConflict, "webapp_err_sub_active")
 		default:

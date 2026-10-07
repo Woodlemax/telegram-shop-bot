@@ -31,6 +31,9 @@ func (b *Bot) routeMessage(ctx context.Context, msg *tgbotapi.Message) {
 		b.handleSuccessfulPayment(ctx, msg)
 		return
 	}
+	if b.handleArchiveUpload(ctx, msg) {
+		return
+	}
 
 	// Check if user is entering a promo code.
 	if msg.Command() == "" {
@@ -82,6 +85,10 @@ func (b *Bot) routeMessage(ctx context.Context, msg *tgbotapi.Message) {
 		b.handleCart(ctx, msg)
 	case "orders":
 		b.handleOrders(ctx, msg)
+	case "files":
+		b.sendDigitalLibrary(ctx, msg.Chat.ID, msg.From.ID, msg.From.LanguageCode)
+	case "setarchive":
+		b.handleSetArchive(ctx, msg)
 
 	case "mysubs":
 		b.handleMySubs(ctx, msg)
@@ -195,8 +202,39 @@ func (b *Bot) handleCallback(ctx context.Context, cb *tgbotapi.CallbackQuery) {
 	msgID := cb.Message.MessageID
 	userID := cb.From.ID
 	lang := cb.From.LanguageCode
+	if strings.HasPrefix(data, "pay:") && !strings.HasPrefix(data, "pay:stars:") && b.archives != nil {
+		parts := strings.Split(data, ":")
+		if len(parts) == 3 {
+			id, err := strconv.ParseInt(parts[2], 10, 64)
+			if err == nil {
+				if _, err := b.loadPayableOrder(ctx, userID, id); err == nil {
+					digital, err := b.archives.OrderHasArchives(ctx, id)
+					if err != nil {
+						b.alert(cb.ID, b.t(lang, "error_short"))
+						return
+					}
+					if digital {
+						b.alert(cb.ID, b.t(lang, "digital_stars_only"))
+						return
+					}
+				}
+			}
+		}
+	}
 
 	switch {
+	case data == "digital:library":
+		b.ack(cb.ID)
+		b.sendDigitalLibrary(ctx, chatID, userID, lang)
+	case strings.HasPrefix(data, "digital:download:"):
+		b.onDigitalDownload(ctx, cb.ID, chatID, userID, data, lang)
+	case strings.HasPrefix(data, "admin:archive:"):
+		b.ack(cb.ID)
+		if b.isAdmin(userID) {
+			if id, err := parseIDFromCallback(data, "admin:archive:"); err == nil {
+				b.beginArchiveUpload(ctx, chatID, userID, id, lang)
+			}
+		}
 	case strings.HasPrefix(data, "category:"):
 		b.ack(cb.ID)
 		b.onCategorySelected(ctx, chatID, userID, b.prepareTextRenderMessageID(chatID, cb.Message), data, lang)

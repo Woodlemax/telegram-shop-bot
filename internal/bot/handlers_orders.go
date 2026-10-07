@@ -31,5 +31,6 @@ func (b *Bot) sendOrders(ctx context.Context, chatID, userID int64, msgID int, l
 	kb := StyledKeyboard{
 		{Btn(b.t(lang, "btn_back"), "back:menu"), Btn(b.t(lang, "btn_menu"), "back:menu")},
 	}
+	kb = append(kb, []StyledButton{Btn(b.t(lang, "digital_library_title"), "digital:library")})
 	b.sendOrEditStyled(chatID, msgID, b.formatOrdersText(lang, orders), "HTML", kb)
 }

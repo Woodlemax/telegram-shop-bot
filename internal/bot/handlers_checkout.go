@@ -216,6 +216,10 @@ func (b *Bot) onOrderConfirm(ctx context.Context, chatID, userID int64, msgID in
 	orderID, err := b.order.CreateFromCart(ctx, userID, view, promo)
 	if err != nil {
 		var stockErr *shop.ErrInsufficientStock
+		if errors.Is(err, storage.ErrDigitalArchiveNotReady) {
+			b.sendOrEditStyled(chatID, msgID, b.t(lang, "digital_archive_unavailable"), "", nil)
+			return
+		}
 		if errors.Is(err, storage.ErrSubscriptionOrderConflict) {
 			b.sendOrEditStyled(chatID, msgID, b.t(lang, "sub_already_active"), "", nil)
 			return
@@ -250,16 +254,17 @@ func (b *Bot) onOrderConfirm(ctx context.Context, chatID, userID int64, msgID in
 	))
 
 	// Subscription products are payable with Stars only — hide crypto.
-	cryptoOK := b.cryptoPaymentsEnabled() && !cartHasSubscription(view)
-	yookassaOK := b.yooKassaPaymentsEnabled() && !cartHasSubscription(view) && view.TotalRUB > 0
-	stripeOK := b.stripePaymentsEnabled() && !cartHasSubscription(view)
-	tonOK := b.tonPaymentsEnabled() && !cartHasSubscription(view) && view.TotalTONNano > 0
-	nowpaymentsOK := b.nowpaymentsEnabled() && !cartHasSubscription(view)
+	starsOnly := cartHasSubscription(view) || shop.CartHasDigital(view)
+	cryptoOK := b.cryptoPaymentsEnabled() && !starsOnly
+	yookassaOK := b.yooKassaPaymentsEnabled() && !starsOnly && view.TotalRUB > 0
+	stripeOK := b.stripePaymentsEnabled() && !starsOnly
+	tonOK := b.tonPaymentsEnabled() && !starsOnly && view.TotalTONNano > 0
+	nowpaymentsOK := b.nowpaymentsEnabled() && !starsOnly
 	// The internal balance rail is offered only for non-subscription orders
 	// when the buyer holds a positive balance; a lookup failure hides the row
 	// rather than blocking checkout.
 	balanceUSD := 0.0
-	if b.balances != nil && !cartHasSubscription(view) {
+	if b.balances != nil && !starsOnly {
 		if bal, balErr := b.balances.GetBalance(ctx, userID); balErr == nil {
 			balanceUSD = bal
 		} else if !errors.Is(balErr, storage.ErrNotFound) {

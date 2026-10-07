@@ -98,7 +98,7 @@ func (b *Bot) formatProductText(lang string, p *storage.Product) string {
 		escapeHTML(strings.TrimSpace(p.Description)),
 		p.PriceUSD,
 		p.PriceStars,
-		b.productStockText(lang, p.Stock),
+		b.productAvailabilityText(lang, p),
 	)
 }
 
@@ -130,7 +130,7 @@ func (b *Bot) formatCategoryProductsText(lang string, category *storage.Category
 			desc,
 			p.PriceUSD,
 			p.PriceStars,
-			b.productStockText(lang, p.Stock),
+			b.productAvailabilityText(lang, &p),
 		))
 	}
 

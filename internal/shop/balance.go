@@ -66,6 +66,17 @@ func (s *OrderService) ConfirmBalancePayment(ctx context.Context, orderID, userI
 	if order.SubscriptionProductID > 0 {
 		return nil, ErrBalanceSubscriptionUnsupported
 	}
+	if guard, ok := s.orders.(interface {
+		HasDigitalArchives(context.Context, int64) (bool, error)
+	}); ok {
+		digital, err := guard.HasDigitalArchives(ctx, orderID)
+		if err != nil {
+			return nil, err
+		}
+		if digital {
+			return nil, ErrBalanceSubscriptionUnsupported
+		}
+	}
 	// Cents rounding at the boundary, same rule as the storage store.
 	amountUSD := math.Round(order.TotalUSD*100) / 100
 	if amountUSD <= 0 {

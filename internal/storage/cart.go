@@ -26,7 +26,8 @@ func (s *SQLCartStore) AddItem(ctx context.Context, userID, productID int64) err
 		INSERT INTO cart_items (user_id, product_id, quantity)
 		VALUES (?, ?, 1)
 		ON CONFLICT(user_id, product_id) DO UPDATE SET
-			quantity = cart_items.quantity + 1
+			quantity = CASE WHEN EXISTS(SELECT 1 FROM products WHERE id=excluded.product_id AND is_digital=1)
+			 THEN 1 ELSE cart_items.quantity + 1 END
 	`
 	_, err := s.db.ExecContext(ctx, query, userID, productID)
 	return err

@@ -202,6 +202,7 @@ func runBot() {
 	// 7. Start Workers — every background goroutine goes through the group so
 	// shutdown can wait for them BEFORE the deferred db.Close() runs.
 	workers := newWorkerGroup()
+	workers.Start(ctx, "digital_delivery", b.RunDigitalDeliveries)
 
 	backupW := worker.NewBackupWorker(db.Conn(), 24*time.Hour)
 	workers.Start(ctx, "backup", backupW.Start)

@@ -249,7 +249,7 @@ func (b *Bot) productKeyboard(p *storage.Product, inWishlist bool, quantity int,
 	if inWishlist {
 		wishBtnLabel = "💔 " + b.t(lang, "btn_wishlist_remove")
 	}
-	return StyledKeyboard{
+	kb := StyledKeyboard{
 		{
 			Btn("➖", fmt.Sprintf("productqty:minus:%d", p.ID)),
 			Btn(b.productQuantityLabel(lang, quantity), "noop"),
@@ -262,6 +262,10 @@ func (b *Bot) productKeyboard(p *storage.Product, inWishlist bool, quantity int,
 			Btn(b.t(lang, "btn_menu"), "back:menu"),
 		},
 	}
+	if p.IsDigital {
+		kb = kb[1:]
+	}
+	return kb
 }
 
 func (b *Bot) cartQuantity(ctx context.Context, userID, prodID int64) (int, error) {

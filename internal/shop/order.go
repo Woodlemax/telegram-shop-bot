@@ -209,7 +209,7 @@ func (s *OrderService) CreateFromCart(ctx context.Context, userID int64, cartVie
 		if err != nil {
 			return 0, fmt.Errorf("order service: get product %d: %w", ci.Product.ID, err)
 		}
-		if !p.IsActive || p.Stock < ci.Quantity {
+		if !p.IsActive || (!p.IsDigital && p.Stock < ci.Quantity) {
 			return 0, fmt.Errorf("order service: %w", &ErrInsufficientStock{ProductName: p.Name, Have: p.Stock, Want: ci.Quantity})
 		}
 	}

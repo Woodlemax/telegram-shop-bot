@@ -233,7 +233,7 @@
       if (p.description) {
         screenEl.appendChild(el('p', 'product-desc', p.description));
       }
-      screenEl.appendChild(el('div', 'product-stock', tf('webapp_stock', p.stock)));
+      screenEl.appendChild(el('div', 'product-stock', p.is_digital ? t('digital_product') : tf('webapp_stock', p.stock)));
 
       var add = el('button', 'btn primary', t('webapp_add_to_cart'));
       add.type = 'button';
@@ -282,6 +282,7 @@
           var qty = el('span', 'qty', String(item.quantity));
           var plus = el('button', 'icon-btn', '+');
           plus.type = 'button';
+          plus.disabled = !!item.is_digital;
           plus.onclick = function () { changeQty(item.product_id, 1); };
           var del = el('button', 'icon-btn danger', '\u00d7');
           del.type = 'button';
@@ -309,10 +310,12 @@
       payStars.onclick = function () { checkout('stars', promo.value, payStars); };
       screenEl.appendChild(payStars);
 
+      if (!cart.stars_only) {
       var payCrypto = el('button', 'btn secondary', t('webapp_pay_crypto'));
       payCrypto.type = 'button';
       payCrypto.onclick = function () { checkout('crypto', promo.value, payCrypto); };
       screenEl.appendChild(payCrypto);
+      }
 
       // The four newer rails render only when the cart payload marks them
       // enabled (rail available, non-subscription cart, positive converted

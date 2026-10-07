@@ -124,6 +124,9 @@ func (b *Bot) sendAdminProductDetails(chatID int64, product *storage.Product, la
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData(b.t(lang, "admin_photo_btn"), fmt.Sprintf("admin:photos:%d", product.ID)),
 		),
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData(b.t(lang, "digital_admin_upload"), fmt.Sprintf("admin:archive:%d", product.ID)),
+		),
 	)
 
 	reply := tgbotapi.NewMessage(chatID, text)

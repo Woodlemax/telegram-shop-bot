@@ -63,7 +63,7 @@ func (s *SQLProductStore) GetProductsByCategory(ctx context.Context, categoryID 
 func (s *SQLProductStore) GetProductsByCategoryPaged(ctx context.Context, categoryID int64, limit, offset int) ([]Product, int, error) {
 	var total int
 	if err := s.db.QueryRowContext(ctx,
-		"SELECT COUNT(*) FROM products WHERE category_id = ? AND is_active = 1 AND stock > 0", categoryID,
+		"SELECT COUNT(*) FROM products WHERE category_id = ? AND is_active = 1 AND (stock > 0 OR is_digital = 1)", categoryID,
 	).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("product store: count paged products: %w", err)
 	}
@@ -71,7 +71,7 @@ func (s *SQLProductStore) GetProductsByCategoryPaged(ctx context.Context, catego
 	rows, err := s.db.QueryContext(ctx,
 		`SELECT id, category_id, name, COALESCE(description, ''), COALESCE(photo_url, ''),
 		        price_usd, COALESCE(price_stars, 0), stock, is_digital, COALESCE(digital_content, ''), is_active, sub_period_days, created_at
-		 FROM products WHERE category_id = ? AND is_active = 1 AND stock > 0
+		 FROM products WHERE category_id = ? AND is_active = 1 AND (stock > 0 OR is_digital = 1)
 		 ORDER BY id LIMIT ? OFFSET ?`, categoryID, limit, offset)
 	if err != nil {
 		return nil, 0, fmt.Errorf("product store: get paged products: %w", err)
@@ -198,7 +198,7 @@ func (s *SQLProductStore) SearchProducts(ctx context.Context, query string) ([]P
 		`SELECT id, category_id, name, COALESCE(description, ''), COALESCE(photo_url, ''),
 		        price_usd, COALESCE(price_stars, 0), stock, is_digital, COALESCE(digital_content, ''), is_active, sub_period_days, created_at
 		 FROM products
-		 WHERE is_active = 1 AND stock > 0 AND (name LIKE ? OR description LIKE ?)
+		 WHERE is_active = 1 AND (stock > 0 OR is_digital = 1) AND (name LIKE ? OR description LIKE ?)
 		 ORDER BY name`,
 		pattern, pattern)
 	if err != nil {
