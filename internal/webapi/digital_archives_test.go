@@ -8,37 +8,38 @@ import (
 	"testing"
 )
 
-func TestDigitalMiniAppStarsOnly(t *testing.T) {
-	f := newFixture(t)
-	p := f.cart.products[1]
-	p.IsDigital = true
-	f.cart.products[1] = p
-	f.request(t, http.MethodPost, "/api/cart", `{"product_id":1,"delta":1}`, true)
-	response := f.request(t, http.MethodGet, "/api/cart", "", true)
-	var cart map[string]any
-	if err := json.Unmarshal(response.Body.Bytes(), &cart); err != nil {
-		t.Fatal(err)
-	}
-	if cart["stars_only"] != true {
-		t.Fatal("digital cart not marked Stars-only")
-	}
-	for _, key := range []string{"yookassa_enabled", "stripe_enabled", "ton_enabled", "nowpayments_enabled"} {
-		if cart[key] != false {
-			t.Fatalf("%s offered for digital purchase", key)
-		}
-	}
-	for _, rail := range []string{"crypto", "yookassa", "stripe", "ton", "nowpayments"} {
-		response = f.request(t, http.MethodPost, "/api/checkout", fmt.Sprintf(`{"method":%q}`, rail), true)
-		if response.Code != http.StatusBadRequest || !strings.Contains(response.Body.String(), "digital_stars_only") {
-			t.Fatalf("%s: %d %s", rail, response.Code, response.Body.String())
-		}
-	}
-	if len(f.orders.created) != 0 || f.tg.endpoint != "" {
-		t.Fatal("rejected rail created an order or invoice")
-	}
-	response = f.request(t, http.MethodPost, "/api/checkout", `{"method":"stars"}`, true)
-	if response.Code != http.StatusOK {
-		t.Fatalf("Stars: %d %s", response.Code, response.Body.String())
+func TestDigitalMiniAppPaymentRails(t *testing.T) {
+	for _, rail := range []string{"stars", "crypto", "yookassa", "stripe", "ton", "nowpayments"} {
+		t.Run(rail, func(t *testing.T) {
+			f := newFixture(t)
+			f.cart.rubRate = 92.5
+			f.cart.tonRate = 5
+			f.orders.tonRate = 5
+			p := f.cart.products[1]
+			p.IsDigital = true
+			f.cart.products[1] = p
+			f.request(t, http.MethodPost, "/api/cart", `{"product_id":1,"delta":1}`, true)
+			response := f.request(t, http.MethodGet, "/api/cart", "", true)
+			var cart map[string]any
+			if err := json.Unmarshal(response.Body.Bytes(), &cart); err != nil {
+				t.Fatal(err)
+			}
+			if cart["stars_only"] != false {
+				t.Fatal("digital cart still marked Stars-only")
+			}
+			for _, key := range []string{"yookassa_enabled", "stripe_enabled", "ton_enabled", "nowpayments_enabled"} {
+				if cart[key] != true {
+					t.Fatalf("%s missing for digital purchase", key)
+				}
+			}
+			response = f.request(t, http.MethodPost, "/api/checkout", fmt.Sprintf(`{"method":%q}`, rail), true)
+			if response.Code != http.StatusOK {
+				t.Fatalf("%s: %d %s", rail, response.Code, response.Body.String())
+			}
+			if len(f.orders.created) != 1 {
+				t.Fatal("checkout did not create exactly one order")
+			}
+		})
 	}
 }
 

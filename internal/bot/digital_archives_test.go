@@ -5,11 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"strconv"
 	"strings"
 	"testing"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"shop_bot/internal/config"
 	"shop_bot/internal/storage"
 )
 
@@ -182,32 +184,168 @@ func TestDigitalArchiveRetryAndLeaseRecovery(t *testing.T) {
 	}
 }
 
-func TestDigitalArchiveRejectsOtherRailsAndQuantity(t *testing.T) {
+func TestDigitalArchivePaymentRailsAndQuantity(t *testing.T) {
 	e := newE2EEnv(t)
 	ctx := context.Background()
-	buyer := int64(784)
-	uploadDigital(e, "stars-only-zip")
-	e.cmd(buyer, "/start", "ru")
-	id := e.placeOrder(buyer, e.prodReg, "")
-	calls := e.cb(buyer, fmt.Sprintf("pay:balance:%d", id), "ru")
-	denied := false
-	for _, c := range calls {
-		if c.Method == "answerCallbackQuery" && strings.Contains(c.Params.Get("text"), "Stars") {
-			denied = true
-		}
-	}
-	if !denied {
-		t.Fatalf("balance callback not denied: %+v", calls)
-	}
+	uploadDigital(e, "all-rails-zip")
 	orders := storage.NewSQLOrderStore(e.db)
-	if err := orders.UpdateOrderStatus(ctx, id, storage.OrderStatusPending, storage.OrderStatusPaid, storage.PaymentMethodCrypto, "crypto-charge"); !errors.Is(err, storage.ErrPaymentReceiptMismatch) {
-		t.Fatalf("non-Stars settlement: %v", err)
+	for i, rail := range []struct {
+		provider, currency string
+		amount             int64
+		scale              int
+		payer              bool
+	}{
+		{storage.PaymentMethodStars, "XTR", 500, 0, true},
+		{storage.PaymentMethodCrypto, "USDT", 1000, 2, true},
+		{storage.PaymentMethodYooKassa, "RUB", 92500, 2, false},
+		{storage.PaymentMethodStripe, "USD", 1000, 2, false},
+		{storage.PaymentMethodTON, "TON", 2_000_000_000, 9, false},
+		{storage.PaymentMethodNowpayments, "USD", 1000, 2, false},
+		{storage.PaymentMethodBalance, "USD", 1000, 2, true},
+	} {
+		t.Run(rail.provider, func(t *testing.T) {
+			buyer := int64(800 + i)
+			e.cmd(buyer, "/start", "ru")
+			id := e.placeOrder(buyer, e.prodReg, "")
+			if _, err := e.db.Conn().Exec("UPDATE orders SET total_rub=925,total_ton_nano=2000000000 WHERE id=?", id); err != nil {
+				t.Fatal(err)
+			}
+			fact := storage.PaymentFact{Provider: rail.provider, ExternalID: "digital-" + rail.provider,
+				AmountMinor: rail.amount, Currency: rail.currency, Scale: rail.scale}
+			if rail.payer {
+				fact.PayerID = buyer
+			}
+			wrong := fact
+			wrong.AmountMinor--
+			if err := orders.UpdateOrderStatusWithPaymentFact(ctx, id, storage.OrderStatusPending, storage.OrderStatusPaid, wrong); !errors.Is(err, storage.ErrPaymentReceiptMismatch) {
+				t.Fatalf("underpayment accepted: %v", err)
+			}
+			before := e.tg.count()
+			e.bot.ProcessDigitalDeliveries(ctx)
+			if len(documentCalls(e.tg.since(before))) != 0 {
+				t.Fatal("archive sent before confirmed payment")
+			}
+			if err := orders.UpdateOrderStatusWithPaymentFact(ctx, id, storage.OrderStatusPending, storage.OrderStatusPaid, fact); err != nil {
+				t.Fatal(err)
+			}
+			deliveryID := e.qInt("SELECT id FROM digital_deliveries WHERE order_id=?", id)
+			// A different payment identifier must not unlock a file through an unrelated ledger entry.
+			if _, err := e.db.Conn().Exec("UPDATE orders SET payment_id='unverified' WHERE id=?", id); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := e.bot.archives.Owned(ctx, buyer, deliveryID); !errors.Is(err, storage.ErrNotFound) {
+				t.Fatalf("unverified payment access: %v", err)
+			}
+			if _, err := e.db.Conn().Exec("UPDATE orders SET payment_id=? WHERE id=?", fact.ExternalID, id); err != nil {
+				t.Fatal(err)
+			}
+			before = e.tg.count()
+			e.bot.ProcessDigitalDeliveries(ctx)
+			docs := documentCalls(e.tg.since(before))
+			if len(docs) != 1 || docs[0].Params.Get("document") != "all-rails-zip" || docs[0].Params.Get("chat_id") != strconv.FormatInt(buyer, 10) {
+				t.Fatalf("delivery: %+v", docs)
+			}
+			if e.qStr("SELECT status FROM orders WHERE id=?", id) != "delivered" {
+				t.Fatal("delivery not recorded")
+			}
+			if _, err := e.bot.archives.Owned(ctx, buyer, deliveryID); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := e.db.Conn().Exec("UPDATE orders SET payment_state='refunded' WHERE id=?", id); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := e.bot.archives.Owned(ctx, buyer, deliveryID); !errors.Is(err, storage.ErrNotFound) {
+				t.Fatalf("refunded access: %v", err)
+			}
+		})
 	}
-	if e.qStr("SELECT status FROM orders WHERE id=?", id) != "pending" {
-		t.Fatal("rejected payment changed order")
+	if got := e.qInt("SELECT stock FROM products WHERE id=?", e.prodReg); got != 5 {
+		t.Fatalf("digital stock decremented: %d", got)
 	}
-	_, err := orders.CreateOrder(ctx, &storage.Order{UserID: buyer, TotalUSD: 20, TotalStars: 1000, Status: storage.OrderStatusPending}, []storage.OrderItem{{ProductID: e.prodReg, ProductName: "Plane", Quantity: 2, PriceUSD: 10}})
+	_, err := orders.CreateOrder(ctx, &storage.Order{UserID: 800, TotalUSD: 20, TotalStars: 1000, Status: storage.OrderStatusPending}, []storage.OrderItem{{ProductID: e.prodReg, ProductName: "Plane", Quantity: 2, PriceUSD: 10}})
 	if !errors.Is(err, storage.ErrDigitalArchiveNotReady) {
 		t.Fatalf("digital quantity accepted: %v", err)
+	}
+}
+
+func TestDigitalArchiveBalanceCheckout(t *testing.T) {
+	e := newE2EEnv(t)
+	ctx := context.Background()
+	const buyer = int64(9110)
+	uploadDigital(e, "balance-zip")
+	e.cmd(buyer, "/start", "en")
+	e.cmd(e2eAdminID, fmt.Sprintf("/setbalance %d 25.00 test credit", buyer), "en")
+	e.cb(buyer, fmt.Sprintf("cart:add:%d", e.prodReg), "en")
+	e.cb(buyer, "cart:checkout", "en")
+	calls := e.cb(buyer, "order:confirm", "en")
+	id := e.qInt("SELECT MAX(id) FROM orders WHERE user_id=?", buyer)
+	screen := requireRender(t, calls, fmt.Sprintf("pay:stars:%d", id))
+	if !strings.Contains(screen.markup(), fmt.Sprintf("pay:balance:%d", id)) {
+		t.Fatal("balance button missing")
+	}
+	e.cb(buyer, fmt.Sprintf("pay:balance:%d", id), "en")
+	if e.qStr("SELECT payment_method FROM orders WHERE id=?", id) != storage.PaymentMethodBalance {
+		t.Fatal("balance payment not settled")
+	}
+	before := e.tg.count()
+	e.bot.ProcessDigitalDeliveries(ctx)
+	if len(documentCalls(e.tg.since(before))) != 1 {
+		t.Fatal("balance purchase did not deliver archive")
+	}
+	e.cb(buyer, fmt.Sprintf("pay:balance:%d", id), "en")
+	if got := e.qStr("SELECT printf('%.2f',balance_usd) FROM users WHERE telegram_id=?", buyer); got != "15.00" {
+		t.Fatalf("balance charged twice: %s", got)
+	}
+}
+
+func TestDigitalArchiveYooKassaCheckout(t *testing.T) {
+	api := newYookassaE2EAPIMock(t)
+	e := newE2EEnvWithConfig(t, func(c *config.Config) { enableYooKassa(c) })
+	e.bot.yookassa.SetBaseURL(api.srv.URL + "/v3")
+	const buyer = int64(5010)
+	uploadDigital(e, "card-zip-v1")
+	e.cmd(buyer, "/start", "en")
+	e.cb(buyer, fmt.Sprintf("cart:add:%d", e.prodReg), "en")
+	e.cb(buyer, "cart:checkout", "en")
+	calls := e.cb(buyer, "order:confirm", "en")
+	id := e.qInt("SELECT MAX(id) FROM orders WHERE user_id=?", buyer)
+	screen := requireRender(t, calls, fmt.Sprintf("pay:stars:%d", id))
+	if !strings.Contains(screen.markup(), fmt.Sprintf("pay:yookassa:%d", id)) {
+		t.Fatal("card button missing")
+	}
+	calls = e.cb(buyer, fmt.Sprintf("pay:yookassa:%d", id), "en")
+	requireRender(t, calls, yookassaE2EConfirmationURL)
+	before := e.tg.count()
+	e.bot.ProcessDigitalDeliveries(context.Background())
+	if len(documentCalls(e.tg.since(before))) != 0 {
+		t.Fatal("payment link unlocked archive before payment")
+	}
+	api.setRefetch(yookassaRefetchJSON("pay_e2e", "succeeded", "925.00", true, id))
+	body := yookassaNotificationBody("payment.succeeded", "pay_e2e")
+	post := func() {
+		rec := httptest.NewRecorder()
+		e.bot.YooKassaWebhookHandler()(rec, httptest.NewRequest(http.MethodPost, "/yookassa-webhook", strings.NewReader(body)))
+		if rec.Code != http.StatusOK {
+			t.Fatalf("payment webhook: %d %s", rec.Code, rec.Body.String())
+		}
+	}
+	post()
+	before = e.tg.count()
+	e.bot.ProcessDigitalDeliveries(context.Background())
+	docs := documentCalls(e.tg.since(before))
+	if len(docs) != 1 || docs[0].Params.Get("document") != "card-zip-v1" {
+		t.Fatalf("card delivery: %+v", docs)
+	}
+	post()
+	before = e.tg.count()
+	e.bot.ProcessDigitalDeliveries(context.Background())
+	if len(documentCalls(e.tg.since(before))) != 0 {
+		t.Fatal("duplicate payment notification resent ZIP")
+	}
+	uploadDigital(e, "card-zip-v2")
+	deliveryID := e.qInt("SELECT id FROM digital_deliveries WHERE order_id=?", id)
+	docs = documentCalls(e.cb(buyer, fmt.Sprintf("digital:download:%d", deliveryID), "en"))
+	if len(docs) != 1 || docs[0].Params.Get("document") != "card-zip-v2" {
+		t.Fatalf("updated card purchase: %+v", docs)
 	}
 }

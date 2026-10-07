@@ -19,12 +19,6 @@ func NewSQLOrderStore(d *DB) *SQLOrderStore {
 	return &SQLOrderStore{db: d.Conn()}
 }
 
-func (s *SQLOrderStore) HasDigitalArchives(ctx context.Context, orderID int64) (bool, error) {
-	var digital bool
-	err := s.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM digital_deliveries WHERE order_id=?)`, orderID).Scan(&digital)
-	return digital, err
-}
-
 // CreateOrder inserts an order and its items within a transaction. Returns the
 // new order ID.
 func (s *SQLOrderStore) CreateOrder(ctx context.Context, order *Order, items []OrderItem) (int64, error) {
@@ -482,13 +476,6 @@ func (s *SQLOrderStore) updateOrderStatusOnce(ctx context.Context, id int64, fro
 	}
 	var attemptID int64
 	if status == OrderStatusPaid {
-		var digital bool
-		if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM digital_deliveries WHERE order_id=?)`, id).Scan(&digital); err != nil {
-			return err
-		}
-		if digital && methodExpr != PaymentMethodStars {
-			return ErrPaymentReceiptMismatch
-		}
 		var entitlementExpiry *time.Time
 		if sub != nil {
 			entitlementExpiry = &sub.ExpiresAt

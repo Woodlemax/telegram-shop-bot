@@ -11,7 +11,7 @@ Telegram. Real delivery of the owner's archive must still be checked in Telegram
 2. Open `/admin`, select the product, and press **Upload / replace ZIP**.
    Alternatively send `/setarchive <product_id>`.
 3. Send the `.zip` as a document within 15 minutes. `/cancel` cancels the upload.
-4. The product becomes digital and payable with Telegram Stars. Subscription
+4. The product becomes digital and uses the shop's configured payment methods. Subscription
    products cannot have ZIP archives. Each digital product is ordered once per
    cart, and completed digital sales do not reduce its stock.
 
@@ -22,8 +22,12 @@ There is no public download URL or file identifier in the catalog API.
 ## Payment and delivery
 
 A delivery row is created in the **same transaction as the order**. A worker runs
-every five seconds and admits only orders with a settled Stars payment and a
-successful Stars ledger entry. Unpaid, canceled, quarantined, refunded and
+every five seconds and admits only orders with a settled payment and a
+successful ledger entry matching the order's provider and payment identifier.
+Supported methods are Stars, CryptoBot, YooKassa, Stripe, TON, NOWPayments and
+internal balance. Provider availability, configured exchange rates and positive
+balance determine which payment buttons appear. No provider keys are enabled
+automatically by attaching a ZIP. Unpaid, canceled, quarantined, refunded and
 partially refunded orders do not grant downloads. The buyer's Telegram ID is the
 recipient; callbacks cannot request another user's files or a group destination.
 
@@ -54,9 +58,17 @@ is retained for history.
 
 Tests use the real order/payment storage with an imitation Telegram API:
 80 MB document metadata, administrative permissions, ZIP validation, expiration
-and cancellation, no delivery before payment, Stars confirmation, no stock
+and cancellation, no delivery before payment, confirmation through every supported
+payment method, incorrect amounts and payment identifiers, balance checkout, no stock
 decrement, payment replay, updated access for previous buyers, ownership checks,
 revoked access, send failure, exclusive claims and expired-lease recovery.
-Mini App tests cover Stars-only checkout and keeping archive identifiers private.
+Mini App tests cover checkout with every configured provider and keeping archive identifiers private.
 
-Real Stars charges are not used in automated checks.
+Real payments are not used in automated checks.
+
+## Telegram payment requirements
+
+Telegram requires Stars for digital goods sold inside bots and Mini Apps:
+https://core.telegram.org/bots/payments-stars#faq. This fork does not enforce
+that restriction for ZIP products. Recurring subscription products retain their
+existing Stars-only payment path.

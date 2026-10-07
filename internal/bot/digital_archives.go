@@ -107,7 +107,7 @@ func (b *Bot) sendDigitalDocument(ctx context.Context, d *storage.DigitalDeliver
 }
 
 // The durable queue is populated when the order is created. Claim only admits
-// settled Stars orders, so delivery survives a crash immediately after payment.
+// settled orders, so delivery survives a crash immediately after payment.
 func (b *Bot) ProcessDigitalDeliveries(ctx context.Context) {
 	if b.archives == nil {
 		return

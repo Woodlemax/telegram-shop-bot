@@ -254,7 +254,7 @@ func (b *Bot) onOrderConfirm(ctx context.Context, chatID, userID int64, msgID in
 	))
 
 	// Subscription products are payable with Stars only — hide crypto.
-	starsOnly := cartHasSubscription(view) || shop.CartHasDigital(view)
+	starsOnly := cartHasSubscription(view)
 	cryptoOK := b.cryptoPaymentsEnabled() && !starsOnly
 	yookassaOK := b.yooKassaPaymentsEnabled() && !starsOnly && view.TotalRUB > 0
 	stripeOK := b.stripePaymentsEnabled() && !starsOnly

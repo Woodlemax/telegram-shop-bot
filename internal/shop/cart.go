@@ -29,18 +29,6 @@ type CartItemView struct {
 	Quantity int
 }
 
-func CartHasDigital(view *CartView) bool {
-	if view == nil {
-		return false
-	}
-	for _, item := range view.Items {
-		if item.Product.IsDigital {
-			return true
-		}
-	}
-	return false
-}
-
 // CartService provides business logic for managing a user's shopping cart.
 type CartService struct {
 	cart     storage.CartStore

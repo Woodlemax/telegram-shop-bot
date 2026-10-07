@@ -202,25 +202,6 @@ func (b *Bot) handleCallback(ctx context.Context, cb *tgbotapi.CallbackQuery) {
 	msgID := cb.Message.MessageID
 	userID := cb.From.ID
 	lang := cb.From.LanguageCode
-	if strings.HasPrefix(data, "pay:") && !strings.HasPrefix(data, "pay:stars:") && b.archives != nil {
-		parts := strings.Split(data, ":")
-		if len(parts) == 3 {
-			id, err := strconv.ParseInt(parts[2], 10, 64)
-			if err == nil {
-				if _, err := b.loadPayableOrder(ctx, userID, id); err == nil {
-					digital, err := b.archives.OrderHasArchives(ctx, id)
-					if err != nil {
-						b.alert(cb.ID, b.t(lang, "error_short"))
-						return
-					}
-					if digital {
-						b.alert(cb.ID, b.t(lang, "digital_stars_only"))
-						return
-					}
-				}
-			}
-		}
-	}
 
 	switch {
 	case data == "digital:library":

@@ -414,7 +414,7 @@ func (s *Server) cartJSON(view *shop.CartView) map[string]any {
 	items := make([]map[string]any, 0, len(view.Items))
 	sub := false
 	for _, it := range view.Items {
-		if it.Product.SubPeriodDays > 0 || it.Product.IsDigital {
+		if it.Product.SubPeriodDays > 0 {
 			sub = true
 		}
 		items = append(items, map[string]any{
@@ -574,10 +574,6 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request, auth *Au
 	}
 	if len(view.Items) == 0 {
 		s.writeError(w, http.StatusBadRequest, "webapp_err_empty_cart")
-		return
-	}
-	if shop.CartHasDigital(view) && req.Method != storage.PaymentMethodStars {
-		s.writeError(w, http.StatusBadRequest, "digital_stars_only")
 		return
 	}
 	if err := shop.ValidateSubscriptionCart(view); err != nil {

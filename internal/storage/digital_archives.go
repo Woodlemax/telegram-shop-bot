@@ -133,14 +133,9 @@ func snapshotDigitalArchive(ctx context.Context, tx *sql.Tx, orderID int64, item
 	return nil
 }
 
-func (s *DigitalArchiveStore) OrderHasArchives(ctx context.Context, orderID int64) (bool, error) {
-	var found bool
-	err := s.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM digital_deliveries WHERE order_id=?)`, orderID).Scan(&found)
-	return found, err
-}
-
-const digitalEntitlement = `o.order_state IN ('placed','completed') AND o.status IN ('paid','delivered') AND o.payment_state='settled' AND o.payment_method='stars'
-    AND EXISTS(SELECT 1 FROM payment_attempts p WHERE p.order_id=o.id AND p.provider='stars' AND p.status='succeeded')`
+const digitalEntitlement = `o.order_state IN ('placed','completed') AND o.status IN ('paid','delivered') AND o.payment_state='settled'
+    AND EXISTS(SELECT 1 FROM payment_attempts p WHERE p.order_id=o.id AND p.provider=o.payment_method
+        AND p.external_id=o.payment_id AND p.status='succeeded')`
 
 // Claim is atomic across workers. Expired leases recover interrupted sends.
 func (s *DigitalArchiveStore) Claim(ctx context.Context) (*DigitalDelivery, error) {
