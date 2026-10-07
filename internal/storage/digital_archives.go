@@ -261,3 +261,60 @@ func (s *DigitalArchiveStore) Library(ctx context.Context, userID int64) ([]Digi
 	}
 	return items, nil
 }
+
+// ForOrder has no library page limit: previous purchases remain downloadable.
+func (s *DigitalArchiveStore) ForOrder(ctx context.Context, userID, orderID int64) ([]DigitalDelivery, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT d.id FROM digital_deliveries d JOIN orders o ON o.id=d.order_id
+        WHERE o.user_id=? AND o.id=? AND `+digitalEntitlement+` ORDER BY d.id`, userID, orderID)
+	if err != nil {
+		return nil, err
+	}
+	var ids []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return nil, err
+	}
+	items := make([]DigitalDelivery, 0, len(ids))
+	for _, id := range ids {
+		d, err := s.get(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, *d)
+	}
+	return items, nil
+}
+
+// RequestOrderDownload reuses the durable delivery queue, without changing the
+// order, stock or payment. Requests while pending/sending share the same row and
+// never invalidate an in-flight worker lease. Entitlement is checked atomically.
+func (s *DigitalArchiveStore) RequestOrderDownload(ctx context.Context, userID, orderID, productID int64) error {
+	res, err := s.db.ExecContext(ctx, `UPDATE digital_deliveries SET
+        state=CASE WHEN state='sent' THEN 'pending' ELSE state END,
+        available_at=CASE WHEN state IN ('sent','pending') THEN 0 ELSE available_at END,
+        attempts=CASE WHEN state='sent' THEN 0 ELSE attempts END,
+        lease_until=CASE WHEN state='sent' THEN 0 ELSE lease_until END,
+        lease_token=CASE WHEN state='sent' THEN '' ELSE lease_token END
+        WHERE order_id=? AND product_id=? AND EXISTS(SELECT 1 FROM orders o
+        WHERE o.id=digital_deliveries.order_id AND o.user_id=? AND `+digitalEntitlement+`)`, orderID, productID, userID)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n != 1 {
+		return ErrNotFound
+	}
+	return nil
+}

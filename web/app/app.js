@@ -15,7 +15,6 @@
   var titleEl = document.getElementById('title');
   var backBtn = document.getElementById('back-btn');
   var cartBtn = document.getElementById('cart-btn');
-  var ordersBtn = document.getElementById('orders-btn');
   var cartBadge = document.getElementById('cart-badge');
 
   // ---- i18n ----------------------------------------------------------------
@@ -160,9 +159,6 @@
     loading();
     api('GET', '/api/catalog').then(function (data) {
       clearScreen();
-    var orders = el('button', 'btn secondary orders-link', t('btn_orders'));
-    orders.type = 'button'; orders.onclick = function () { push(renderOrders); };
-    screenEl.appendChild(orders);
       var list = el('div', 'list');
       for (var i = 0; i < data.categories.length; i++) {
         (function (cat) {
@@ -176,6 +172,9 @@
         list.appendChild(el('div', 'empty', t('webapp_empty')));
       }
       screenEl.appendChild(list);
+      var orders = el('button', 'btn secondary catalog-orders', t('btn_orders'));
+      orders.type = 'button'; orders.onclick = function () { push(renderOrders); };
+      screenEl.appendChild(orders);
     }).catch(showError);
   }
 
@@ -519,7 +518,17 @@
       var list = el('div', 'list');
       for (var i = 0; i < order.items.length; i++) {
         var item = order.items[i];
-        list.appendChild(el('div', 'order-item', item.name + ' × ' + item.quantity));
+        var row = el('div', 'order-item', item.name + ' × ' + item.quantity);
+        if (item.download_available) {
+          row.appendChild(el('div', 'card-price', item.archive_name));
+          (function (productID, parent) {
+            var download = el('button', 'btn primary', t('webapp_order_download'));
+            download.type = 'button';
+            download.onclick = function () { downloadOrderArchive(order.id, productID, download); };
+            parent.appendChild(download);
+          })(item.product_id, row);
+        }
+        list.appendChild(row);
       }
       screenEl.appendChild(list);
       screenEl.appendChild(el('div', 'cart-total', t('webapp_total') + ': ' + orderTotal(order)));
@@ -527,6 +536,15 @@
       var refresh = el('button', 'btn secondary', t('webapp_orders_refresh'));
       refresh.type = 'button'; refresh.onclick = function () { renderOrder(id); }; screenEl.appendChild(refresh);
     }).catch(function (err) { historyFailure(err, function () { renderOrder(id); }); });
+  }
+
+  function downloadOrderArchive(orderID, productID, button) {
+    button.disabled = true;
+    api('POST', '/api/orders/' + orderID + '/download', {product_id: productID}).then(function () {
+      button.disabled = false;
+      if (tg && tg.showAlert) { tg.showAlert(t('webapp_order_download_queued')); }
+      else { alert(t('webapp_order_download_queued')); }
+    }).catch(function (err) { button.disabled = false; showError(err); });
   }
 
   // ---- boot ---------------------------------------------------------------------
@@ -554,7 +572,6 @@
 
     backBtn.onclick = pop;
     cartBtn.onclick = function () { push(renderCart); };
-  ordersBtn.onclick = function () { push(renderOrders); };
 
     var lang = '';
     if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
@@ -565,7 +582,6 @@
       return resp.json();
     }).then(function (data) {
       dict = data || {};
-    ordersBtn.title = t('btn_orders'); ordersBtn.setAttribute('aria-label', t('btn_orders'));
     }).catch(function () {
       dict = {};
     }).then(function () {

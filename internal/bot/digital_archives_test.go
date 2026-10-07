@@ -93,6 +93,22 @@ func TestDigitalArchivePaymentAndReplacement(t *testing.T) {
 	if len(docs) != 1 || docs[0].Params.Get("document") != "zip-80mb-v2" {
 		t.Fatalf("updated download=%+v", docs)
 	}
+	// The Mini App queues repeat downloads through the same delivery worker.
+	for i := 0; i < 2; i++ {
+		if err := e.bot.archives.RequestOrderDownload(ctx, buyer, orderID, e.prodReg); err != nil {
+			t.Fatal(err)
+		}
+	}
+	before = e.tg.count()
+	e.bot.ProcessDigitalDeliveries(ctx)
+	e.bot.ProcessDigitalDeliveries(ctx)
+	docs = documentCalls(e.tg.since(before))
+	if len(docs) != 1 || docs[0].Params.Get("document") != "zip-80mb-v2" || docs[0].Params.Get("chat_id") != strconv.FormatInt(buyer, 10) {
+		t.Fatalf("queued download=%+v", docs)
+	}
+	if err := e.bot.archives.RequestOrderDownload(ctx, buyer+1, orderID, e.prodReg); !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("foreign queued download: %v", err)
+	}
 	calls = e.cb(buyer+1, fmt.Sprintf("digital:download:%d", deliveryID), "ru")
 	if len(documentCalls(calls)) != 0 {
 		t.Fatal("foreign purchase allowed")
@@ -106,6 +122,9 @@ func TestDigitalArchivePaymentAndReplacement(t *testing.T) {
 	}
 	if _, err := e.bot.archives.Owned(ctx, buyer, deliveryID); !errors.Is(err, storage.ErrNotFound) {
 		t.Fatalf("refunded entitlement: %v", err)
+	}
+	if err := e.bot.archives.RequestOrderDownload(ctx, buyer, orderID, e.prodReg); !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("refunded queued download: %v", err)
 	}
 }
 

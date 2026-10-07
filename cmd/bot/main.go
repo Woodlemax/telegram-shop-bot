@@ -327,6 +327,7 @@ func runBot() {
 			TON:         tonPayments,
 			Nowpayments: nowpaymentsPayments,
 			Files:       b.API(),
+			Archives:    storage.NewDigitalArchiveStore(db),
 			// Rendered-availability flags for the Mini App cart payload —
 			// the exact predicates of the bot's payment keyboard (bot.go:
 			// yooKassaPaymentsEnabled & co.): configured credentials, plus

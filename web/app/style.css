@@ -192,6 +192,7 @@ body {
 .open-price label { display: block; }
 .open-price .btn { font-size: 14px; padding: 10px; }
 .orders-link { margin: 0 0 12px; }
+.catalog-orders { margin-top: 16px; margin-bottom: 0; }
 .order-card { width: 100%; text-align: left; padding: 14px; border: none; border-radius: 12px; background: var(--secondary-bg); color: var(--text); cursor: pointer; font: inherit; }
 .order-heading { font-weight: 600; font-size: 16px; margin: 0 0 8px; overflow-wrap: anywhere; }
 .order-status { font-size: 14px; margin-bottom: 6px; }

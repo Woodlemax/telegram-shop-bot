@@ -120,6 +120,11 @@ type FileURLResolver interface {
 	GetFileDirectURL(fileID string) (string, error)
 }
 
+type OrderArchives interface {
+	ForOrder(context.Context, int64, int64) ([]storage.DigitalDelivery, error)
+	RequestOrderDownload(context.Context, int64, int64, int64) error
+}
+
 // Localizer is the slice of service.I18nService the API consumes.
 type Localizer interface {
 	T(lang, key string) string
@@ -145,6 +150,7 @@ type Deps struct {
 	TON         TONLinker
 	Nowpayments NowpaymentsInvoicer
 	Files       FileURLResolver
+	Archives    OrderArchives
 
 	// The *Available flags are the config-level rail availability rendered
 	// into the cart payload as *_enabled booleans. main computes them with
@@ -204,6 +210,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/checkout", s.withAuth(s.handleCheckout))
 	mux.HandleFunc("GET /api/orders", s.withAuth(s.handleOrders))
 	mux.HandleFunc("GET /api/orders/{id}", s.withAuth(s.handleOrder))
+	mux.HandleFunc("POST /api/orders/{id}/download", s.withAuth(s.handleOrderDownload))
 	mux.HandleFunc("GET /api/photo/{file_id}", s.withAuth(s.handlePhoto))
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
 		s.writeError(w, http.StatusNotFound, "webapp_err_not_found")

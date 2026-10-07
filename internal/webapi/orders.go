@@ -26,9 +26,11 @@ type orderJSON struct {
 	Items         []orderItemJSON `json:"items"`
 }
 type orderItemJSON struct {
-	ProductID int64  `json:"product_id"`
-	Name      string `json:"name"`
-	Quantity  int    `json:"quantity"`
+	ProductID         int64  `json:"product_id"`
+	Name              string `json:"name"`
+	Quantity          int    `json:"quantity"`
+	DownloadAvailable bool   `json:"download_available"`
+	ArchiveName       string `json:"archive_name,omitempty"`
 }
 
 func toOrderJSON(o *storage.Order) orderJSON {
@@ -80,5 +82,57 @@ func (s *Server) handleOrder(w http.ResponseWriter, r *http.Request, auth *AuthR
 		s.writeError(w, http.StatusInternalServerError, "webapp_err_internal")
 		return
 	}
-	s.writeJSON(w, http.StatusOK, map[string]any{"order": toOrderJSON(o)})
+	result := toOrderJSON(o)
+	if s.deps.Archives != nil {
+		files, err := s.deps.Archives.ForOrder(r.Context(), auth.User.ID, id)
+		if err != nil {
+			s.logger.Error("webapi: order archives unavailable", "order_id", id)
+			s.writeError(w, http.StatusInternalServerError, "webapp_err_internal")
+			return
+		}
+		for i := range result.Items {
+			for _, file := range files {
+				if file.ProductID == result.Items[i].ProductID {
+					result.Items[i].DownloadAvailable = true
+					result.Items[i].ArchiveName = file.FileName
+					break
+				}
+			}
+		}
+	}
+	s.writeJSON(w, http.StatusOK, map[string]any{"order": result})
+}
+
+func (s *Server) handleOrderDownload(w http.ResponseWriter, r *http.Request, auth *AuthResult) {
+	w.Header().Set("Cache-Control", "no-store")
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	var req struct {
+		ProductID int64 `json:"product_id"`
+	}
+	if err != nil || id <= 0 {
+		s.writeError(w, http.StatusBadRequest, "webapp_err_bad_request")
+		return
+	}
+	if !s.decodeBody(w, r, &req) {
+		return
+	}
+	if req.ProductID <= 0 {
+		s.writeError(w, http.StatusBadRequest, "webapp_err_bad_request")
+		return
+	}
+	if s.deps.Archives == nil {
+		s.writeError(w, http.StatusNotFound, "digital_no_access")
+		return
+	}
+	err = s.deps.Archives.RequestOrderDownload(r.Context(), auth.User.ID, id, req.ProductID)
+	if errors.Is(err, storage.ErrNotFound) {
+		s.writeError(w, http.StatusNotFound, "digital_no_access")
+		return
+	}
+	if err != nil {
+		s.logger.Error("webapi: archive download queue failed", "order_id", id)
+		s.writeError(w, http.StatusInternalServerError, "webapp_err_internal")
+		return
+	}
+	s.writeJSON(w, http.StatusOK, map[string]bool{"queued": true})
 }

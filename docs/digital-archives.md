@@ -51,6 +51,13 @@ the buyer again. Operational errors suppress Telegram request details/tokens.
 The delivered document has **Download again**. Buyers can also use `/files` or
 **My files** in the bot's order history (the latest 50 purchase entries).
 
+In the Mini App, **My orders** is below the catalog categories. Open an order
+and press **Download** next to an available ZIP. The bot sends the current archive
+to the buyer's private chat, where it can be saved. This works for both paid and
+free orders and is not limited to the latest 50 purchases. Requests while a file
+is queued or sending reuse the same delivery task; requesting a previously sent
+file queues it again without changing payments or stock.
+
 Replacing an archive updates its reference on **all existing purchases**,
 including paid and delivered orders. A previous buyer downloads the latest ZIP
 without another payment. An upload does not broadcast a new document to previous
