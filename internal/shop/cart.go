@@ -13,6 +13,7 @@ type CartView struct {
 	Items      []CartItemView
 	TotalUSD   float64
 	TotalStars int
+	BaseRUB    bool
 	// TotalRUB is the RUB price of TotalUSD at the current rate, rounded to
 	// kopecks. It stays 0 while RUB payments are disabled (rate 0 or no
 	// exchange service).
@@ -73,7 +74,8 @@ func (s *CartService) Get(ctx context.Context, userID int64) (*CartView, error) 
 	}
 
 	view := &CartView{
-		Items: make([]CartItemView, 0, len(items)),
+		Items:   make([]CartItemView, 0, len(items)),
+		BaseRUB: true,
 	}
 
 	for _, ci := range items {
@@ -81,9 +83,33 @@ func (s *CartService) Get(ctx context.Context, userID int64) (*CartView, error) 
 		if err != nil {
 			return nil, fmt.Errorf("cart service: get product %d: %w", ci.ProductID, err)
 		}
+		copyProduct := *p
+		p = &copyProduct
 
-		if s.exchange != nil {
-			p.PriceStars = s.exchange.ConvertUSDToStars(p.PriceUSD)
+		if p.PriceRUB == nil && !p.OpenPrice {
+			view.BaseRUB = false
+		}
+		applyProductPrice(p, s.exchange)
+		if p.OpenPrice {
+			rub := float64(ci.CustomPrice)
+			p.PriceRUB = &rub
+			if rub > 0 && (s.exchange == nil || !s.exchange.RUBConfigured()) {
+				return nil, ErrRUBRate
+			}
+			p.PriceUSD = 0
+			p.PriceStars = 0
+			if s.exchange != nil {
+				p.PriceUSD = s.exchange.ConvertRUBToUSD(rub)
+				p.PriceStars = s.exchange.ConvertUSDToStars(p.PriceUSD)
+			}
+		}
+		if p.PriceRUB != nil {
+			if *p.PriceRUB > 0 && (s.exchange == nil || !s.exchange.RUBConfigured()) {
+				return nil, ErrRUBRate
+			}
+			view.TotalRUB += *p.PriceRUB * float64(ci.Quantity)
+		} else {
+			view.BaseRUB = false
 		}
 
 		view.Items = append(view.Items, CartItemView{
@@ -97,7 +123,9 @@ func (s *CartService) Get(ctx context.Context, userID int64) (*CartView, error) 
 	// Convert once from the accumulated TotalUSD: per-item conversion would
 	// drift the total through repeated kopeck/nanoton rounding.
 	if s.exchange != nil {
-		view.TotalRUB = s.exchange.ConvertUSDToRUB(view.TotalUSD)
+		if !view.BaseRUB {
+			view.TotalRUB = s.exchange.ConvertUSDToRUB(view.TotalUSD)
+		}
 		view.TotalTONNano = s.exchange.ConvertUSDToNanoTON(view.TotalUSD)
 	}
 

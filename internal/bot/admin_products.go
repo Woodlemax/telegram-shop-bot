@@ -3,6 +3,7 @@ package bot
 import (
 	"context"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -50,8 +51,12 @@ func (b *Bot) handleAddProductStep(ctx context.Context, msg *tgbotapi.Message) b
 		_ = b.fsm.SetAddProductState(ctx, msg.From.ID, state, 30*time.Minute)
 		b.send(tgbotapi.NewMessage(chatID, b.t(lang, "admin_add_product_price")))
 	case storage.StepPriceUSD:
-		p, _ := strconv.ParseFloat(msg.Text, 64)
-		state.PriceUSD = p
+		p, err := strconv.ParseFloat(strings.TrimSpace(msg.Text), 64)
+		if err != nil || p < 0 || math.IsNaN(p) || math.IsInf(p, 0) {
+			b.send(tgbotapi.NewMessage(chatID, b.t(lang, "admin_invalid_price")))
+			return true
+		}
+		state.PriceRUB = &p
 		state.Step = storage.StepStock
 		_ = b.fsm.SetAddProductState(ctx, msg.From.ID, state, 30*time.Minute)
 		b.send(tgbotapi.NewMessage(chatID, b.t(lang, "admin_add_product_stock")))
@@ -90,7 +95,7 @@ func (b *Bot) finishAddProduct(ctx context.Context, chatID, userID, categoryID i
 	if len(state.Photos) > 0 {
 		cover = state.Photos[0]
 	}
-	p := &storage.Product{CategoryID: categoryID, Name: state.Name, Description: state.Description, PriceUSD: state.PriceUSD, Stock: state.Stock, PhotoURL: cover, IsActive: true, SubPeriodDays: state.SubPeriodDays}
+	p := &storage.Product{CategoryID: categoryID, Name: state.Name, Description: state.Description, PriceUSD: state.PriceUSD, PriceRUB: state.PriceRUB, Stock: state.Stock, PhotoURL: cover, IsActive: true, SubPeriodDays: state.SubPeriodDays}
 	id, err := b.products.CreateProduct(ctx, p)
 	if err != nil {
 		b.loggerFor(ctx).Error("create product", "error", err)
@@ -113,11 +118,18 @@ func (b *Bot) sendAdminProductDetails(chatID int64, product *storage.Product, la
 
 	text := fmt.Sprintf(
 		b.t(lang, "admin_product_details"),
-		product.ID, product.Name, product.Description, product.PriceUSD, product.Stock, product.CategoryID, product.IsActive,
+		product.ID, product.Name, product.Description, productAmount(product), product.Stock, product.CategoryID, product.IsActive,
 		product.ID, product.ID, product.ID, product.ID, product.ID, product.ID,
 	)
+	text = currencyText(text, product.PriceRUB != nil)
+	openLabel := b.t(lang, "open_price_admin_on")
+	if product.OpenPrice {
+		openLabel = b.t(lang, "open_price_admin_off")
+		text += "\n" + b.t(lang, "open_price_hint")
+	}
 
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(openLabel, fmt.Sprintf("admin:openprice:%d", product.ID))),
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData(toggleLabel, fmt.Sprintf("admin:togglestock:%d", product.ID)),
 		),
@@ -181,7 +193,26 @@ func (b *Bot) handleEditProductField(ctx context.Context, msg *tgbotapi.Message,
 			b.send(tgbotapi.NewMessage(msg.Chat.ID, b.t(lang, "admin_invalid_price")))
 			return
 		}
-		product.PriceUSD = price
+		if price < 0 || math.IsNaN(price) || math.IsInf(price, 0) {
+			b.send(tgbotapi.NewMessage(msg.Chat.ID, b.t(lang, "admin_invalid_price")))
+			return
+		}
+		product.PriceRUB = &price
+		product.PriceUSD = 0
+		product.OpenPrice = false
+	case "openprice":
+		on, err := strconv.ParseBool(value)
+		if err != nil || product.SubPeriodDays > 0 {
+			b.send(tgbotapi.NewMessage(msg.Chat.ID, b.t(lang, "open_price_sub_error")))
+			return
+		}
+		product.OpenPrice = on
+		if on {
+			zero := float64(0)
+			product.PriceRUB = &zero
+			product.PriceUSD = 0
+			product.PriceStars = 0
+		}
 	case "stock":
 		stock, err := strconv.Atoi(value)
 		if err != nil {

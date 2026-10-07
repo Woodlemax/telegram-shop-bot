@@ -39,6 +39,21 @@ func (s *ExchangeService) SetRate(rate int) {
 	s.mu.Unlock()
 }
 
+func (s *ExchangeService) ConvertRUBToUSD(rub float64) float64 {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.usdToRUB <= 0 || rub <= 0 {
+		return 0
+	}
+	return rub / s.usdToRUB
+}
+
+func (s *ExchangeService) RUBConfigured() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.usdToRUB > 0
+}
+
 // ConvertUSDToStars converts a USD amount to Telegram Stars.
 // Returns at least 1 for any positive amount.
 func (s *ExchangeService) ConvertUSDToStars(amountUSD float64) int {

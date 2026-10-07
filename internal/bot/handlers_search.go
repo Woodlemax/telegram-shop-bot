@@ -31,7 +31,7 @@ func (b *Bot) searchNavRow(lang string) []StyledButton {
 func (b *Bot) searchResultsKeyboard(lang string, products []storage.Product) StyledKeyboard {
 	kb := make(StyledKeyboard, 0, len(products)+1)
 	for _, p := range products {
-		label := fmt.Sprintf("🛍 %s — $%.2f", p.Name, p.PriceUSD)
+		label := fmt.Sprintf(currencyText("🛍 %s — $%.2f", p.PriceRUB != nil), p.Name, productAmount(&p))
 		kb = append(kb, []StyledButton{
 			b.styledBtn(BtnKeyCatalogProduct, label, fmt.Sprintf("product:%d", p.ID), StylePrimary),
 		})

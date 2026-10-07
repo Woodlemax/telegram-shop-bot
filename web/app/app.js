@@ -126,6 +126,27 @@
     return '$' + n.toFixed(2);
   }
 
+  function rub(n) { return Number(n).toFixed(2) + ' ₽'; }
+  function productPrice(p) { return p.price_rub == null ? usd(p.price_usd) : rub(p.price_rub); }
+  function savePrice(id, input, done) {
+    var value = input.value.trim();
+    if (!/^\d+$/.test(value) || Number(value) > 1000000) { showError(new Error('open_price_invalid')); return; }
+    api('POST', '/api/cart', { product_id: id, price: Number(value) }).then(function (cart) {
+      updateCartBadge(countItems(cart)); done();
+    }).catch(showError);
+  }
+  function priceEditor(parent, id, current, done) {
+    var group = el('div', 'open-price');
+    var label = el('label', 'product-desc', t('open_price_hint'));
+    var input = el('input', 'input');
+    input.type = 'number'; input.min = '0'; input.max = '1000000'; input.step = '1'; input.inputMode = 'numeric';
+    input.value = String(current || 0);
+    label.appendChild(input); group.appendChild(label);
+    var save = el('button', 'btn secondary', t('open_price_apply'));
+    save.type = 'button'; save.onclick = function () { savePrice(id, input, done); };
+    group.appendChild(save); parent.appendChild(group); return input;
+  }
+
   function loading() {
     clearScreen();
     screenEl.appendChild(el('div', 'loading', t('webapp_loading')));
@@ -172,7 +193,8 @@
           card.appendChild(img);
           var info = el('div', 'card-info');
           info.appendChild(el('div', 'card-name', p.name));
-          info.appendChild(el('div', 'card-price', usd(p.price_usd) + ' / ' + stars(p.price_stars)));
+          info.appendChild(el('div', 'card-price', productPrice(p) + ' / ' + stars(p.price_stars)));
+          if (p.open_price) { info.appendChild(el('div', 'product-desc', t('open_price_hint'))); }
           card.appendChild(info);
           card.onclick = function () { push(function () { renderProduct(p.id); }); };
           list.appendChild(card);
@@ -222,7 +244,8 @@
       }
 
       screenEl.appendChild(el('h2', 'product-name', p.name));
-      screenEl.appendChild(el('div', 'product-price', usd(p.price_usd) + ' / ' + stars(p.price_stars)));
+      screenEl.appendChild(el('div', 'product-price', productPrice(p) + ' / ' + stars(p.price_stars)));
+      var customPrice = p.open_price ? priceEditor(screenEl, p.id, 0, function () { push(renderCart); }) : null;
       if (data.rating_count > 0) {
         screenEl.appendChild(el('div', 'product-rating',
           '\u2605 ' + data.rating_avg.toFixed(1) + ' \u00b7 ' + tf('webapp_reviews', data.rating_count)));
@@ -238,6 +261,7 @@
       var add = el('button', 'btn primary', t('webapp_add_to_cart'));
       add.type = 'button';
       add.onclick = function () {
+        if (customPrice) { savePrice(p.id, customPrice, function () { push(renderCart); }); return; }
         add.disabled = true;
         api('POST', '/api/cart', { product_id: p.id, delta: 1 }).then(function (cart) {
           updateCartBadge(countItems(cart));
@@ -272,7 +296,8 @@
           var row = el('div', 'cart-row');
           var info = el('div', 'card-info');
           info.appendChild(el('div', 'card-name', item.name));
-          info.appendChild(el('div', 'card-price', usd(item.price_usd) + ' \u00d7 ' + item.quantity));
+          info.appendChild(el('div', 'card-price', productPrice(item) + ' \u00d7 ' + item.quantity));
+          if (item.open_price) { priceEditor(info, item.product_id, item.price_rub, renderCart); }
           row.appendChild(info);
 
           var controls = el('div', 'qty-controls');
@@ -298,12 +323,18 @@
       screenEl.appendChild(list);
 
       screenEl.appendChild(el('div', 'cart-total',
-        t('webapp_total') + ': ' + usd(cart.total_usd) + ' / ' + stars(cart.total_stars)));
+        t('webapp_total') + ': ' + rub(cart.total_rub) + ' / ' + stars(cart.total_stars)));
 
       var promo = el('input', 'input');
       promo.type = 'text';
       promo.placeholder = t('webapp_promo_placeholder');
       screenEl.appendChild(promo);
+
+      if (cart.free_checkout) {
+        var getFree = el('button', 'btn primary', t('free_order_button'));
+        getFree.type = 'button'; getFree.onclick = function () { checkout('free', promo.value, getFree); };
+        screenEl.appendChild(getFree); return;
+      }
 
       var payStars = el('button', 'btn primary', t('webapp_pay_stars'));
       payStars.type = 'button';
@@ -368,6 +399,11 @@
     if (promo) { body.promo = promo; }
     api('POST', '/api/checkout', body).then(function (data) {
       btn.disabled = false;
+      if (data.free) {
+        var message = tf('free_order_done', data.order_id);
+        if (tg && tg.showAlert) { tg.showAlert(message); } else { alert(message); }
+        renderCart(); return;
+      }
       if (method === 'stars' && tg && tg.openInvoice) {
         tg.openInvoice(data.invoice_link, function (status) {
           if (status === 'paid') { renderCart(); }

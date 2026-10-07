@@ -212,9 +212,18 @@ func (s *OrderService) CreateFromCart(ctx context.Context, userID int64, cartVie
 		if !p.IsActive || (!p.IsDigital && p.Stock < ci.Quantity) {
 			return 0, fmt.Errorf("order service: %w", &ErrInsufficientStock{ProductName: p.Name, Have: p.Stock, Want: ci.Quantity})
 		}
+		if p.OpenPrice != ci.Product.OpenPrice {
+			return 0, ErrOpenPrice
+		}
+		if p.OpenPrice && (ci.Product.PriceRUB == nil || *ci.Product.PriceRUB < 0 || *ci.Product.PriceRUB > 1000000 || math.Trunc(*ci.Product.PriceRUB) != *ci.Product.PriceRUB) {
+			return 0, ErrOpenPrice
+		}
 	}
 
 	totalUSD := cartView.TotalUSD
+	if cartView.BaseRUB {
+		totalUSD = math.Round(totalUSD*100) / 100
+	}
 	totalStars := cartView.TotalStars
 	discountPct := 0
 	promoCode := ""

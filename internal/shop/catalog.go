@@ -24,9 +24,7 @@ func NewCatalogService(ps storage.ProductStore, exchange ...*service.ExchangeSer
 
 // applyExchangeRate updates the PriceStars field based on real-time rates.
 func (s *CatalogService) applyExchangeRate(p *storage.Product) {
-	if s.exchange != nil {
-		p.PriceStars = s.exchange.ConvertUSDToStars(p.PriceUSD)
-	}
+	applyProductPrice(p, s.exchange)
 }
 
 // ListCategories returns all available categories.
@@ -69,6 +67,8 @@ func (s *CatalogService) GetProduct(ctx context.Context, id int64) (*storage.Pro
 	if err != nil {
 		return nil, err
 	}
+	copyProduct := *p
+	p = &copyProduct
 	s.applyExchangeRate(p)
 	return p, nil
 }

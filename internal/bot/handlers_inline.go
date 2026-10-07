@@ -73,7 +73,7 @@ func (b *Bot) inlineResultForProduct(lang string, p *storage.Product, cover stri
 	if p.PriceStars > 0 {
 		starsText = fmt.Sprintf(" / %d ⭐", p.PriceStars)
 	}
-	title := fmt.Sprintf("%s — $%.2f%s", p.Name, p.PriceUSD, starsText)
+	title := fmt.Sprintf(currencyText("%s — $%.2f%s", p.PriceRUB != nil), p.Name, productAmount(p), starsText)
 
 	r := tgbotapi.NewInlineQueryResultArticleHTML(id, title, caption)
 	if len(p.Description) > 100 {
@@ -90,10 +90,10 @@ func (b *Bot) formatProductCaption(lang string, p *storage.Product) string {
 		starsText = fmt.Sprintf(" / %d ⭐", p.PriceStars)
 	}
 	return fmt.Sprintf(
-		"<b>%s</b>\n%s\n\n💵 $%.2f%s\n📦 %s: %d",
+		currencyText("<b>%s</b>\n%s\n\n💵 $%.2f%s\n📦 %s: %d", p.PriceRUB != nil),
 		p.Name,
 		p.Description,
-		p.PriceUSD,
+		productAmount(p),
 		starsText,
 		b.t(lang, "stock"),
 		p.Stock,

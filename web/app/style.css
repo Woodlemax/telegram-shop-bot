@@ -186,3 +186,11 @@ body {
   color: var(--text);
   font-size: 15px;
 }
+
+.open-price { margin-top: 10px; }
+.open-price label { display: block; }
+.open-price .btn { font-size: 14px; padding: 10px; }
+@media (max-width: 440px) {
+  .cart-row { flex-wrap: wrap; }
+  .cart-row .qty-controls { margin-left: auto; }
+}

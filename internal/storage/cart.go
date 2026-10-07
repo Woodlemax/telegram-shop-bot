@@ -96,7 +96,7 @@ func (s *SQLCartStore) CountActiveCarts(ctx context.Context) (int64, error) {
 
 func (s *SQLCartStore) GetItems(ctx context.Context, userID int64) ([]CartItem, error) {
 	query := `
-		SELECT c.id, c.user_id, c.product_id, c.quantity, c.added_at, p.name, p.price_usd
+		SELECT c.id, c.user_id, c.product_id, c.quantity, c.added_at, p.name, p.price_usd, c.custom_price
 		FROM cart_items c
 		JOIN products p ON c.product_id = p.id
 		WHERE c.user_id = ?
@@ -110,7 +110,7 @@ func (s *SQLCartStore) GetItems(ctx context.Context, userID int64) ([]CartItem, 
 	var items []CartItem
 	for rows.Next() {
 		var i CartItem
-		if err := rows.Scan(&i.ID, &i.UserID, &i.ProductID, &i.Quantity, &i.AddedAt, &i.ProductName, &i.ProductPrice); err != nil {
+		if err := rows.Scan(&i.ID, &i.UserID, &i.ProductID, &i.Quantity, &i.AddedAt, &i.ProductName, &i.ProductPrice, &i.CustomPrice); err != nil {
 			return nil, fmt.Errorf("scan cart item: %w", err)
 		}
 		items = append(items, i)

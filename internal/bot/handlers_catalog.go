@@ -265,6 +265,9 @@ func (b *Bot) productKeyboard(p *storage.Product, inWishlist bool, quantity int,
 	if p.IsDigital {
 		kb = kb[1:]
 	}
+	if p.OpenPrice {
+		kb = append(StyledKeyboard{{Btn(b.t(lang, "open_price_button"), fmt.Sprintf("price:enter:%d", p.ID))}}, kb...)
+	}
 	return kb
 }
 

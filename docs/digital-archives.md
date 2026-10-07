@@ -31,6 +31,10 @@ automatically by attaching a ZIP. Unpaid, canceled, quarantined, refunded and
 partially refunded orders do not grant downloads. The buyer's Telegram ID is the
 recipient; callbacks cannot request another user's files or a group destination.
 
+Zero-total orders can receive a separately recorded free grant through
+**Get without payment**. They have no money receipt; the same worker and download
+ownership checks apply. See [open prices](open-prices.md).
+
 The worker sends `sendDocument` with the stored `file_id`. Successful sends store
 the message ID. An entirely digital order is then marked delivered; mixed orders
 retain their existing physical fulfillment workflow.

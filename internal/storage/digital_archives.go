@@ -134,8 +134,10 @@ func snapshotDigitalArchive(ctx context.Context, tx *sql.Tx, orderID int64, item
 }
 
 const digitalEntitlement = `o.order_state IN ('placed','completed') AND o.status IN ('paid','delivered') AND o.payment_state='settled'
-    AND EXISTS(SELECT 1 FROM payment_attempts p WHERE p.order_id=o.id AND p.provider=o.payment_method
-        AND p.external_id=o.payment_id AND p.status='succeeded')`
+    AND (EXISTS(SELECT 1 FROM payment_attempts p WHERE p.order_id=o.id AND p.provider=o.payment_method
+        AND p.external_id=o.payment_id AND p.status='succeeded')
+    OR (o.payment_method='free' AND o.total_usd=0 AND o.total_stars=0 AND o.total_rub=0 AND o.total_ton_nano=0
+        AND EXISTS(SELECT 1 FROM free_order_grants g WHERE g.order_id=o.id)))`
 
 // Claim is atomic across workers. Expired leases recover interrupted sends.
 func (s *DigitalArchiveStore) Claim(ctx context.Context) (*DigitalDelivery, error) {

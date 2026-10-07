@@ -34,6 +34,9 @@ func (b *Bot) routeMessage(ctx context.Context, msg *tgbotapi.Message) {
 	if b.handleArchiveUpload(ctx, msg) {
 		return
 	}
+	if b.handlePriceInput(ctx, msg) {
+		return
+	}
 
 	// Check if user is entering a promo code.
 	if msg.Command() == "" {
@@ -204,6 +207,16 @@ func (b *Bot) handleCallback(ctx context.Context, cb *tgbotapi.CallbackQuery) {
 	lang := cb.From.LanguageCode
 
 	switch {
+	case strings.HasPrefix(data, "price:enter:"):
+		b.ack(cb.ID)
+		b.onOpenPrice(ctx, chatID, userID, data, lang)
+	case strings.HasPrefix(data, "order:free:"):
+		b.onFreeOrder(ctx, cb.ID, chatID, userID, data, lang)
+	case strings.HasPrefix(data, "admin:openprice:"):
+		b.ack(cb.ID)
+		if b.isAdmin(userID) {
+			b.onAdminOpenPrice(ctx, chatID, data, lang)
+		}
 	case data == "digital:library":
 		b.ack(cb.ID)
 		b.sendDigitalLibrary(ctx, chatID, userID, lang)

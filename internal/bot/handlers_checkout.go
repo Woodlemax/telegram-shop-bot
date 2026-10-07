@@ -248,10 +248,23 @@ func (b *Bot) onOrderConfirm(ctx context.Context, chatID, userID int64, msgID in
 	view.TotalRUB = createdOrder.TotalRUB
 	view.TotalTONNano = createdOrder.TotalTonNano
 
+	adminTotal := view.TotalUSD
+	if view.BaseRUB {
+		adminTotal = view.TotalRUB
+	}
 	b.notifyAdmins(ctx, AdminEventOrderNew, fmt.Sprintf(
-		b.t("en", "admin_order_new"),
-		orderID, userID, view.TotalUSD, view.TotalStars,
+		currencyText(b.t("en", "admin_order_new"), view.BaseRUB),
+		orderID, userID, adminTotal, view.TotalStars,
 	))
+	if shop.IsFreeOrder(createdOrder) {
+		if err := b.order.ConfirmFreeOrder(ctx, orderID, userID); err != nil {
+			b.sendOrEditStyled(chatID, msgID, b.t(lang, "free_order_error"), "", StyledKeyboard{{Btn(b.t(lang, "free_order_button"), fmt.Sprintf("order:free:%d", orderID))}})
+			return
+		}
+		b.sendOrEditStyled(chatID, msgID, fmt.Sprintf(b.t(lang, "free_order_done"), orderID), "", StyledKeyboard{{Btn(b.t(lang, "btn_orders"), "back:orders"), Btn(b.t(lang, "btn_menu"), "back:menu")}})
+		b.ProcessDigitalDeliveries(ctx)
+		return
+	}
 
 	// Subscription products are payable with Stars only — hide crypto.
 	starsOnly := cartHasSubscription(view)

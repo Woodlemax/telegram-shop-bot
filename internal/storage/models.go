@@ -12,6 +12,7 @@ const (
 	OrderStatusCancelled = "cancelled"
 
 	PaymentMethodStars       = "stars"
+	PaymentMethodFree        = "free"
 	PaymentMethodCrypto      = "crypto"
 	PaymentMethodYooKassa    = "yookassa"
 	PaymentMethodStripe      = "stripe"
@@ -75,6 +76,7 @@ type AddProductState struct {
 	Name          string         `json:"name"`
 	Description   string         `json:"description"`
 	PriceUSD      float64        `json:"price_usd"`
+	PriceRUB      *float64       `json:"price_rub"`
 	PriceStars    int            `json:"price_stars"`
 	Stock         int            `json:"stock"`
 	Photos        []string       `json:"photos"`
@@ -124,6 +126,8 @@ type Product struct {
 	PhotoURL       string    `db:"photo_url"`
 	PriceUSD       float64   `db:"price_usd"`
 	PriceStars     int       `db:"price_stars"`
+	OpenPrice      bool      `db:"open_price"`
+	PriceRUB       *float64  `db:"price_rub"`
 	Stock          int       `db:"stock"`
 	IsDigital      bool      `db:"is_digital"`
 	DigitalContent string    `db:"digital_content"`
@@ -133,11 +137,12 @@ type Product struct {
 }
 
 type CartItem struct {
-	ID        int64     `db:"id"`
-	UserID    int64     `db:"user_id"`
-	ProductID int64     `db:"product_id"`
-	Quantity  int       `db:"quantity"`
-	AddedAt   time.Time `db:"added_at"`
+	ID          int64     `db:"id"`
+	UserID      int64     `db:"user_id"`
+	ProductID   int64     `db:"product_id"`
+	Quantity    int       `db:"quantity"`
+	CustomPrice int       `db:"custom_price"`
+	AddedAt     time.Time `db:"added_at"`
 
 	// Joined fields
 	ProductName  string  `db:"product_name"`
