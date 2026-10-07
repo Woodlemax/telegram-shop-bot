@@ -1,4 +1,5 @@
 {
+  "product_go_to_cart": "В корзину",
   "product_infinite_stock": "Бесконечный запас",
   "product_single_in_cart": "Только один экземпляр в корзине",
   "admin_infinite_stock_on": "Включить бесконечный запас",
@@ -408,7 +409,7 @@
   "webapp_cart_empty": "Ваша корзина пуста",
   "webapp_empty": "Здесь пока пусто",
   "webapp_loading": "Загрузка…",
-  "webapp_add_to_cart": "В корзину",
+  "webapp_add_to_cart": "Добавить в корзину",
   "webapp_total": "Итого",
   "webapp_promo_placeholder": "Промокод (необязательно)",
   "webapp_pay_stars": "Оплатить Stars ⭐",

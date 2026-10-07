@@ -1,4 +1,5 @@
 {
+  "product_go_to_cart": "Zum Warenkorb",
   "product_infinite_stock": "Unbegrenzter Bestand",
   "product_single_in_cart": "Nur ein Exemplar im Warenkorb",
   "admin_infinite_stock_on": "Unbegrenzten Bestand aktivieren",
@@ -408,7 +409,7 @@
   "webapp_cart_empty": "Dein Warenkorb ist leer",
   "webapp_empty": "Hier ist noch nichts",
   "webapp_loading": "Wird geladen…",
-  "webapp_add_to_cart": "In den Warenkorb",
+  "webapp_add_to_cart": "In den Warenkorb legen",
   "webapp_total": "Gesamt",
   "webapp_promo_placeholder": "Promo-Code (optional)",
   "webapp_pay_stars": "Mit Stars bezahlen ⭐",

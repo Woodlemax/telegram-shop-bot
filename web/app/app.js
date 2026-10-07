@@ -130,10 +130,10 @@
   function productPrice(p) { return p.price_rub == null ? usd(p.price_usd) : rub(p.price_rub); }
   function savePrice(id, input, done) {
     var value = input.value.trim();
-    if (!/^\d+$/.test(value) || Number(value) > 1000000) { showError(new Error('open_price_invalid')); return; }
-    api('POST', '/api/cart', { product_id: id, price: Number(value) }).then(function (cart) {
-      updateCartBadge(countItems(cart)); done();
-    }).catch(showError);
+    if (!/^\d+$/.test(value) || Number(value) > 1000000) { showError(new Error('open_price_invalid')); return Promise.resolve(null); }
+    return api('POST', '/api/cart', { product_id: id, price: Number(value) }).then(function (cart) {
+      updateCartBadge(countItems(cart)); done(cart); return cart;
+    }).catch(function (err) { showError(err); return null; });
   }
   function priceEditor(parent, id, current, done) {
     var group = el('div', 'open-price');
@@ -228,8 +228,16 @@
 
   function renderProduct(id) {
     loading();
-    api('GET', '/api/products/' + id).then(function (data) {
+    Promise.all([api('GET', '/api/products/' + id), api('GET', '/api/cart')]).then(function (results) {
+      var data = results[0];
+      var cart = results[1];
       var p = data.product;
+      var cartItem = null;
+      for (var c = 0; c < cart.items.length; c++) {
+        if (cart.items[c].product_id === p.id && cart.items[c].quantity > 0) { cartItem = cart.items[c]; break; }
+      }
+      var inCart = !!cartItem;
+      updateCartBadge(countItems(cart));
       setTitle(p.name);
       clearScreen();
 
@@ -245,7 +253,7 @@
 
       screenEl.appendChild(el('h2', 'product-name', p.name));
       screenEl.appendChild(el('div', 'product-price', productPrice(p) + ' / ' + stars(p.price_stars)));
-      var customPrice = p.open_price ? priceEditor(screenEl, p.id, 0, function () { push(renderCart); }) : null;
+      var customPrice = p.open_price ? priceEditor(screenEl, p.id, cartItem ? cartItem.price_rub : 0, added) : null;
       if (data.rating_count > 0) {
         screenEl.appendChild(el('div', 'product-rating',
           '\u2605 ' + data.rating_avg.toFixed(1) + ' \u00b7 ' + tf('webapp_reviews', data.rating_count)));
@@ -260,16 +268,22 @@
 
       if (p.is_digital) { screenEl.appendChild(el('div', 'product-stock', t('digital_product'))); }
       if (p.single_in_cart) { screenEl.appendChild(el('div', 'product-stock', t('product_single_in_cart'))); }
-      var add = el('button', 'btn primary', t('webapp_add_to_cart'));
+      var add = el('button', 'btn primary', t(inCart ? 'product_go_to_cart' : 'webapp_add_to_cart'));
       add.type = 'button';
+      function added(cart) {
+        updateCartBadge(countItems(cart));
+        inCart = true;
+        add.textContent = t('product_go_to_cart');
+        add.disabled = false;
+        if (tg && tg.HapticFeedback) { tg.HapticFeedback.notificationOccurred('success'); }
+      }
       add.onclick = function () {
-        if (customPrice) { savePrice(p.id, customPrice, function () { push(renderCart); }); return; }
+        if (inCart) { push(renderCart); return; }
         add.disabled = true;
-        api('POST', '/api/cart', { product_id: p.id, delta: 1 }).then(function (cart) {
-          updateCartBadge(countItems(cart));
-          add.disabled = false;
-          if (tg && tg.HapticFeedback) { tg.HapticFeedback.notificationOccurred('success'); }
-        }).catch(function (err) {
+        if (customPrice) {
+          savePrice(p.id, customPrice, added).then(function () { add.disabled = false; }); return;
+        }
+        api('POST', '/api/cart', { product_id: p.id, delta: 1 }).then(added).catch(function (err) {
           add.disabled = false;
           showError(err);
         });

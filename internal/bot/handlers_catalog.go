@@ -249,13 +249,19 @@ func (b *Bot) productKeyboard(p *storage.Product, inWishlist bool, quantity int,
 	if inWishlist {
 		wishBtnLabel = "💔 " + b.t(lang, "btn_wishlist_remove")
 	}
+	addLabel := b.t(lang, "btn_add_to_cart")
+	addAction := fmt.Sprintf("cart:add:%d", p.ID)
+	if quantity > 0 {
+		addLabel = b.t(lang, "product_go_to_cart")
+		addAction = "back:cart"
+	}
 	kb := StyledKeyboard{
 		{
 			Btn("➖", fmt.Sprintf("productqty:minus:%d", p.ID)),
 			Btn(b.productQuantityLabel(lang, quantity), "noop"),
 			Btn("➕", fmt.Sprintf("productqty:plus:%d", p.ID)),
 		},
-		{b.styledBtn(BtnKeyProductAdd, b.t(lang, "btn_add_to_cart"), fmt.Sprintf("cart:add:%d", p.ID), StyleSuccess)},
+		{b.styledBtn(BtnKeyProductAdd, addLabel, addAction, StyleSuccess)},
 		{
 			b.styledBtn(BtnKeyProductWish, wishBtnLabel, fmt.Sprintf("wish:%d", p.ID), StyleDefault),
 			Btn(b.t(lang, "btn_back"), fmt.Sprintf("back:category:%d", p.CategoryID)),
