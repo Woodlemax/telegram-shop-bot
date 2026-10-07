@@ -374,6 +374,9 @@ func ensureOrderPayableForUser(order *storage.Order, userID int64) error {
 	if order.PaymentState == storage.PaymentStateNeedsReview {
 		return storage.ErrPaymentNeedsReview
 	}
+	if order.PaymentState != "" && order.PaymentState != storage.PaymentStatePending {
+		return storage.ErrOrderStatusConflict
+	}
 	return nil
 }
 

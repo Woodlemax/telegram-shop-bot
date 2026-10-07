@@ -45,3 +45,20 @@ their existing fulfillment/refund workflows instead of this button.
 Available digital items offer **Download** with the latest ZIP's filename.
 The bot sends it to the buyer's private chat. Replacing a product archive updates
 previous purchases too. See [digital archives](digital-archives.md).
+
+## Orders in the bot
+
+Send `/orders` or use **My orders** in the bot menu. History is paged ten orders
+at a time. Pending orders with a pending payment offer **Continue payment #N**
+and **Cancel order #N**. Cancel opens a confirmation; Back leaves the order
+unchanged. A payment confirmed before cancellation cannot be overwritten.
+
+Continue payment lists methods for that same order's saved amounts, including
+internal balance when available. It does not create a purchase, clear the current
+cart, recalculate the discount or use current catalog prices. Subscription terms
+remain frozen and Stars-only; zero-total orders offer free fulfillment. Payment
+callbacks check ownership and payment status again, so old buttons cannot pay a
+canceled, paid or reviewed order.
+
+**My files** shows one latest archive per eligible product even if bought more
+than once. Refund of one purchase preserves access through another valid purchase.

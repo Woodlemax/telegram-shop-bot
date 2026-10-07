@@ -275,6 +275,15 @@ func (b *Bot) handleCallback(ctx context.Context, cb *tgbotapi.CallbackQuery) {
 		b.ack(cb.ID)
 		b.onOrderConfirm(ctx, chatID, userID, b.prepareTextRenderMessageID(chatID, cb.Message), data, lang)
 
+	case strings.HasPrefix(data, "order:cancelask:"):
+		b.onOrderCancelAsk(ctx, cb.ID, chatID, userID, b.prepareTextRenderMessageID(chatID, cb.Message), data, lang)
+	case strings.HasPrefix(data, "order:resume:"):
+		b.onOrderResume(ctx, cb.ID, chatID, userID, b.prepareTextRenderMessageID(chatID, cb.Message), data, lang)
+	case strings.HasPrefix(data, "orders:page:"):
+		b.ack(cb.ID)
+		if page, err := parseIDFromCallback(data, "orders:page:"); err == nil && page > 0 && page <= 1000000 {
+			b.sendOrdersPage(ctx, chatID, userID, b.prepareTextRenderMessageID(chatID, cb.Message), lang, int(page))
+		}
 	case strings.HasPrefix(data, "order:cancel:"):
 		b.onOrderCancel(ctx, cb.ID, chatID, userID, b.prepareTextRenderMessageID(chatID, cb.Message), data, lang)
 

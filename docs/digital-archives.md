@@ -49,7 +49,12 @@ the buyer again. Operational errors suppress Telegram request details/tokens.
 ## Downloads and updates
 
 The delivered document has **Download again**. Buyers can also use `/files` or
-**My files** in the bot's order history (the latest 50 purchase entries).
+**My files** in the bot's order history (up to 50 distinct products).
+The library shows each product once even after repeat purchases; the newest
+eligible purchase represents its button and points to the latest archive.
+Grouping happens after entitlement checks and before the limit. A refunded
+repeat purchase does not hide an older valid purchase. All order/delivery
+records remain intact for history and per-order downloads.
 
 In the Mini App, **My orders** is below the catalog categories. Open an order
 and press **Download** next to an available ZIP. The bot sends the current archive

@@ -232,8 +232,8 @@ func (s *DigitalArchiveStore) Owned(ctx context.Context, userID, deliveryID int6
 }
 
 func (s *DigitalArchiveStore) Library(ctx context.Context, userID int64) ([]DigitalDelivery, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT d.id FROM digital_deliveries d JOIN orders o ON o.id=d.order_id
-        WHERE o.user_id=? AND `+digitalEntitlement+` ORDER BY d.id DESC LIMIT 50`, userID)
+	rows, err := s.db.QueryContext(ctx, `SELECT MAX(d.id) FROM digital_deliveries d JOIN orders o ON o.id=d.order_id
+        WHERE o.user_id=? AND `+digitalEntitlement+` GROUP BY d.product_id ORDER BY MAX(d.id) DESC LIMIT 50`, userID)
 	if err != nil {
 		return nil, err
 	}
