@@ -33,6 +33,7 @@ A full-featured e-commerce bot for Telegram — catalog, cart, Telegram Stars & 
 **🛍️ Buyer**
 - Product catalog with categories & photo galleries
 - Cart & checkout inside Telegram
+- Mini App order history with latest ZIP downloads and confirmation before canceling an unpaid order
 - **Telegram Stars** payments (built-in)
 - **Digital ZIP models** — admin document uploads, automatic delivery after confirmed payment, retries, and downloads of updated archives for existing buyers. [Setup](docs/digital-archives.md).
 - **Ruble catalog and open prices** — set product prices in RUB, let buyers choose a whole-ruble amount from zero, and fulfill zero-total carts without payment. [Setup](docs/open-prices.md).

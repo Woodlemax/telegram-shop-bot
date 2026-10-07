@@ -535,7 +535,29 @@
       if (order.payment_method === 'stars') { screenEl.appendChild(el('div', 'card-price', stars(order.total_stars))); }
       var refresh = el('button', 'btn secondary', t('webapp_orders_refresh'));
       refresh.type = 'button'; refresh.onclick = function () { renderOrder(id); }; screenEl.appendChild(refresh);
+      if (order.status === 'pending' && order.payment_state === 'pending') {
+        var cancel = el('button', 'btn secondary danger', t('btn_cancel_order'));
+        cancel.type = 'button';
+        cancel.onclick = function () { cancelOrder(id, cancel); };
+        screenEl.appendChild(cancel);
+      }
     }).catch(function (err) { historyFailure(err, function () { renderOrder(id); }); });
+  }
+
+  function cancelOrder(orderID, button) {
+    button.disabled = true;
+    var confirmed = function (yes) {
+      if (!yes) { button.disabled = false; return; }
+      api('POST', '/api/orders/' + orderID + '/cancel').then(function () {
+        renderOrder(orderID);
+      }).catch(function (err) {
+        button.disabled = false;
+        showError(err);
+        if (err.message === 'webapp_order_cancel_unavailable') { renderOrder(orderID); }
+      });
+    };
+    if (tg && tg.showConfirm) { tg.showConfirm(t('webapp_order_cancel_confirm'), confirmed); }
+    else { confirmed(window.confirm(t('webapp_order_cancel_confirm'))); }
   }
 
   function downloadOrderArchive(orderID, productID, button) {

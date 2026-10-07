@@ -56,6 +56,7 @@ type OrderService interface {
 	GetOrder(ctx context.Context, orderID int64) (*storage.Order, error)
 	GetUserOrders(ctx context.Context, userID int64) ([]storage.Order, error)
 	GetUserOrdersPaged(ctx context.Context, userID int64, limit, offset int) ([]storage.Order, int, error)
+	CancelOrder(ctx context.Context, orderID, userID int64) error
 }
 
 // PromoStore is the slice of storage.PromoStore the API consumes.
@@ -210,6 +211,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/checkout", s.withAuth(s.handleCheckout))
 	mux.HandleFunc("GET /api/orders", s.withAuth(s.handleOrders))
 	mux.HandleFunc("GET /api/orders/{id}", s.withAuth(s.handleOrder))
+	mux.HandleFunc("POST /api/orders/{id}/cancel", s.withAuth(s.handleOrderCancel))
 	mux.HandleFunc("POST /api/orders/{id}/download", s.withAuth(s.handleOrderDownload))
 	mux.HandleFunc("GET /api/photo/{file_id}", s.withAuth(s.handlePhoto))
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {

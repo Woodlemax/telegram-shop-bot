@@ -103,6 +103,42 @@ func (s *Server) handleOrder(w http.ResponseWriter, r *http.Request, auth *AuthR
 	s.writeJSON(w, http.StatusOK, map[string]any{"order": result})
 }
 
+func (s *Server) handleOrderCancel(w http.ResponseWriter, r *http.Request, auth *AuthResult) {
+	w.Header().Set("Cache-Control", "no-store")
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil || id <= 0 {
+		s.writeError(w, http.StatusBadRequest, "webapp_err_bad_request")
+		return
+	}
+	o, err := s.deps.Orders.GetOrder(r.Context(), id)
+	if errors.Is(err, storage.ErrNotFound) || (err == nil && (o == nil || o.UserID != auth.User.ID)) {
+		s.writeError(w, http.StatusNotFound, "webapp_err_not_found")
+		return
+	}
+	if err != nil {
+		s.logger.Error("webapi: load order for cancellation", "order_id", id)
+		s.writeError(w, http.StatusInternalServerError, "webapp_err_internal")
+		return
+	}
+	if o.Status != storage.OrderStatusPending || o.PaymentState != storage.PaymentStatePending {
+		s.writeError(w, http.StatusConflict, "webapp_order_cancel_unavailable")
+		return
+	}
+	// The store atomically checks ownership and pending payment again, so a
+	// payment confirmed after the read cannot be overwritten by cancellation.
+	err = s.deps.Orders.CancelOrder(r.Context(), id, auth.User.ID)
+	if errors.Is(err, storage.ErrNotFound) || errors.Is(err, storage.ErrOrderStatusConflict) {
+		s.writeError(w, http.StatusConflict, "webapp_order_cancel_unavailable")
+		return
+	}
+	if err != nil {
+		s.logger.Error("webapi: cancel order", "order_id", id)
+		s.writeError(w, http.StatusInternalServerError, "webapp_err_internal")
+		return
+	}
+	s.writeJSON(w, http.StatusOK, map[string]bool{"cancelled": true})
+}
+
 func (s *Server) handleOrderDownload(w http.ResponseWriter, r *http.Request, auth *AuthResult) {
 	w.Header().Set("Cache-Control", "no-store")
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)

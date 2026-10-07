@@ -154,6 +154,7 @@ body {
 }
 .btn.primary { background: var(--button); color: var(--button-text); }
 .btn.secondary { background: var(--secondary-bg); color: var(--text); }
+.btn.danger { color: #d33; }
 .btn:disabled { opacity: 0.6; cursor: default; }
 
 .pager .btn { width: auto; margin: 0; padding: 8px 14px; }

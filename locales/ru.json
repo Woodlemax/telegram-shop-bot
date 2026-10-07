@@ -1,4 +1,6 @@
 {
+  "webapp_order_cancel_confirm": "Отменить этот заказ?",
+  "webapp_order_cancel_unavailable": "Заказ уже нельзя отменить. Его статус обновился.",
   "webapp_order_download": "Скачать",
   "webapp_order_download_queued": "Архив запрошен. Бот пришлёт актуальный ZIP в личный чат — скачайте его из сообщения.",
   "webapp_order_number": "Заказ #%d",

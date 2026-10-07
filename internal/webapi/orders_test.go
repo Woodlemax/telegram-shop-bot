@@ -33,6 +33,15 @@ func (f *fakeOrders) GetUserOrdersPaged(ctx context.Context, userID int64, limit
 	return orders[offset:end], total, nil
 }
 
+func (f *fakeOrders) CancelOrder(ctx context.Context, orderID, userID int64) error {
+	o, err := f.GetOrder(ctx, orderID)
+	if err != nil || o.UserID != userID || o.Status != storage.OrderStatusPending || o.PaymentState != storage.PaymentStatePending {
+		return storage.ErrNotFound
+	}
+	o.Status, o.OrderState, o.PaymentState = storage.OrderStatusCancelled, storage.OrderStateCancelled, storage.PaymentStateCancelled
+	return nil
+}
+
 func TestOrderHistoryOwnershipPaginationAndSnapshots(t *testing.T) {
 	f, db, _, productID := realOpenPriceFixture(t)
 	ctx := context.Background()
