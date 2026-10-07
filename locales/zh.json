@@ -1,4 +1,8 @@
 {
+  "webapp_order_pay_continue": "继续付款",
+  "webapp_order_pay_unavailable": "此订单已无法付款，订单状态已更新。",
+  "webapp_order_pay_method_unavailable": "此订单无法使用该付款方式，请选择其他方式。",
+  "webapp_order_pay_no_methods": "目前没有可用的付款方式，请稍后重试或联系客服。",
   "webapp_order_cancel_confirm": "取消此订单？",
   "webapp_order_cancel_unavailable": "此订单已无法取消，订单状态已更新。",
   "webapp_order_download": "下载",

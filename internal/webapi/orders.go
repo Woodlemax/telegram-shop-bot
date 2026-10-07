@@ -14,16 +14,17 @@ const ordersPerPage = 10
 // Only buyer-visible snapshots are returned: no provider identifiers, user IDs,
 // archive references or administrative payment records.
 type orderJSON struct {
-	ID            int64           `json:"id"`
-	Status        string          `json:"status"`
-	PaymentState  string          `json:"payment_state"`
-	PaymentMethod string          `json:"payment_method"`
-	TotalRUB      float64         `json:"total_rub"`
-	TotalUSD      float64         `json:"total_usd"`
-	TotalStars    int             `json:"total_stars"`
-	CreatedAt     time.Time       `json:"created_at"`
-	UpdatedAt     time.Time       `json:"updated_at"`
-	Items         []orderItemJSON `json:"items"`
+	ID             int64           `json:"id"`
+	Status         string          `json:"status"`
+	PaymentState   string          `json:"payment_state"`
+	PaymentMethod  string          `json:"payment_method"`
+	TotalRUB       float64         `json:"total_rub"`
+	TotalUSD       float64         `json:"total_usd"`
+	TotalStars     int             `json:"total_stars"`
+	CreatedAt      time.Time       `json:"created_at"`
+	UpdatedAt      time.Time       `json:"updated_at"`
+	Items          []orderItemJSON `json:"items"`
+	PaymentMethods []string        `json:"payment_methods,omitempty"`
 }
 type orderItemJSON struct {
 	ProductID         int64  `json:"product_id"`
@@ -83,6 +84,7 @@ func (s *Server) handleOrder(w http.ResponseWriter, r *http.Request, auth *AuthR
 		return
 	}
 	result := toOrderJSON(o)
+	result.PaymentMethods = s.orderPaymentMethods(o)
 	if s.deps.Archives != nil {
 		files, err := s.deps.Archives.ForOrder(r.Context(), auth.User.ID, id)
 		if err != nil {

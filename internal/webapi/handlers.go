@@ -212,6 +212,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/orders", s.withAuth(s.handleOrders))
 	mux.HandleFunc("GET /api/orders/{id}", s.withAuth(s.handleOrder))
 	mux.HandleFunc("POST /api/orders/{id}/cancel", s.withAuth(s.handleOrderCancel))
+	mux.HandleFunc("POST /api/orders/{id}/pay", s.withAuth(s.handleOrderPay))
 	mux.HandleFunc("POST /api/orders/{id}/download", s.withAuth(s.handleOrderDownload))
 	mux.HandleFunc("GET /api/photo/{file_id}", s.withAuth(s.handlePhoto))
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
@@ -695,8 +696,15 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request, auth *Au
 		return
 	}
 
+	s.issueOrderPayment(w, r, auth, order, req.Method, subPeriod)
+}
+
+// Shared by cart checkout and resuming an existing order. Amounts and invoice
+// payloads always come from the committed order, never the current cart.
+func (s *Server) issueOrderPayment(w http.ResponseWriter, r *http.Request, auth *AuthResult, order *storage.Order, method string, subPeriod int) {
+	ctx, userID, orderID := r.Context(), auth.User.ID, order.ID
 	lang := auth.User.LanguageCode
-	if req.Method == storage.PaymentMethodFree {
+	if method == storage.PaymentMethodFree {
 		err := s.deps.Orders.(interface {
 			ConfirmFreeOrder(context.Context, int64, int64) error
 		}).ConfirmFreeOrder(ctx, orderID, userID)
@@ -708,7 +716,8 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request, auth *Au
 		return
 	}
 	var link string
-	switch req.Method {
+	var err error
+	switch method {
 	case storage.PaymentMethodStars:
 		link, err = s.createStarsInvoiceLink(lang, order, subPeriod)
 	case storage.PaymentMethodCrypto:
@@ -763,7 +772,7 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request, auth *Au
 		}
 	}
 	if err != nil {
-		s.logger.Error("webapi: create invoice link", "order_id", orderID, "method", req.Method, "error", err)
+		s.logger.Error("webapi: create invoice link", "order_id", orderID, "method", method)
 		s.writeError(w, http.StatusBadGateway, "webapp_err_internal")
 		return
 	}

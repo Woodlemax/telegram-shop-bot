@@ -1,4 +1,8 @@
 {
+  "webapp_order_pay_continue": "Продолжить оплату",
+  "webapp_order_pay_unavailable": "Этот заказ уже нельзя оплатить. Его статус обновился.",
+  "webapp_order_pay_method_unavailable": "Этот способ оплаты недоступен для заказа. Выберите другой.",
+  "webapp_order_pay_no_methods": "Сейчас нет доступных способов оплаты. Попробуйте позже или обратитесь в поддержку.",
   "webapp_order_cancel_confirm": "Отменить этот заказ?",
   "webapp_order_cancel_unavailable": "Заказ уже нельзя отменить. Его статус обновился.",
   "webapp_order_download": "Скачать",

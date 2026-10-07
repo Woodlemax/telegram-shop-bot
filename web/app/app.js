@@ -536,12 +536,68 @@
       var refresh = el('button', 'btn secondary', t('webapp_orders_refresh'));
       refresh.type = 'button'; refresh.onclick = function () { renderOrder(id); }; screenEl.appendChild(refresh);
       if (order.status === 'pending' && order.payment_state === 'pending') {
+        var resume = el('button', 'btn primary', t('webapp_order_pay_continue'));
+        resume.type = 'button';
+        resume.onclick = function () { push(function () { renderOrderPayment(id); }); };
+        screenEl.appendChild(resume);
         var cancel = el('button', 'btn secondary danger', t('btn_cancel_order'));
         cancel.type = 'button';
         cancel.onclick = function () { cancelOrder(id, cancel); };
         screenEl.appendChild(cancel);
       }
     }).catch(function (err) { historyFailure(err, function () { renderOrder(id); }); });
+  }
+
+  function renderOrderPayment(id) {
+    var activeRender = navStack[navStack.length - 1];
+    setTitle(tf('webapp_order_number', id)); loading();
+    api('GET', '/api/orders/' + id).then(function (data) {
+      if (navStack[navStack.length - 1] !== activeRender) { return; }
+      var order = data.order;
+      if (order.status !== 'pending' || order.payment_state !== 'pending') { pop(); return; }
+      clearScreen();
+      screenEl.appendChild(el('h2', 'product-name', t('webapp_order_pay_continue')));
+      screenEl.appendChild(el('div', 'cart-total', t('webapp_total') + ': ' + orderTotal(order)));
+      var labels = {stars: 'webapp_pay_stars', crypto: 'webapp_pay_crypto', yookassa: 'webapp_pay_rub', stripe: 'webapp_pay_stripe', ton: 'webapp_pay_ton', nowpayments: 'webapp_pay_nowpayments', free: 'free_order_button'};
+      var methods = order.payment_methods || [];
+      var buttons = [];
+      for (var i = 0; i < methods.length; i++) {
+        (function (method) {
+          if (!labels[method]) { return; }
+          var pay = el('button', 'btn ' + (buttons.length ? 'secondary' : 'primary'), t(labels[method]));
+          pay.type = 'button';
+          pay.onclick = function () { resumeOrderPayment(id, method, buttons); };
+          buttons.push(pay); screenEl.appendChild(pay);
+        })(methods[i]);
+      }
+      if (!buttons.length) { screenEl.appendChild(el('p', 'product-desc', t('webapp_order_pay_no_methods'))); }
+      var refresh = el('button', 'btn secondary', t('webapp_orders_refresh'));
+      refresh.type = 'button'; refresh.onclick = function () { renderOrderPayment(id); };
+      screenEl.appendChild(refresh);
+    }).catch(function (err) { historyFailure(err, function () { renderOrderPayment(id); }); });
+  }
+
+  function resumeOrderPayment(id, method, buttons) {
+    var activeRender = navStack[navStack.length - 1];
+    function refresh() { if (navStack[navStack.length - 1] === activeRender) { renderOrderPayment(id); } }
+    function enable() { for (var i = 0; i < buttons.length; i++) { buttons[i].disabled = false; } }
+    for (var i = 0; i < buttons.length; i++) { buttons[i].disabled = true; }
+    api('POST', '/api/orders/' + id + '/pay', {method: method}).then(function (data) {
+      enable();
+      if (navStack[navStack.length - 1] !== activeRender) { return; }
+      if (data.free) {
+        if (tg && tg.showAlert) { tg.showAlert(tf('free_order_done', data.order_id)); }
+        else { alert(tf('free_order_done', data.order_id)); }
+        refresh(); return;
+      }
+      if (method === 'stars' && tg && tg.openInvoice) {
+        tg.openInvoice(data.invoice_link, refresh);
+      } else if (tg && tg.openLink) { tg.openLink(data.invoice_link); }
+      else { window.open(data.invoice_link, '_blank'); }
+    }).catch(function (err) {
+      enable(); showError(err);
+      if (err.message === 'webapp_order_pay_unavailable' || err.message === 'webapp_order_pay_method_unavailable') { refresh(); }
+    });
   }
 
   function cancelOrder(orderID, button) {

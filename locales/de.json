@@ -1,4 +1,8 @@
 {
+  "webapp_order_pay_continue": "Zahlung fortsetzen",
+  "webapp_order_pay_unavailable": "Diese Bestellung kann nicht mehr bezahlt werden. Ihr Status hat sich geändert.",
+  "webapp_order_pay_method_unavailable": "Diese Zahlungsart ist für die Bestellung nicht verfügbar. Wählen Sie eine andere.",
+  "webapp_order_pay_no_methods": "Derzeit sind keine Zahlungsarten verfügbar. Versuchen Sie es später oder kontaktieren Sie den Support.",
   "webapp_order_cancel_confirm": "Diese Bestellung stornieren?",
   "webapp_order_cancel_unavailable": "Diese Bestellung kann nicht mehr storniert werden. Ihr Status hat sich geändert.",
   "webapp_order_download": "Herunterladen",

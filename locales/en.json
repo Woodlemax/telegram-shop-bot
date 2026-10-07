@@ -1,4 +1,8 @@
 {
+  "webapp_order_pay_continue": "Continue payment",
+  "webapp_order_pay_unavailable": "This order can no longer be paid. Its status has changed.",
+  "webapp_order_pay_method_unavailable": "This payment method is unavailable for this order. Choose another.",
+  "webapp_order_pay_no_methods": "No payment methods are currently available. Try later or contact support.",
   "webapp_order_cancel_confirm": "Cancel this order?",
   "webapp_order_cancel_unavailable": "This order can no longer be canceled. Its status has changed.",
   "webapp_order_download": "Download",

@@ -1,4 +1,8 @@
 {
+  "webapp_order_pay_continue": "Continuar el pago",
+  "webapp_order_pay_unavailable": "Este pedido ya no se puede pagar. Su estado ha cambiado.",
+  "webapp_order_pay_method_unavailable": "Este método de pago no está disponible para el pedido. Elige otro.",
+  "webapp_order_pay_no_methods": "No hay métodos de pago disponibles. Inténtalo más tarde o contacta con soporte.",
   "webapp_order_cancel_confirm": "¿Cancelar este pedido?",
   "webapp_order_cancel_unavailable": "Este pedido ya no se puede cancelar. Su estado ha cambiado.",
   "webapp_order_download": "Descargar",
