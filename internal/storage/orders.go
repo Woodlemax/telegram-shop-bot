@@ -212,6 +212,46 @@ func (s *SQLOrderStore) GetUserOrders(ctx context.Context, userID int64) ([]Orde
 	return orders, nil
 }
 
+// GetUserOrdersPaged bounds both the order query and item loading to one page.
+func (s *SQLOrderStore) GetUserOrdersPaged(ctx context.Context, userID int64, limit, offset int) ([]Order, int, error) {
+	if limit < 1 || limit > 100 || offset < 0 {
+		return nil, 0, fmt.Errorf("order store: invalid pagination")
+	}
+	var total int
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM orders WHERE user_id=?`, userID).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+	rows, err := s.db.QueryContext(ctx, `SELECT id FROM orders WHERE user_id=? ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?`, userID, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	var ids []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return nil, 0, err
+		}
+		ids = append(ids, id)
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return nil, 0, err
+	}
+	orders := make([]Order, 0, len(ids))
+	for _, id := range ids {
+		o, err := s.GetOrder(ctx, id)
+		if err != nil {
+			return nil, 0, err
+		}
+		if o.UserID == userID {
+			orders = append(orders, *o)
+		}
+	}
+	return orders, total, nil
+}
+
 // GetAllOrders returns all orders sorted by created_at descending. If
 // statusFilter is non-empty, only orders with that status are returned.
 func (s *SQLOrderStore) GetAllOrders(ctx context.Context, statusFilter string) ([]Order, error) {

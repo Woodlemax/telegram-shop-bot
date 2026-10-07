@@ -45,6 +45,7 @@ A full-featured e-commerce bot for Telegram — catalog, cart, Telegram Stars & 
 - **300+ coins via NOWPayments** (optional)
 - **Balance payments** — spend an admin-granted USD balance at checkout
 - **Mini App** — full shop UI inside Telegram (opt-in via `WEBAPP_URL`)
+- **Order history in Mini App** — dated orders with saved totals, product quantities, payment/delivery/refund statuses and paging. [Details](docs/order-history.md).
 - **Reviews & ratings** — 1–5 ⭐ after delivery, average shown on the product card
 - Promo codes with category limits + personal one-off codes
 - Wishlist — price drop & restock alerts

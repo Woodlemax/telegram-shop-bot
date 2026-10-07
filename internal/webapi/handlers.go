@@ -55,6 +55,7 @@ type OrderService interface {
 	CreateFromCart(ctx context.Context, userID int64, view *shop.CartView, promo *storage.PromoCode) (int64, error)
 	GetOrder(ctx context.Context, orderID int64) (*storage.Order, error)
 	GetUserOrders(ctx context.Context, userID int64) ([]storage.Order, error)
+	GetUserOrdersPaged(ctx context.Context, userID int64, limit, offset int) ([]storage.Order, int, error)
 }
 
 // PromoStore is the slice of storage.PromoStore the API consumes.
@@ -201,6 +202,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/cart", s.withAuth(s.handleCartPost))
 	mux.HandleFunc("DELETE /api/cart", s.withAuth(s.handleCartDelete))
 	mux.HandleFunc("POST /api/checkout", s.withAuth(s.handleCheckout))
+	mux.HandleFunc("GET /api/orders", s.withAuth(s.handleOrders))
+	mux.HandleFunc("GET /api/orders/{id}", s.withAuth(s.handleOrder))
 	mux.HandleFunc("GET /api/photo/{file_id}", s.withAuth(s.handlePhoto))
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
 		s.writeError(w, http.StatusNotFound, "webapp_err_not_found")

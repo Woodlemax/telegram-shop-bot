@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"sort"
 	"strconv"
 	"time"
 
@@ -677,6 +678,33 @@ func (s *OrderService) SetDelivered(ctx context.Context, orderID int64) (*storag
 // GetUserOrders returns all orders for the given user.
 func (s *OrderService) GetUserOrders(ctx context.Context, userID int64) ([]storage.Order, error) {
 	return s.orders.GetUserOrders(ctx, userID)
+}
+
+func (s *OrderService) GetUserOrdersPaged(ctx context.Context, userID int64, limit, offset int) ([]storage.Order, int, error) {
+	if paged, ok := s.orders.(interface {
+		GetUserOrdersPaged(context.Context, int64, int, int) ([]storage.Order, int, error)
+	}); ok {
+		return paged.GetUserOrdersPaged(ctx, userID, limit, offset)
+	}
+	orders, err := s.orders.GetUserOrders(ctx, userID)
+	if err != nil {
+		return nil, 0, err
+	}
+	sort.Slice(orders, func(i, j int) bool {
+		if orders[i].CreatedAt.Equal(orders[j].CreatedAt) {
+			return orders[i].ID > orders[j].ID
+		}
+		return orders[i].CreatedAt.After(orders[j].CreatedAt)
+	})
+	total := len(orders)
+	if limit < 1 || offset < 0 || offset >= total {
+		return []storage.Order{}, total, nil
+	}
+	end := offset + limit
+	if end > total {
+		end = total
+	}
+	return orders[offset:end], total, nil
 }
 
 // GetAllOrders returns all orders, optionally filtered by status.

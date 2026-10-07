@@ -15,6 +15,7 @@
   var titleEl = document.getElementById('title');
   var backBtn = document.getElementById('back-btn');
   var cartBtn = document.getElementById('cart-btn');
+  var ordersBtn = document.getElementById('orders-btn');
   var cartBadge = document.getElementById('cart-badge');
 
   // ---- i18n ----------------------------------------------------------------
@@ -159,6 +160,9 @@
     loading();
     api('GET', '/api/catalog').then(function (data) {
       clearScreen();
+    var orders = el('button', 'btn secondary orders-link', t('btn_orders'));
+    orders.type = 'button'; orders.onclick = function () { push(renderOrders); };
+    screenEl.appendChild(orders);
       var list = el('div', 'list');
       for (var i = 0; i < data.categories.length; i++) {
         (function (cat) {
@@ -435,6 +439,96 @@
     });
   }
 
+  // ---- screen: order history ----------------------------------------------------
+
+  function orderTotal(order) {
+    if (order.total_rub > 0 || (order.total_usd === 0 && order.total_stars === 0)) { return rub(order.total_rub); }
+    if (order.total_usd > 0) { return usd(order.total_usd); }
+    return stars(order.total_stars);
+  }
+
+  function orderStatus(order) {
+    var special = {refunded: 'webapp_order_refunded', partially_refunded: 'webapp_order_partial_refund', needs_review: 'webapp_order_review', cancelled: 'order_status_cancelled'};
+    if (special[order.payment_state]) { return t(special[order.payment_state]); }
+    if (order.payment_method === 'free' && order.status === 'paid') { return t('webapp_order_free'); }
+    var key = 'order_status_' + order.status;
+    return dict[key] || t('webapp_order_unknown');
+  }
+
+  function orderDate(value) {
+    var date = new Date(value);
+    return isNaN(date.getTime()) || date.getFullYear() < 2000 ? t('webapp_order_date_unknown') : date.toLocaleString();
+  }
+
+  function historyFailure(err, retry) {
+    clearScreen();
+    screenEl.appendChild(el('div', 'empty', t('error_load_orders')));
+    var button = el('button', 'btn secondary', t('webapp_orders_refresh'));
+    button.type = 'button'; button.onclick = retry; screenEl.appendChild(button);
+    showError(err);
+  }
+
+  function renderOrders(page) {
+    page = page || 1;
+  if (navStack.length) { navStack[navStack.length - 1] = function () { renderOrders(page); }; }
+    setTitle(t('btn_orders')); loading();
+    api('GET', '/api/orders?page=' + page).then(function (data) {
+      clearScreen();
+      var refresh = el('button', 'btn secondary orders-link', t('webapp_orders_refresh'));
+      refresh.type = 'button'; refresh.onclick = function () { renderOrders(page); }; screenEl.appendChild(refresh);
+      var list = el('div', 'list');
+      for (var i = 0; i < data.orders.length; i++) {
+        (function (order) {
+          var row = el('button', 'order-card'); row.type = 'button';
+          row.appendChild(el('div', 'order-heading', tf('webapp_order_number', order.id) + ' · ' + orderTotal(order)));
+          row.appendChild(el('div', 'order-status', orderStatus(order)));
+          row.appendChild(el('div', 'card-price', orderDate(order.created_at)));
+          var names = [];
+          for (var j = 0; j < order.items.length; j++) { names.push(order.items[j].name + ' × ' + order.items[j].quantity); }
+          row.appendChild(el('div', 'order-summary', names.join(', ')));
+          row.onclick = function () { push(function () { renderOrder(order.id); }); };
+          list.appendChild(row);
+        })(data.orders[i]);
+      }
+      if (!data.orders.length) { list.appendChild(el('div', 'empty', t('orders_empty'))); }
+      screenEl.appendChild(list);
+      var pages = Math.ceil(data.total / data.per_page);
+      if (pages > 1) {
+        var pager = el('div', 'pager');
+        var prev = el('button', 'btn secondary', '\u2039'); prev.type = 'button'; prev.disabled = page <= 1;
+        prev.onclick = function () { renderOrders(page - 1); };
+        var next = el('button', 'btn secondary', '\u203a'); next.type = 'button'; next.disabled = page >= pages;
+        next.onclick = function () { renderOrders(page + 1); };
+        pager.appendChild(prev); pager.appendChild(el('span', 'pager-label', page + ' / ' + pages)); pager.appendChild(next);
+        screenEl.appendChild(pager);
+      }
+    }).catch(function (err) { historyFailure(err, function () { renderOrders(page); }); });
+  }
+
+  function renderOrder(id) {
+    setTitle(tf('webapp_order_number', id)); loading();
+    api('GET', '/api/orders/' + id).then(function (data) {
+      var order = data.order;
+      clearScreen();
+      screenEl.appendChild(el('h2', 'product-name', tf('webapp_order_number', order.id)));
+      screenEl.appendChild(el('div', 'order-status', orderStatus(order)));
+      screenEl.appendChild(el('div', 'product-stock', orderDate(order.created_at)));
+      var method = dict['payment_method_' + order.payment_method] || t('webapp_order_payment_unknown');
+      screenEl.appendChild(el('p', 'product-desc', tf('webapp_order_payment', method)));
+      screenEl.appendChild(el('h3', 'order-heading', t('webapp_order_items')));
+      var list = el('div', 'list');
+      for (var i = 0; i < order.items.length; i++) {
+        var item = order.items[i];
+        list.appendChild(el('div', 'order-item', item.name + ' × ' + item.quantity));
+      }
+      screenEl.appendChild(list);
+      screenEl.appendChild(el('div', 'cart-total', t('webapp_total') + ': ' + orderTotal(order)));
+      if (order.payment_method === 'stars') { screenEl.appendChild(el('div', 'card-price', stars(order.total_stars))); }
+      var refresh = el('button', 'btn secondary', t('webapp_orders_refresh'));
+      refresh.type = 'button'; refresh.onclick = function () { renderOrder(id); }; screenEl.appendChild(refresh);
+    }).catch(function (err) { historyFailure(err, function () { renderOrder(id); }); });
+  }
+
   // ---- boot ---------------------------------------------------------------------
 
   function applyTheme() {
@@ -460,6 +554,7 @@
 
     backBtn.onclick = pop;
     cartBtn.onclick = function () { push(renderCart); };
+  ordersBtn.onclick = function () { push(renderOrders); };
 
     var lang = '';
     if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
@@ -470,6 +565,7 @@
       return resp.json();
     }).then(function (data) {
       dict = data || {};
+    ordersBtn.title = t('btn_orders'); ordersBtn.setAttribute('aria-label', t('btn_orders'));
     }).catch(function () {
       dict = {};
     }).then(function () {
