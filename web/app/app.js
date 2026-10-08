@@ -378,10 +378,9 @@
         };
         screenEl.appendChild(community);
       }
-      screenEl.appendChild(el('div', 'product-stock', p.infinite_stock ? t('product_infinite_stock') : tf('webapp_stock', p.stock)));
+      if (!p.infinite_stock) { screenEl.appendChild(el('div', 'product-stock', tf('webapp_stock', p.stock))); }
 
       if (p.is_digital) { screenEl.appendChild(el('div', 'product-stock', t('digital_product'))); }
-      if (p.single_in_cart) { screenEl.appendChild(el('div', 'product-stock', t('product_single_in_cart'))); }
       var add = el('button', 'btn primary', t(inCart ? 'product_go_to_cart' : 'webapp_add_to_cart'));
       add.type = 'button';
       function added(cart) {
