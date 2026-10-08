@@ -99,7 +99,7 @@ func (w *WishlistWatcherWorker) checkWishlists(ctx context.Context) {
 		// Back-in-stock notification: item was out of stock when added, now available.
 		// Only send once; clear flag when item goes out of stock again.
 		if e.StockAtAdded == 0 {
-			if e.Product.Stock > 0 && !e.BackInStockNotifiedAt.Valid {
+			if (e.Product.InfiniteStock || e.Product.Stock > 0) && !e.BackInStockNotifiedAt.Valid {
 				text := fmt.Sprintf(
 					w.i18n.T(lang, "wishlist_back_in_stock"),
 					e.Product.Name,

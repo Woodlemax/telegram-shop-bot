@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"sort"
 	"strconv"
 	"time"
 
@@ -209,25 +210,28 @@ func (s *OrderService) CreateFromCart(ctx context.Context, userID int64, cartVie
 		if err != nil {
 			return 0, fmt.Errorf("order service: get product %d: %w", ci.Product.ID, err)
 		}
-		if !p.IsActive || p.Stock < ci.Quantity {
+		if !p.IsActive || (!p.InfiniteStock && p.Stock < ci.Quantity) {
 			return 0, fmt.Errorf("order service: %w", &ErrInsufficientStock{ProductName: p.Name, Have: p.Stock, Want: ci.Quantity})
+		}
+		if ci.Quantity <= 0 || (p.SingleInCart && ci.Quantity > 1) {
+			return 0, storage.ErrSingleItemLimit
+		}
+		if p.OpenPrice != ci.Product.OpenPrice {
+			return 0, ErrOpenPrice
+		}
+		if p.OpenPrice && (ci.Product.PriceRUB == nil || *ci.Product.PriceRUB < 0 || *ci.Product.PriceRUB > 1000000 || math.Trunc(*ci.Product.PriceRUB) != *ci.Product.PriceRUB) {
+			return 0, ErrOpenPrice
 		}
 	}
 
-	totalUSD := cartView.TotalUSD
-	totalStars := cartView.TotalStars
-	discountPct := 0
-	promoCode := ""
-
-	if promo != nil {
-		discountPct = promo.Discount
-		promoCode = promo.Code
-		totalUSD = totalUSD * float64(100-discountPct) / 100
-		totalStars = totalStars * (100 - discountPct) / 100
+	totals, err := DiscountCart(cartView, promo)
+	if err != nil {
+		return 0, err
 	}
-	totalRUB := cartView.TotalRUB
+	totalUSD, totalStars, totalRUB := totals.TotalUSD, totals.TotalStars, totals.TotalRUB
+	discountPct, promoCode := 0, ""
 	if promo != nil {
-		totalRUB = math.Round(totalRUB*float64(100-discountPct)) / 100
+		discountPct, promoCode = promo.Discount, promo.Code
 	}
 	// TON snapshot: convert the final USD total (already discounted above)
 	// once, mirroring the RUB promo placement — discounting a pre-converted
@@ -665,6 +669,33 @@ func (s *OrderService) SetDelivered(ctx context.Context, orderID int64) (*storag
 // GetUserOrders returns all orders for the given user.
 func (s *OrderService) GetUserOrders(ctx context.Context, userID int64) ([]storage.Order, error) {
 	return s.orders.GetUserOrders(ctx, userID)
+}
+
+func (s *OrderService) GetUserOrdersPaged(ctx context.Context, userID int64, limit, offset int) ([]storage.Order, int, error) {
+	if paged, ok := s.orders.(interface {
+		GetUserOrdersPaged(context.Context, int64, int, int) ([]storage.Order, int, error)
+	}); ok {
+		return paged.GetUserOrdersPaged(ctx, userID, limit, offset)
+	}
+	orders, err := s.orders.GetUserOrders(ctx, userID)
+	if err != nil {
+		return nil, 0, err
+	}
+	sort.Slice(orders, func(i, j int) bool {
+		if orders[i].CreatedAt.Equal(orders[j].CreatedAt) {
+			return orders[i].ID > orders[j].ID
+		}
+		return orders[i].CreatedAt.After(orders[j].CreatedAt)
+	})
+	total := len(orders)
+	if limit < 1 || offset < 0 || offset >= total {
+		return []storage.Order{}, total, nil
+	}
+	end := offset + limit
+	if end > total {
+		end = total
+	}
+	return orders[offset:end], total, nil
 }
 
 // GetAllOrders returns all orders, optionally filtered by status.

@@ -60,7 +60,7 @@ func reviewInviteKeyboard(orderID int64) StyledKeyboard {
 
 // sendReviewInvite asks the buyer to rate a freshly delivered order.
 func (b *Bot) sendReviewInvite(ctx context.Context, order *storage.Order) {
-	if order == nil {
+	if order == nil || b.adminOnly() {
 		return
 	}
 	lang := "en"

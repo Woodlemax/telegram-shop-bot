@@ -69,11 +69,14 @@ type payLedgerStore interface {
 type Bot struct {
 	api             *tgbotapi.BotAPI
 	cfg             *config.Config
+	exchange        *service.ExchangeService
+	telegramInput   sync.Map
 	catalog         *shop.CatalogService
 	cart            *shop.CartService
 	order           *shop.OrderService
 	users           storage.UserStore
 	products        storage.ProductStore
+	adminProducts   storage.AdminProductLister
 	promos          storage.PromoStore
 	analytics       storage.AnalyticsStore
 	photos          storage.ProductPhotoStore
@@ -97,6 +100,7 @@ type Bot struct {
 	wishlist   *storage.WishlistStore
 	uiSettings storage.UISettingsStore
 	subs       storage.SubscriptionStore
+	archives   *storage.DigitalArchiveStore
 	// tgbotapi v5 omits recurring fields. Reference-counted signals preserve
 	// them across concurrent duplicate deliveries of the same charge.
 	pendingSubSignalsMu sync.Mutex
@@ -169,7 +173,10 @@ func NewWithAPI(cfg *config.Config, api *tgbotapi.BotAPI, db *storage.DB, metric
 	analyticsStore := storage.NewSQLAnalyticsStore(db)
 	referralStore := storage.NewReferralStore(db.Conn())
 	referralSvc := service.NewReferralService(2.0, 1.0, 100, redisClient)
-	exchangeSvc := service.NewExchangeService(cfg.USDToStarsRate, cfg.USDToRUBRate, cfg.USDPerTON)
+	exchangeSvc, err := service.NewPersistentExchangeService(context.Background(), storage.NewSQLRUBRateStore(db.Conn()), cfg.USDToStarsRate, cfg.USDToRUBRate, cfg.USDPerTON)
+	if err != nil {
+		return nil, err
+	}
 	loyaltyStore := storage.NewLoyaltyStore(db.Conn())
 	loyaltySvc := service.NewLoyaltyService(loyaltyStore, 1)
 
@@ -199,11 +206,13 @@ func NewWithAPI(cfg *config.Config, api *tgbotapi.BotAPI, db *storage.DB, metric
 	b := &Bot{
 		api:             api,
 		cfg:             cfg,
+		exchange:        exchangeSvc,
 		catalog:         shop.NewCatalogService(cachedPS, exchangeSvc),
 		cart:            shop.NewCartService(cs, cachedPS, exchangeSvc),
 		order:           shop.NewOrderService(os, cs, cachedPS, paymentDeps, logger, exchangeSvc),
 		users:           us,
 		products:        cachedPS,
+		adminProducts:   ps,
 		promos:          promoStore,
 		analytics:       analyticsStore,
 		referrals:       referralStore,
@@ -226,6 +235,7 @@ func NewWithAPI(cfg *config.Config, api *tgbotapi.BotAPI, db *storage.DB, metric
 		payLedger:       storage.NewSQLPaymentLedgerStore(db),
 		balances:        balanceStore,
 		subs:            storage.NewSQLSubscriptionStore(db),
+		archives:        storage.NewDigitalArchiveStore(db),
 	}
 	// One-time setup at construction: no request/update context exists yet, so
 	// context.Background() is the honest root (not a per-update ctx).
@@ -264,41 +274,46 @@ func (b *Bot) ensureHandler(ctx context.Context) {
 	})
 }
 
+// ExchangeService is shared by bot checkout and Mini App pricing.
+func (b *Bot) ExchangeService() *service.ExchangeService { return b.exchange }
+
 // API returns the underlying Telegram Bot API instance.
 func (b *Bot) API() *tgbotapi.BotAPI {
 	return b.api
 }
 
+func (b *Bot) starsOnlyPayments() bool { return b.cfg != nil && b.cfg.StarsOnlyPayments }
+
 func (b *Bot) cryptoPaymentsEnabled() bool {
-	return b.crypto != nil && b.crypto.Configured()
+	return !b.starsOnlyPayments() && b.crypto != nil && b.crypto.Configured()
 }
 
 // yooKassaPaymentsEnabled reports whether RUB card payments can be offered:
 // credentials configured AND a positive RUB exchange rate AND the order has a
 // positive RUB snapshot (checked per-order at button build time).
 func (b *Bot) yooKassaPaymentsEnabled() bool {
-	return b.yookassa != nil && b.yookassa.Configured() && b.cfg != nil && b.cfg.USDToRUBRate > 0
+	return !b.starsOnlyPayments() && b.yookassa != nil && b.yookassa.Configured() && b.currentRUBRate() > 0
 }
 
 // stripePaymentsEnabled reports whether USD card payments via Stripe can be
 // offered: the adapter is fully configured. No conversion is needed — the
 // order's USD snapshot is charged directly.
 func (b *Bot) stripePaymentsEnabled() bool {
-	return b.stripe != nil && b.stripe.Configured()
+	return !b.starsOnlyPayments() && b.stripe != nil && b.stripe.Configured()
 }
 
 // tonPaymentsEnabled reports whether TON on-chain transfers can be offered:
 // a wallet address configured AND a positive USD/TON rate. The order's
 // nanoton snapshot is checked per-order at button build time.
 func (b *Bot) tonPaymentsEnabled() bool {
-	return b.ton != nil && b.ton.Configured() && b.cfg != nil && b.cfg.USDPerTON > 0
+	return !b.starsOnlyPayments() && b.ton != nil && b.ton.Configured() && b.cfg != nil && b.cfg.USDPerTON > 0
 }
 
 // nowpaymentsEnabled reports whether hosted crypto invoices via NOWPayments
 // can be offered: the adapter is fully configured. No conversion is needed —
 // the order's USD snapshot is priced directly.
 func (b *Bot) nowpaymentsEnabled() bool {
-	return b.nowpayments != nil && b.nowpayments.Configured()
+	return !b.starsOnlyPayments() && b.nowpayments != nil && b.nowpayments.Configured()
 }
 
 // registerCommands registers the bot command list with Telegram so the "/" menu shows up.
@@ -319,6 +334,12 @@ func (b *Bot) registerCommands() {
 		tgbotapi.BotCommand{Command: "help", Description: "All commands"},
 		tgbotapi.BotCommand{Command: "cancel", Description: "Cancel current action"},
 	)
+	if b.adminOnly() {
+		cmds = tgbotapi.NewSetMyCommands(
+			tgbotapi.BotCommand{Command: "start", Description: "Open shop"},
+			tgbotapi.BotCommand{Command: "help", Description: "Open shop"},
+		)
+	}
 	if _, err := b.api.Request(cmds); err != nil {
 		b.logger.Warn("setMyCommands failed", "error", err)
 	}

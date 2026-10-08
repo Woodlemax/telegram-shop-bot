@@ -3,9 +3,11 @@ package config
 import (
 	"fmt"
 	"math"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 )
 
 const defaultUSDToStarsRate = 50
@@ -23,6 +25,8 @@ type Config struct {
 	RedisPassword         string
 	TelegramWebhookSecret string
 	USDToStarsRate        int
+	StarsOnlyPayments     bool
+	BotAdminOnly          bool
 	LocalesDir            string
 	OutboundWebhookURL    string
 	OutboundWebhookSecret string
@@ -32,7 +36,9 @@ type Config struct {
 	TopicOrdersDelivered  int
 	// WebAppURL is the public HTTPS URL of the Mini App (mounted at /app/).
 	// Empty disables the Mini App and its REST API entirely.
-	WebAppURL string
+	WebAppURL        string
+	ShopOfferURL     string
+	ShopContactsText string
 	// YooKassa RUB card payments. All three must be set together or none.
 	YooKassaShopID    string
 	YooKassaSecretKey string
@@ -86,6 +92,23 @@ func load(lookup lookupFunc) (*Config, error) {
 	usdToStars, err := parsePositiveInt(value(lookup, "USD_TO_STARS_RATE"), defaultUSDToStarsRate)
 	if err != nil {
 		return nil, fmt.Errorf("USD_TO_STARS_RATE: %w", err)
+	}
+
+	starsOnly := false
+	if raw := strings.TrimSpace(value(lookup, "STARS_ONLY_PAYMENTS")); raw != "" {
+		var err error
+		starsOnly, err = strconv.ParseBool(raw)
+		if err != nil {
+			return nil, fmt.Errorf("STARS_ONLY_PAYMENTS: %w", err)
+		}
+	}
+
+	botAdminOnly := false
+	if raw := strings.TrimSpace(value(lookup, "BOT_ADMIN_ONLY")); raw != "" {
+		botAdminOnly, err = strconv.ParseBool(raw)
+		if err != nil {
+			return nil, fmt.Errorf("BOT_ADMIN_ONLY: %w", err)
+		}
 	}
 
 	adminGroupID, err := parseOptionalInt64(value(lookup, "ADMIN_GROUP_ID"))
@@ -162,6 +185,18 @@ func load(lookup lookupFunc) (*Config, error) {
 		return nil, err
 	}
 
+	shopOfferURL := strings.TrimSpace(value(lookup, "SHOP_OFFER_URL"))
+	if shopOfferURL != "" {
+		u, err := url.Parse(shopOfferURL)
+		if err != nil || u.Scheme != "https" || u.Hostname() == "" || u.User != nil {
+			return nil, fmt.Errorf("SHOP_OFFER_URL must be an HTTPS URL without credentials")
+		}
+	}
+	shopContacts := strings.TrimSpace(strings.ReplaceAll(value(lookup, "SHOP_CONTACTS_TEXT"), `\n`, "\n"))
+	if utf8.RuneCountInString(shopContacts) > 3000 {
+		return nil, fmt.Errorf("SHOP_CONTACTS_TEXT must contain at most 3000 characters")
+	}
+
 	return &Config{
 		BotToken:              botToken,
 		BotUsername:           value(lookup, "BOT_USERNAME"),
@@ -179,10 +214,14 @@ func load(lookup lookupFunc) (*Config, error) {
 		RedisPassword:         value(lookup, "REDIS_PASSWORD"),
 		TelegramWebhookSecret: webhookSecret,
 		USDToStarsRate:        usdToStars,
+		StarsOnlyPayments:     starsOnly,
+		BotAdminOnly:          botAdminOnly,
 		LocalesDir:            getEnv(lookup, "LOCALES_DIR", "locales"),
 		OutboundWebhookURL:    value(lookup, "OUTBOUND_WEBHOOK_URL"),
 		OutboundWebhookSecret: value(lookup, "OUTBOUND_WEBHOOK_SECRET"),
 		WebAppURL:             value(lookup, "WEBAPP_URL"),
+		ShopOfferURL:          shopOfferURL,
+		ShopContactsText:      shopContacts,
 		YooKassaShopID:        yooShopID,
 		YooKassaSecretKey:     yooSecret,
 		YooKassaReturnURL:     yooReturn,

@@ -2,6 +2,7 @@ package shop
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"shop_bot/internal/service"
@@ -13,6 +14,7 @@ type CartView struct {
 	Items      []CartItemView
 	TotalUSD   float64
 	TotalStars int
+	BaseRUB    bool
 	// TotalRUB is the RUB price of TotalUSD at the current rate, rounded to
 	// kopecks. It stays 0 while RUB payments are disabled (rate 0 or no
 	// exchange service).
@@ -52,10 +54,16 @@ func (s *CartService) Add(ctx context.Context, userID, productID int64) error {
 	if err != nil {
 		return err
 	}
-	if !(p.IsActive && p.Stock > 0) {
+	if !(p.IsActive && (p.InfiniteStock || p.Stock > 0)) {
 		return storage.ErrProductOutOfStock
 	}
-	return s.cart.AddItem(ctx, userID, productID)
+	if err := s.cart.AddItem(ctx, userID, productID); err != nil {
+		return err
+	}
+	if p.SingleInCart {
+		return s.cart.UpdateQuantity(ctx, userID, productID, 1)
+	}
+	return nil
 }
 
 // Get returns an aggregated view of the user's cart including product details
@@ -66,18 +74,47 @@ func (s *CartService) Get(ctx context.Context, userID int64) (*CartView, error) 
 		return nil, fmt.Errorf("cart service: get items: %w", err)
 	}
 
+	exchange := s.exchange.Snapshot()
 	view := &CartView{
-		Items: make([]CartItemView, 0, len(items)),
+		Items:   make([]CartItemView, 0, len(items)),
+		BaseRUB: true,
 	}
 
 	for _, ci := range items {
 		p, err := s.products.GetProduct(ctx, ci.ProductID)
+		if errors.Is(err, storage.ErrNotFound) {
+			continue
+		}
 		if err != nil {
 			return nil, fmt.Errorf("cart service: get product %d: %w", ci.ProductID, err)
 		}
+		copyProduct := *p
+		p = &copyProduct
 
-		if s.exchange != nil {
-			p.PriceStars = s.exchange.ConvertUSDToStars(p.PriceUSD)
+		if p.PriceRUB == nil && !p.OpenPrice {
+			view.BaseRUB = false
+		}
+		applyProductPrice(p, exchange)
+		if p.OpenPrice {
+			rub := float64(ci.CustomPrice)
+			p.PriceRUB = &rub
+			if rub > 0 && (exchange == nil || !exchange.RUBConfigured()) {
+				return nil, ErrRUBRate
+			}
+			p.PriceUSD = 0
+			p.PriceStars = 0
+			if exchange != nil {
+				p.PriceUSD = exchange.ConvertRUBToUSD(rub)
+				p.PriceStars = exchange.ConvertUSDToStars(p.PriceUSD)
+			}
+		}
+		if p.PriceRUB != nil {
+			if *p.PriceRUB > 0 && (exchange == nil || !exchange.RUBConfigured()) {
+				return nil, ErrRUBRate
+			}
+			view.TotalRUB += *p.PriceRUB * float64(ci.Quantity)
+		} else {
+			view.BaseRUB = false
 		}
 
 		view.Items = append(view.Items, CartItemView{
@@ -90,9 +127,11 @@ func (s *CartService) Get(ctx context.Context, userID int64) (*CartView, error) 
 
 	// Convert once from the accumulated TotalUSD: per-item conversion would
 	// drift the total through repeated kopeck/nanoton rounding.
-	if s.exchange != nil {
-		view.TotalRUB = s.exchange.ConvertUSDToRUB(view.TotalUSD)
-		view.TotalTONNano = s.exchange.ConvertUSDToNanoTON(view.TotalUSD)
+	if exchange != nil {
+		if !view.BaseRUB {
+			view.TotalRUB = exchange.ConvertUSDToRUB(view.TotalUSD)
+		}
+		view.TotalTONNano = exchange.ConvertUSDToNanoTON(view.TotalUSD)
 	}
 
 	return view, nil
@@ -127,7 +166,17 @@ func (s *CartService) ChangeQuantity(ctx context.Context, userID, productID int6
 		if err != nil {
 			return fmt.Errorf("cart service: get product %d for quantity change: %w", productID, err)
 		}
-		if !(p.IsActive && p.Stock >= newQty) {
+		if !p.IsActive || (!p.InfiniteStock && p.Stock <= 0) {
+			return storage.ErrProductOutOfStock
+		}
+		if p.SingleInCart && newQty > 1 {
+			// Repeated add actions are idempotent for a single-unit product.
+			if currentQty == 1 && delta == 1 {
+				return nil
+			}
+			return storage.ErrSingleItemLimit
+		}
+		if !(p.IsActive && (p.InfiniteStock || p.Stock >= newQty)) {
 			return storage.ErrProductOutOfStock
 		}
 	}

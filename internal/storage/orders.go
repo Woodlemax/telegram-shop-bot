@@ -88,6 +88,9 @@ func (s *SQLOrderStore) createOrderOnce(ctx context.Context, order *Order, items
 	}
 
 	for _, item := range items {
+		if err := snapshotDigitalArchive(ctx, tx, orderID, item); err != nil {
+			return 0, err
+		}
 		_, err := tx.ExecContext(ctx,
 			`INSERT INTO order_items (order_id, product_id, product_name, quantity, price_usd)
 			 VALUES (?, ?, ?, ?, ?)`,
@@ -207,6 +210,46 @@ func (s *SQLOrderStore) GetUserOrders(ctx context.Context, userID int64) ([]Orde
 	}
 
 	return orders, nil
+}
+
+// GetUserOrdersPaged bounds both the order query and item loading to one page.
+func (s *SQLOrderStore) GetUserOrdersPaged(ctx context.Context, userID int64, limit, offset int) ([]Order, int, error) {
+	if limit < 1 || limit > 100 || offset < 0 {
+		return nil, 0, fmt.Errorf("order store: invalid pagination")
+	}
+	var total int
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM orders WHERE user_id=?`, userID).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+	rows, err := s.db.QueryContext(ctx, `SELECT id FROM orders WHERE user_id=? ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?`, userID, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	var ids []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return nil, 0, err
+		}
+		ids = append(ids, id)
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return nil, 0, err
+	}
+	orders := make([]Order, 0, len(ids))
+	for _, id := range ids {
+		o, err := s.GetOrder(ctx, id)
+		if err != nil {
+			return nil, 0, err
+		}
+		if o.UserID == userID {
+			orders = append(orders, *o)
+		}
+	}
+	return orders, total, nil
 }
 
 // GetAllOrders returns all orders sorted by created_at descending. If
@@ -526,7 +569,7 @@ func (s *SQLOrderStore) updateOrderStatusOnce(ctx context.Context, id int64, fro
 
 		// 1. Get items (use internal method but with tx)
 		rows, err := tx.QueryContext(ctx,
-			`SELECT product_id, quantity FROM order_items WHERE order_id = ?`, id)
+			`SELECT product_id, quantity FROM order_items i WHERE order_id = ?`, id)
 		if err != nil {
 			return fmt.Errorf("order store: get items for stock update: %w", err)
 		}
@@ -548,7 +591,7 @@ func (s *SQLOrderStore) updateOrderStatusOnce(ctx context.Context, id int64, fro
 		// 2. Decrement stock for each item atomically; fail if stock would go negative.
 		for _, i := range items {
 			res, err := tx.ExecContext(ctx,
-				`UPDATE products SET stock = stock - ? WHERE id = ? AND stock >= ?`,
+				`UPDATE products SET stock = CASE WHEN infinite_stock=1 THEN stock ELSE stock - ? END WHERE id = ? AND (infinite_stock=1 OR stock >= ?)`,
 				i.quantity, i.productID, i.quantity)
 			if err != nil {
 				return fmt.Errorf("order store: decrement stock for product %d: %w", i.productID, err)

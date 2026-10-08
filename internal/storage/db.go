@@ -29,6 +29,7 @@ var (
 	ErrSubscriptionOrderConflict = errors.New("storage: subscription already active or awaiting payment")
 	ErrSubscriptionEntitlement   = errors.New("storage: subscription entitlement write failed")
 	ErrProductOutOfStock         = errors.New("storage: product out of stock")
+	ErrSingleItemLimit           = errors.New("storage: only one unit allowed in cart")
 	ErrEmptyCart                 = errors.New("storage: cart is empty")
 	// ErrInsufficientFunds rejects a balance debit that would overdraw the
 	// user's USD balance. The guard lives in the UPDATE's WHERE clause, so

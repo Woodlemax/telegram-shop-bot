@@ -24,19 +24,28 @@ func NewCartStore(db *sql.DB) *SQLCartStore {
 func (s *SQLCartStore) AddItem(ctx context.Context, userID, productID int64) error {
 	query := `
 		INSERT INTO cart_items (user_id, product_id, quantity)
-		VALUES (?, ?, 1)
+		SELECT ?, id, 1 FROM products WHERE id=? AND deleted_at IS NULL
 		ON CONFLICT(user_id, product_id) DO UPDATE SET
-			quantity = cart_items.quantity + 1
+			quantity = CASE WHEN EXISTS(SELECT 1 FROM products WHERE id=excluded.product_id AND single_in_cart=1)
+			 THEN 1 ELSE cart_items.quantity + 1 END
 	`
-	_, err := s.db.ExecContext(ctx, query, userID, productID)
-	return err
+	res, err := s.db.ExecContext(ctx, query, userID, productID)
+	if err != nil {
+		return err
+	}
+	if n, err := res.RowsAffected(); err != nil {
+		return err
+	} else if n == 0 {
+		return ErrNotFound
+	}
+	return nil
 }
 
 func (s *SQLCartStore) UpdateQuantity(ctx context.Context, userID, productID int64, quantity int) error {
 	if quantity <= 0 {
 		return s.RemoveItem(ctx, userID, productID)
 	}
-	query := `UPDATE cart_items SET quantity = ? WHERE user_id = ? AND product_id = ?`
+	query := `UPDATE cart_items SET quantity = CASE WHEN EXISTS(SELECT 1 FROM products WHERE id=cart_items.product_id AND single_in_cart=1) THEN 1 ELSE ? END WHERE user_id = ? AND product_id = ?`
 	_, err := s.db.ExecContext(ctx, query, quantity, userID, productID)
 	return err
 }
@@ -95,10 +104,10 @@ func (s *SQLCartStore) CountActiveCarts(ctx context.Context) (int64, error) {
 
 func (s *SQLCartStore) GetItems(ctx context.Context, userID int64) ([]CartItem, error) {
 	query := `
-		SELECT c.id, c.user_id, c.product_id, c.quantity, c.added_at, p.name, p.price_usd
+		SELECT c.id, c.user_id, c.product_id, c.quantity, c.added_at, p.name, p.price_usd, c.custom_price
 		FROM cart_items c
 		JOIN products p ON c.product_id = p.id
-		WHERE c.user_id = ?
+		WHERE c.user_id = ? AND p.deleted_at IS NULL
 	`
 	rows, err := s.db.QueryContext(ctx, query, userID)
 	if err != nil {
@@ -109,7 +118,7 @@ func (s *SQLCartStore) GetItems(ctx context.Context, userID int64) ([]CartItem, 
 	var items []CartItem
 	for rows.Next() {
 		var i CartItem
-		if err := rows.Scan(&i.ID, &i.UserID, &i.ProductID, &i.Quantity, &i.AddedAt, &i.ProductName, &i.ProductPrice); err != nil {
+		if err := rows.Scan(&i.ID, &i.UserID, &i.ProductID, &i.Quantity, &i.AddedAt, &i.ProductName, &i.ProductPrice, &i.CustomPrice); err != nil {
 			return nil, fmt.Errorf("scan cart item: %w", err)
 		}
 		items = append(items, i)

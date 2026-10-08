@@ -139,17 +139,29 @@ func (b *Bot) onProductSelected(ctx context.Context, chatID, userID int64, msgID
 		return
 	}
 
+	quantity := 0
+	view, cartErr := b.cart.Get(ctx, userID)
+	if cartErr != nil {
+		b.loggerFor(ctx).Warn("get cart for product view", "user_id", userID, "product_id", prodID, "error", cartErr)
+	} else {
+		for _, item := range view.Items {
+			if item.Product.ID == prodID {
+				quantity = item.Quantity
+				if p.OpenPrice {
+					p.PriceRUB = item.Product.PriceRUB
+					p.PriceUSD = item.Product.PriceUSD
+					p.PriceStars = item.Product.PriceStars
+				}
+				break
+			}
+		}
+	}
 	text := b.formatProductText(lang, p)
 	avg, reviewCount := b.productRating(ctx, prodID)
 	if reviewCount > 0 {
 		text += "\n" + b.formatRatingLine(lang, avg, reviewCount)
 	}
-
 	inWishlist, _ := b.wishlist.IsInWishlist(ctx, userID, prodID)
-	quantity, err := b.cartQuantity(ctx, userID, prodID)
-	if err != nil {
-		b.loggerFor(ctx).Warn("get cart quantity for product view", "user_id", userID, "product_id", prodID, "error", err)
-	}
 	kb := b.productKeyboard(p, inWishlist, quantity, lang)
 	if reviewCount > 0 {
 		kb = insertReviewsRow(kb, Btn(b.t(lang, "review_btn_list"), fmt.Sprintf("review:list:%d", prodID)))
@@ -249,19 +261,35 @@ func (b *Bot) productKeyboard(p *storage.Product, inWishlist bool, quantity int,
 	if inWishlist {
 		wishBtnLabel = "💔 " + b.t(lang, "btn_wishlist_remove")
 	}
-	return StyledKeyboard{
+	addLabel := b.t(lang, "btn_add_to_cart")
+	addAction := fmt.Sprintf("cart:add:%d", p.ID)
+	if quantity > 0 {
+		addLabel = b.t(lang, "product_go_to_cart")
+		addAction = "back:cart"
+	}
+	kb := StyledKeyboard{
 		{
 			Btn("➖", fmt.Sprintf("productqty:minus:%d", p.ID)),
 			Btn(b.productQuantityLabel(lang, quantity), "noop"),
 			Btn("➕", fmt.Sprintf("productqty:plus:%d", p.ID)),
 		},
-		{b.styledBtn(BtnKeyProductAdd, b.t(lang, "btn_add_to_cart"), fmt.Sprintf("cart:add:%d", p.ID), StyleSuccess)},
+		{b.styledBtn(BtnKeyProductAdd, addLabel, addAction, StyleSuccess)},
 		{
 			b.styledBtn(BtnKeyProductWish, wishBtnLabel, fmt.Sprintf("wish:%d", p.ID), StyleDefault),
 			Btn(b.t(lang, "btn_back"), fmt.Sprintf("back:category:%d", p.CategoryID)),
 			Btn(b.t(lang, "btn_menu"), "back:menu"),
 		},
 	}
+	if p.SingleInCart {
+		kb = kb[1:]
+	}
+	if p.OpenPrice {
+		kb = append(StyledKeyboard{{Btn(b.t(lang, "open_price_button"), fmt.Sprintf("price:enter:%d", p.ID))}}, kb...)
+	}
+	if link, err := storage.NormalizeTelegramURL(p.TelegramURL); err == nil && link != "" {
+		kb = append(StyledKeyboard{{BtnURL(b.t(lang, "product_telegram_link"), link)}}, kb...)
+	}
+	return kb
 }
 
 func (b *Bot) cartQuantity(ctx context.Context, userID, prodID int64) (int, error) {

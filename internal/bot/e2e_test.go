@@ -94,6 +94,10 @@ func (f *fakeTelegram) serveHTTP(w http.ResponseWriter, r *http.Request) {
 			},
 		})
 		return
+	case "createInvoiceLink":
+		f.record(tgCall{Method: method, Params: params})
+		writeJSON(map[string]any{"ok": true, "result": "https://t.me/$test-invoice"})
+		return
 	case "answerCallbackQuery", "deleteMessage", "answerPreCheckoutQuery":
 		f.record(tgCall{Method: method, Params: params})
 		writeJSON(map[string]any{"ok": true, "result": true})

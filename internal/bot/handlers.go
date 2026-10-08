@@ -15,6 +15,10 @@ func (b *Bot) route(ctx context.Context, update tgbotapi.Update) {
 		b.handlePreCheckout(ctx, update.PreCheckoutQuery)
 
 	case update.InlineQuery != nil:
+		if b.adminOnly() {
+			_, _ = b.api.Request(tgbotapi.InlineConfig{InlineQueryID: update.InlineQuery.ID, Results: []interface{}{}, IsPersonal: true, CacheTime: 1})
+			return
+		}
 		b.handleInlineQuery(ctx, update.InlineQuery)
 
 	case update.Message != nil:
@@ -31,9 +35,21 @@ func (b *Bot) routeMessage(ctx context.Context, msg *tgbotapi.Message) {
 		b.handleSuccessfulPayment(ctx, msg)
 		return
 	}
+	if b.adminOnly() && b.routeAdminOnlyMessage(msg) {
+		return
+	}
+	if b.handleProductTelegramInput(ctx, msg) {
+		return
+	}
+	if b.handleArchiveUpload(ctx, msg) {
+		return
+	}
+	if !b.adminOnly() && b.handlePriceInput(ctx, msg) {
+		return
+	}
 
 	// Check if user is entering a promo code.
-	if msg.Command() == "" {
+	if !b.adminOnly() && msg.Command() == "" {
 		promoAt, _ := b.fsm.GetPromoState(ctx, msg.From.ID)
 		if !promoAt.IsZero() {
 			b.handlePromoInput(ctx, msg)
@@ -42,7 +58,7 @@ func (b *Bot) routeMessage(ctx context.Context, msg *tgbotapi.Message) {
 	}
 
 	// Check if user is writing a review text (post-rating FSM step).
-	if msg.Command() == "" {
+	if !b.adminOnly() && msg.Command() == "" {
 		reviewState, _ := b.fsm.GetReviewState(ctx, msg.From.ID)
 		if reviewState != nil {
 			b.handleReviewTextInput(ctx, msg, reviewState)
@@ -82,6 +98,10 @@ func (b *Bot) routeMessage(ctx context.Context, msg *tgbotapi.Message) {
 		b.handleCart(ctx, msg)
 	case "orders":
 		b.handleOrders(ctx, msg)
+	case "files":
+		b.sendDigitalLibrary(ctx, msg.Chat.ID, msg.From.ID, msg.From.LanguageCode)
+	case "setarchive":
+		b.handleSetArchive(ctx, msg)
 
 	case "mysubs":
 		b.handleMySubs(ctx, msg)
@@ -99,8 +119,12 @@ func (b *Bot) routeMessage(ctx context.Context, msg *tgbotapi.Message) {
 		b.handleCancel(ctx, msg)
 
 	// Admin commands.
+	case "rubrate":
+		b.handleRUBRate(ctx, msg)
 	case "admin":
 		b.handleAdmin(msg)
+	case "listproduct":
+		b.handleListProduct(ctx, msg)
 	case "addproduct":
 		b.handleAddProduct(ctx, msg)
 	case "editproduct":
@@ -190,13 +214,59 @@ func (b *Bot) handleCallback(ctx context.Context, cb *tgbotapi.CallbackQuery) {
 		return
 	}
 
+	if b.handleShopInfoCallback(cb) {
+		return
+	}
 	data := cb.Data
 	chatID := cb.Message.Chat.ID
 	msgID := cb.Message.MessageID
 	userID := cb.From.ID
 	lang := cb.From.LanguageCode
 
+	if b.adminOnly() && !(b.isAdmin(userID) && chatID == userID && adminCallback(data)) {
+		b.toast(cb.ID, b.t(lang, "bot_miniapp_only"))
+		return
+	}
+	b.telegramInput.Delete(userID)
 	switch {
+	case strings.HasPrefix(data, "admin:telegram:"):
+		b.ack(cb.ID)
+		if b.isAdmin(userID) && chatID == userID {
+			b.onAdminProductTelegram(ctx, chatID, userID, data, lang)
+		}
+	case data == "admin:rubrate", data == "admin:rubrate:edit":
+		b.ack(cb.ID)
+		if b.isAdmin(userID) && chatID == userID {
+			// Old buttons show the command instructions instead of opening an input dialog.
+			b.sendRUBRate(chatID, msgID, lang)
+		}
+	case strings.HasPrefix(data, "price:enter:"):
+		b.ack(cb.ID)
+		b.onOpenPrice(ctx, chatID, userID, data, lang)
+	case strings.HasPrefix(data, "order:free:"):
+		b.onFreeOrder(ctx, cb.ID, chatID, userID, data, lang)
+	case strings.HasPrefix(data, "admin:openprice:"):
+		b.ack(cb.ID)
+		if b.isAdmin(userID) {
+			b.onAdminOpenPrice(ctx, chatID, data, lang)
+		}
+	case strings.HasPrefix(data, "admin:infinitestock:"), strings.HasPrefix(data, "admin:singleincart:"):
+		b.ack(cb.ID)
+		if b.isAdmin(userID) {
+			b.onAdminQuantitySetting(ctx, chatID, data, lang)
+		}
+	case data == "digital:library":
+		b.ack(cb.ID)
+		b.sendDigitalLibrary(ctx, chatID, userID, lang)
+	case strings.HasPrefix(data, "digital:download:"):
+		b.onDigitalDownload(ctx, cb.ID, chatID, userID, data, lang)
+	case strings.HasPrefix(data, "admin:archive:"):
+		b.ack(cb.ID)
+		if b.isAdmin(userID) {
+			if id, err := parseIDFromCallback(data, "admin:archive:"); err == nil {
+				b.beginArchiveUpload(ctx, chatID, userID, id, lang)
+			}
+		}
 	case strings.HasPrefix(data, "category:"):
 		b.ack(cb.ID)
 		b.onCategorySelected(ctx, chatID, userID, b.prepareTextRenderMessageID(chatID, cb.Message), data, lang)
@@ -238,6 +308,15 @@ func (b *Bot) handleCallback(ctx context.Context, cb *tgbotapi.CallbackQuery) {
 		b.ack(cb.ID)
 		b.onOrderConfirm(ctx, chatID, userID, b.prepareTextRenderMessageID(chatID, cb.Message), data, lang)
 
+	case strings.HasPrefix(data, "order:cancelask:"):
+		b.onOrderCancelAsk(ctx, cb.ID, chatID, userID, b.prepareTextRenderMessageID(chatID, cb.Message), data, lang)
+	case strings.HasPrefix(data, "order:resume:"):
+		b.onOrderResume(ctx, cb.ID, chatID, userID, b.prepareTextRenderMessageID(chatID, cb.Message), data, lang)
+	case strings.HasPrefix(data, "orders:page:"):
+		b.ack(cb.ID)
+		if page, err := parseIDFromCallback(data, "orders:page:"); err == nil && page > 0 && page <= 1000000 {
+			b.sendOrdersPage(ctx, chatID, userID, b.prepareTextRenderMessageID(chatID, cb.Message), lang, int(page))
+		}
 	case strings.HasPrefix(data, "order:cancel:"):
 		b.onOrderCancel(ctx, cb.ID, chatID, userID, b.prepareTextRenderMessageID(chatID, cb.Message), data, lang)
 

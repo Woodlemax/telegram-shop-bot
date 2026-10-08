@@ -33,7 +33,14 @@ A full-featured e-commerce bot for Telegram — catalog, cart, Telegram Stars & 
 **🛍️ Buyer**
 - Product catalog with categories & photo galleries
 - Cart & checkout inside Telegram
-- **Telegram Stars** payments (built-in)
+- Bot order history with resume/cancel actions, and one latest archive per purchased product
+- Mini App order history with latest ZIP downloads, resumed payment and confirmation before canceling an unpaid order. [Usage](docs/order-history.md).
+- **Optional Telegram community link** per product; a group/channel button below its description in the bot and Mini App, editable/removable from the administrator product card
+- **RUB exchange rate** editable in `/admin` → **RUB exchange rate** or `/rubrate 100`; saved in SQLite and applied to bot and Mini App without restarting
+- **Telegram Stars** payments (built-in); shared `STARS_ONLY_PAYMENTS` switch disables every other checkout method in the bot and Mini App
+- **Digital ZIP models** — admin document uploads, automatic delivery after confirmed payment, retries, and downloads of updated archives for existing buyers. [Setup](docs/digital-archives.md).
+- **Ruble catalog and open prices** — set product prices in RUB, let buyers choose a whole-ruble amount from zero, and fulfill zero-total carts without payment. [Setup](docs/open-prices.md).
+- **Product quantity settings** — independent unlimited-stock and one-unit-per-cart switches, managed from the administrator product card. [Setup](docs/product-quantity-settings.md).
 - **Stars subscriptions** — recurring 30-day products, `/mysubs` to manage
 - **USDT via CryptoBot** (optional)
 - **RUB cards via YooKassa** (optional)
@@ -42,6 +49,7 @@ A full-featured e-commerce bot for Telegram — catalog, cart, Telegram Stars & 
 - **300+ coins via NOWPayments** (optional)
 - **Balance payments** — spend an admin-granted USD balance at checkout
 - **Mini App** — full shop UI inside Telegram (opt-in via `WEBAPP_URL`)
+- **Order history in Mini App** — dated orders with saved totals, product quantities, payment/delivery/refund statuses and paging. [Details](docs/order-history.md).
 - **Reviews & ratings** — 1–5 ⭐ after delivery, average shown on the product card
 - Promo codes with category limits + personal one-off codes
 - Wishlist — price drop & restock alerts
@@ -219,6 +227,7 @@ docker compose logs -f bot
 | Command | Description |
 |---|---|
 | `/admin` | Admin panel |
+| `/listproduct [page]` | List all products with IDs (private administrator chat; includes inactive and sold-out items) |
 | `/addproduct` | Add a product (step-by-step wizard, photos & subscriptions supported) |
 | `/editproduct <id> <field> <value>` | Edit a product |
 | `/deleteproduct <id>` | Delete a product |

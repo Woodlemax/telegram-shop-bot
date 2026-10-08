@@ -18,6 +18,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
 	"shop_bot/internal/payment"
+	"shop_bot/internal/service"
 	"shop_bot/internal/shop"
 	"shop_bot/internal/storage"
 )
@@ -55,6 +56,8 @@ type OrderService interface {
 	CreateFromCart(ctx context.Context, userID int64, view *shop.CartView, promo *storage.PromoCode) (int64, error)
 	GetOrder(ctx context.Context, orderID int64) (*storage.Order, error)
 	GetUserOrders(ctx context.Context, userID int64) ([]storage.Order, error)
+	GetUserOrdersPaged(ctx context.Context, userID int64, limit, offset int) ([]storage.Order, int, error)
+	CancelOrder(ctx context.Context, orderID, userID int64) error
 }
 
 // PromoStore is the slice of storage.PromoStore the API consumes.
@@ -119,6 +122,11 @@ type FileURLResolver interface {
 	GetFileDirectURL(fileID string) (string, error)
 }
 
+type OrderArchives interface {
+	ForOrder(context.Context, int64, int64) ([]storage.DigitalDelivery, error)
+	RequestOrderDownload(context.Context, int64, int64, int64) error
+}
+
 // Localizer is the slice of service.I18nService the API consumes.
 type Localizer interface {
 	T(lang, key string) string
@@ -128,22 +136,26 @@ type Localizer interface {
 
 // Deps carries every dependency of the Mini App API server.
 type Deps struct {
-	Auth        *Authenticator
-	Catalog     CatalogService
-	Cart        CartService
-	Orders      OrderService
-	Users       storage.UserStore
-	Promos      PromoStore
-	Reviews     RatingStore
-	Photos      PhotoStore
-	I18n        Localizer
-	Tg          TelegramAPI
-	Crypto      CryptoInvoicer
-	YooKassa    YooKassaInvoicer
-	Stripe      StripeInvoicer
-	TON         TONLinker
-	Nowpayments NowpaymentsInvoicer
-	Files       FileURLResolver
+	Auth              *Authenticator
+	Catalog           CatalogService
+	Cart              CartService
+	Orders            OrderService
+	Users             storage.UserStore
+	Promos            PromoStore
+	Reviews           RatingStore
+	Photos            PhotoStore
+	I18n              Localizer
+	Tg                TelegramAPI
+	Crypto            CryptoInvoicer
+	YooKassa          YooKassaInvoicer
+	Stripe            StripeInvoicer
+	TON               TONLinker
+	Nowpayments       NowpaymentsInvoicer
+	Files             FileURLResolver
+	Archives          OrderArchives
+	StarsOnlyPayments bool
+	USDToRUBRate      float64 // Fallback for callers without a shared exchange service.
+	Exchange          *service.ExchangeService
 
 	// The *Available flags are the config-level rail availability rendered
 	// into the cart payload as *_enabled booleans. main computes them with
@@ -200,7 +212,13 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/cart", s.withAuth(s.handleCartGet))
 	mux.HandleFunc("POST /api/cart", s.withAuth(s.handleCartPost))
 	mux.HandleFunc("DELETE /api/cart", s.withAuth(s.handleCartDelete))
+	mux.HandleFunc("POST /api/cart/promo", s.withAuth(s.handlePromoPreview))
 	mux.HandleFunc("POST /api/checkout", s.withAuth(s.handleCheckout))
+	mux.HandleFunc("GET /api/orders", s.withAuth(s.handleOrders))
+	mux.HandleFunc("GET /api/orders/{id}", s.withAuth(s.handleOrder))
+	mux.HandleFunc("POST /api/orders/{id}/cancel", s.withAuth(s.handleOrderCancel))
+	mux.HandleFunc("POST /api/orders/{id}/pay", s.withAuth(s.handleOrderPay))
+	mux.HandleFunc("POST /api/orders/{id}/download", s.withAuth(s.handleOrderDownload))
 	mux.HandleFunc("GET /api/photo/{file_id}", s.withAuth(s.handlePhoto))
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
 		s.writeError(w, http.StatusNotFound, "webapp_err_not_found")
@@ -283,27 +301,40 @@ func (s *Server) handleCatalog(w http.ResponseWriter, r *http.Request, _ *AuthRe
 
 // productJSON is the wire form of a product in lists and cards.
 type productJSON struct {
-	ID            int64   `json:"id"`
-	CategoryID    int64   `json:"category_id"`
-	Name          string  `json:"name"`
-	Description   string  `json:"description"`
-	Photo         string  `json:"photo,omitempty"`
-	PriceUSD      float64 `json:"price_usd"`
-	PriceStars    int     `json:"price_stars"`
-	Stock         int     `json:"stock"`
-	SubPeriodDays int     `json:"sub_period_days,omitempty"`
+	ID            int64    `json:"id"`
+	CategoryID    int64    `json:"category_id"`
+	Name          string   `json:"name"`
+	Description   string   `json:"description"`
+	TelegramURL   string   `json:"telegram_url,omitempty"`
+	Photo         string   `json:"photo,omitempty"`
+	PriceUSD      float64  `json:"price_usd"`
+	PriceStars    int      `json:"price_stars"`
+	PriceRUB      *float64 `json:"price_rub"`
+	OpenPrice     bool     `json:"open_price"`
+	Stock         int      `json:"stock"`
+	InfiniteStock bool     `json:"infinite_stock"`
+	SingleInCart  bool     `json:"single_in_cart"`
+	IsDigital     bool     `json:"is_digital"`
+	SubPeriodDays int      `json:"sub_period_days,omitempty"`
 }
 
 func toProductJSON(p *storage.Product) productJSON {
+	link, _ := storage.NormalizeTelegramURL(p.TelegramURL)
 	return productJSON{
 		ID:            p.ID,
 		CategoryID:    p.CategoryID,
 		Name:          p.Name,
 		Description:   p.Description,
+		TelegramURL:   link,
 		Photo:         photoRef(p.PhotoURL),
 		PriceUSD:      p.PriceUSD,
 		PriceStars:    p.PriceStars,
+		PriceRUB:      p.PriceRUB,
+		OpenPrice:     p.OpenPrice,
 		Stock:         p.Stock,
+		InfiniteStock: p.InfiniteStock,
+		SingleInCart:  p.SingleInCart,
+		IsDigital:     p.IsDigital,
 		SubPeriodDays: p.SubPeriodDays,
 	}
 }
@@ -345,7 +376,7 @@ func (s *Server) handleProducts(w http.ResponseWriter, r *http.Request, _ *AuthR
 	}
 	out := make([]productJSON, 0, len(prods))
 	for i := range prods {
-		out = append(out, toProductJSON(&prods[i]))
+		out = append(out, s.displayProductJSON(&prods[i]))
 	}
 	s.writeJSON(w, http.StatusOK, map[string]any{
 		"products": out,
@@ -382,22 +413,35 @@ func (s *Server) handleProduct(w http.ResponseWriter, r *http.Request, _ *AuthRe
 		s.logger.Warn("webapi: product rating", "product_id", id, "error", err)
 	}
 	photos := make([]string, 0, 4)
-	if cover := photoRef(p.PhotoURL); cover != "" {
-		photos = append(photos, cover)
+	seen := make(map[string]struct{})
+	addPhoto := func(raw string) {
+		ref := photoRef(raw)
+		if ref == "" {
+			return
+		}
+		if _, exists := seen[ref]; exists {
+			return
+		}
+		seen[ref] = struct{}{}
+		photos = append(photos, ref)
 	}
+	addPhoto(p.PhotoURL)
 	if extra, err := s.deps.Photos.List(ctx, id); err != nil {
 		s.logger.Warn("webapi: product photos", "product_id", id, "error", err)
 	} else {
 		for _, ph := range extra {
-			photos = append(photos, photoRef(ph.FileID))
+			addPhoto(ph.FileID)
 		}
 	}
 
 	resp := map[string]any{
-		"product":      toProductJSON(p),
+		"product":      s.displayProductJSON(p),
 		"rating_avg":   avg,
 		"rating_count": count,
 		"photos":       photos,
+	}
+	if p.OpenPrice {
+		resp["open_price_rates"] = s.openPriceRates()
 	}
 	s.writeJSON(w, http.StatusOK, resp)
 }
@@ -416,24 +460,33 @@ func (s *Server) cartJSON(view *shop.CartView) map[string]any {
 			sub = true
 		}
 		items = append(items, map[string]any{
-			"product_id":  it.Product.ID,
-			"name":        it.Product.Name,
-			"photo":       photoRef(it.Product.PhotoURL),
-			"price_usd":   it.Product.PriceUSD,
-			"price_stars": it.Product.PriceStars,
-			"quantity":    it.Quantity,
+			"product_id":     it.Product.ID,
+			"name":           it.Product.Name,
+			"photo":          photoRef(it.Product.PhotoURL),
+			"price_usd":      it.Product.PriceUSD,
+			"price_stars":    it.Product.PriceStars,
+			"price_rub":      s.displayProductJSON(&it.Product).PriceRUB,
+			"open_price":     it.Product.OpenPrice,
+			"quantity":       it.Quantity,
+			"is_digital":     it.Product.IsDigital,
+			"single_in_cart": it.Product.SingleInCart,
+			"infinite_stock": it.Product.InfiniteStock,
 		})
 	}
 	return map[string]any{
 		"items":               items,
+		"open_price_rates":    s.openPriceRates(),
+		"stars_only":          sub || s.deps.StarsOnlyPayments,
+		"base_currency":       "RUB",
+		"free_checkout":       len(view.Items) > 0 && view.TotalUSD == 0 && view.TotalStars == 0 && view.TotalRUB == 0 && !sub,
 		"total_usd":           view.TotalUSD,
 		"total_stars":         view.TotalStars,
 		"total_rub":           view.TotalRUB,
 		"total_ton_nano":      view.TotalTONNano,
-		"yookassa_enabled":    s.deps.YooKassaAvailable && !sub && view.TotalRUB > 0,
-		"stripe_enabled":      s.deps.StripeAvailable && !sub,
-		"ton_enabled":         s.deps.TONAvailable && !sub && view.TotalTONNano > 0,
-		"nowpayments_enabled": s.deps.NowpaymentsAvailable && !sub,
+		"yookassa_enabled":    s.deps.YooKassaAvailable && (s.deps.Exchange == nil || s.deps.Exchange.RUBConfigured()) && !sub && !s.deps.StarsOnlyPayments && view.TotalRUB > 0,
+		"stripe_enabled":      s.deps.StripeAvailable && !sub && !s.deps.StarsOnlyPayments,
+		"ton_enabled":         s.deps.TONAvailable && !sub && !s.deps.StarsOnlyPayments && view.TotalTONNano > 0,
+		"nowpayments_enabled": s.deps.NowpaymentsAvailable && !sub && !s.deps.StarsOnlyPayments,
 	}
 }
 
@@ -458,8 +511,20 @@ func (s *Server) handleCartPost(w http.ResponseWriter, r *http.Request, auth *Au
 	var req struct {
 		ProductID int64 `json:"product_id"`
 		Delta     *int  `json:"delta"`
+		Price     *int  `json:"price"`
 	}
 	if !s.decodeBody(w, r, &req) {
+		return
+	}
+	if req.Price != nil {
+		setter, ok := s.deps.Cart.(interface {
+			SetPrice(context.Context, int64, int64, int) error
+		})
+		if !ok || req.ProductID <= 0 || setter.SetPrice(r.Context(), auth.User.ID, req.ProductID, *req.Price) != nil {
+			s.writeError(w, http.StatusBadRequest, "open_price_invalid")
+			return
+		}
+		s.respondCart(w, r, auth.User.ID)
 		return
 	}
 	delta := 1
@@ -473,6 +538,10 @@ func (s *Server) handleCartPost(w http.ResponseWriter, r *http.Request, auth *Au
 
 	if err := s.deps.Cart.ChangeQuantity(r.Context(), auth.User.ID, req.ProductID, delta); err != nil {
 		switch {
+		case errors.Is(err, storage.ErrNotFound):
+			s.writeError(w, http.StatusConflict, "webapp_err_not_found")
+		case errors.Is(err, storage.ErrSingleItemLimit):
+			s.writeError(w, http.StatusConflict, "product_single_in_cart")
 		case errors.Is(err, storage.ErrProductOutOfStock):
 			s.writeError(w, http.StatusConflict, "webapp_err_out_of_stock")
 		case errors.Is(err, storage.ErrNotFound):
@@ -534,7 +603,11 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request, auth *Au
 	if !s.decodeBody(w, r, &req) {
 		return
 	}
-	if req.Method != storage.PaymentMethodStars && req.Method != storage.PaymentMethodCrypto && req.Method != storage.PaymentMethodYooKassa && req.Method != storage.PaymentMethodStripe && req.Method != storage.PaymentMethodTON && req.Method != storage.PaymentMethodNowpayments {
+	if s.deps.StarsOnlyPayments && req.Method != storage.PaymentMethodFree && req.Method != storage.PaymentMethodStars {
+		s.writeError(w, http.StatusBadRequest, "stars_only_payment")
+		return
+	}
+	if req.Method != storage.PaymentMethodFree && req.Method != storage.PaymentMethodStars && req.Method != storage.PaymentMethodCrypto && req.Method != storage.PaymentMethodYooKassa && req.Method != storage.PaymentMethodStripe && req.Method != storage.PaymentMethodTON && req.Method != storage.PaymentMethodNowpayments {
 		s.writeError(w, http.StatusBadRequest, "webapp_err_method")
 		return
 	}
@@ -596,15 +669,48 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request, auth *Au
 		s.writeError(w, http.StatusBadRequest, errKey)
 		return
 	}
+	discounted, err := shop.DiscountCart(view, promo)
+	if err != nil {
+		s.writeError(w, http.StatusBadRequest, "promo_not_found")
+		return
+	}
+	zero := discounted.TotalUSD == 0 && discounted.TotalStars == 0 && discounted.TotalRUB == 0 && discounted.TotalTONNano == 0
+	// Older clients may still ask for Stars after applying a full discount.
+	// Grant free access instead of creating an invalid zero-Star invoice.
+	if zero && subPeriod == 0 && req.Method == storage.PaymentMethodStars {
+		req.Method = storage.PaymentMethodFree
+	}
+	if req.Method == storage.PaymentMethodStars && discounted.TotalStars <= 0 {
+		s.writeError(w, http.StatusBadRequest, "free_order_error")
+		return
+	}
+	if req.Method == storage.PaymentMethodFree {
+		if !zero || subPeriod > 0 {
+			s.writeError(w, http.StatusBadRequest, "free_order_error")
+			return
+		}
+		if _, ok := s.deps.Orders.(interface {
+			ConfirmFreeOrder(context.Context, int64, int64) error
+		}); !ok {
+			s.writeError(w, http.StatusInternalServerError, "free_order_error")
+			return
+		}
+	}
 
 	orderID, err := s.deps.Orders.CreateFromCart(ctx, userID, view, promo)
 	if err != nil {
 		var stockErr *shop.ErrInsufficientStock
 		switch {
+		case errors.Is(err, storage.ErrNotFound):
+			s.writeError(w, http.StatusConflict, "webapp_err_not_found")
+		case errors.Is(err, storage.ErrSingleItemLimit):
+			s.writeError(w, http.StatusConflict, "product_single_in_cart")
 		case errors.As(err, &stockErr):
 			s.writeError(w, http.StatusConflict, "webapp_err_out_of_stock")
 		case errors.Is(err, storage.ErrEmptyCart):
 			s.writeError(w, http.StatusBadRequest, "webapp_err_empty_cart")
+		case errors.Is(err, storage.ErrDigitalArchiveNotReady):
+			s.writeError(w, http.StatusConflict, "digital_archive_unavailable")
 		case errors.Is(err, storage.ErrSubscriptionOrderConflict):
 			s.writeError(w, http.StatusConflict, "webapp_err_sub_active")
 		default:
@@ -621,9 +727,28 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request, auth *Au
 		return
 	}
 
+	s.issueOrderPayment(w, r, auth, order, req.Method, subPeriod)
+}
+
+// Shared by cart checkout and resuming an existing order. Amounts and invoice
+// payloads always come from the committed order, never the current cart.
+func (s *Server) issueOrderPayment(w http.ResponseWriter, r *http.Request, auth *AuthResult, order *storage.Order, method string, subPeriod int) {
+	ctx, userID, orderID := r.Context(), auth.User.ID, order.ID
 	lang := auth.User.LanguageCode
+	if method == storage.PaymentMethodFree {
+		err := s.deps.Orders.(interface {
+			ConfirmFreeOrder(context.Context, int64, int64) error
+		}).ConfirmFreeOrder(ctx, orderID, userID)
+		if err != nil {
+			s.writeError(w, http.StatusConflict, "free_order_error")
+			return
+		}
+		s.writeJSON(w, http.StatusOK, map[string]any{"order_id": orderID, "free": true})
+		return
+	}
 	var link string
-	switch req.Method {
+	var err error
+	switch method {
 	case storage.PaymentMethodStars:
 		link, err = s.createStarsInvoiceLink(lang, order, subPeriod)
 	case storage.PaymentMethodCrypto:
@@ -678,7 +803,7 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request, auth *Au
 		}
 	}
 	if err != nil {
-		s.logger.Error("webapi: create invoice link", "order_id", orderID, "method", req.Method, "error", err)
+		s.logger.Error("webapi: create invoice link", "order_id", orderID, "method", method)
 		s.writeError(w, http.StatusBadGateway, "webapp_err_internal")
 		return
 	}
@@ -705,6 +830,9 @@ func (s *Server) resolvePromo(ctx context.Context, userID int64, code string, vi
 		s.logger.Error("webapi: get promo", "code", code, "error", err)
 		return nil, "webapp_err_internal"
 	}
+	if err := storage.ValidatePromo(promo); err != nil {
+		return nil, "promo_not_found"
+	}
 	// Personal promos are invisible to anyone but their owner.
 	if promo.BoundUserID != nil && *promo.BoundUserID != userID {
 		return nil, "promo_not_found"
@@ -730,15 +858,18 @@ func (s *Server) resolvePromo(ctx context.Context, userID int64, code string, vi
 		}
 	}
 
-	if promo.CategoryID != nil {
+	if promo.CategoryID != nil || len(promo.ProductIDs) > 0 {
 		match := false
 		for _, it := range view.Items {
-			if it.Product.CategoryID == *promo.CategoryID {
+			if storage.PromoMatchesProduct(promo, &it.Product) {
 				match = true
 				break
 			}
 		}
 		if !match {
+			if len(promo.ProductIDs) > 0 {
+				return nil, "promo_product_mismatch"
+			}
 			return nil, "promo_category_mismatch"
 		}
 	}

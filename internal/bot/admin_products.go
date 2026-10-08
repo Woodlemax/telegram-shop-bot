@@ -3,6 +3,7 @@ package bot
 import (
 	"context"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -50,8 +51,12 @@ func (b *Bot) handleAddProductStep(ctx context.Context, msg *tgbotapi.Message) b
 		_ = b.fsm.SetAddProductState(ctx, msg.From.ID, state, 30*time.Minute)
 		b.send(tgbotapi.NewMessage(chatID, b.t(lang, "admin_add_product_price")))
 	case storage.StepPriceUSD:
-		p, _ := strconv.ParseFloat(msg.Text, 64)
-		state.PriceUSD = p
+		p, err := strconv.ParseFloat(strings.TrimSpace(msg.Text), 64)
+		if err != nil || p < 0 || math.IsNaN(p) || math.IsInf(p, 0) {
+			b.send(tgbotapi.NewMessage(chatID, b.t(lang, "admin_invalid_price")))
+			return true
+		}
+		state.PriceRUB = &p
 		state.Step = storage.StepStock
 		_ = b.fsm.SetAddProductState(ctx, msg.From.ID, state, 30*time.Minute)
 		b.send(tgbotapi.NewMessage(chatID, b.t(lang, "admin_add_product_stock")))
@@ -90,7 +95,7 @@ func (b *Bot) finishAddProduct(ctx context.Context, chatID, userID, categoryID i
 	if len(state.Photos) > 0 {
 		cover = state.Photos[0]
 	}
-	p := &storage.Product{CategoryID: categoryID, Name: state.Name, Description: state.Description, PriceUSD: state.PriceUSD, Stock: state.Stock, PhotoURL: cover, IsActive: true, SubPeriodDays: state.SubPeriodDays}
+	p := &storage.Product{CategoryID: categoryID, Name: state.Name, Description: state.Description, PriceUSD: state.PriceUSD, PriceRUB: state.PriceRUB, Stock: state.Stock, PhotoURL: cover, IsActive: true, SubPeriodDays: state.SubPeriodDays}
 	id, err := b.products.CreateProduct(ctx, p)
 	if err != nil {
 		b.loggerFor(ctx).Error("create product", "error", err)
@@ -106,6 +111,10 @@ func (b *Bot) finishAddProduct(ctx context.Context, chatID, userID, categoryID i
 }
 
 func (b *Bot) sendAdminProductDetails(chatID int64, product *storage.Product, lang string) {
+	stockText := strconv.Itoa(product.Stock)
+	if product.InfiniteStock {
+		stockText = "∞"
+	}
 	toggleLabel := b.t(lang, "admin_btn_stock_off")
 	if product.Stock <= 0 {
 		toggleLabel = b.t(lang, "admin_btn_stock_on")
@@ -113,19 +122,59 @@ func (b *Bot) sendAdminProductDetails(chatID int64, product *storage.Product, la
 
 	text := fmt.Sprintf(
 		b.t(lang, "admin_product_details"),
-		product.ID, product.Name, product.Description, product.PriceUSD, product.Stock, product.CategoryID, product.IsActive,
+		product.ID, product.Name, product.Description, productAmount(product), stockText, product.CategoryID, product.IsActive,
 		product.ID, product.ID, product.ID, product.ID, product.ID, product.ID,
 	)
+	text = currencyText(text, product.PriceRUB != nil)
+	settingState := func(on bool) string {
+		if on {
+			return "✅"
+		}
+		return "❌"
+	}
+	text += "\n" + fmt.Sprintf(b.t(lang, "admin_quantity_settings"), settingState(product.InfiniteStock), settingState(product.SingleInCart))
+	infiniteLabel := b.t(lang, "admin_infinite_stock_on")
+	if product.InfiniteStock {
+		infiniteLabel = b.t(lang, "admin_infinite_stock_off")
+	}
+	singleLabel := b.t(lang, "admin_single_in_cart_on")
+	if product.SingleInCart {
+		singleLabel = b.t(lang, "admin_single_in_cart_off")
+	}
+	openLabel := b.t(lang, "open_price_admin_on")
+	if product.OpenPrice {
+		openLabel = b.t(lang, "open_price_admin_off")
+		text += "\n" + b.t(lang, "open_price_hint")
+	}
 
+	linkText := product.TelegramURL
+	if linkText == "" {
+		linkText = b.t(lang, "admin_telegram_empty")
+	}
+	text += "\n" + fmt.Sprintf(b.t(lang, "admin_telegram_current"), linkText)
+	text += "\n" + fmt.Sprintf(b.t(lang, "admin_telegram_usage"), product.ID, product.ID)
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(infiniteLabel, fmt.Sprintf("admin:infinitestock:%d", product.ID))),
+		tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(singleLabel, fmt.Sprintf("admin:singleincart:%d", product.ID))),
+		tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(openLabel, fmt.Sprintf("admin:openprice:%d", product.ID))),
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData(toggleLabel, fmt.Sprintf("admin:togglestock:%d", product.ID)),
 		),
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData(b.t(lang, "admin_photo_btn"), fmt.Sprintf("admin:photos:%d", product.ID)),
 		),
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData(b.t(lang, "digital_admin_upload"), fmt.Sprintf("admin:archive:%d", product.ID)),
+		),
 	)
+	if product.InfiniteStock {
+		keyboard.InlineKeyboard = append(keyboard.InlineKeyboard[:3], keyboard.InlineKeyboard[4:]...)
+	}
 
+	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(b.t(lang, "admin_telegram_edit"), fmt.Sprintf("admin:telegram:edit:%d", product.ID))))
+	if product.TelegramURL != "" {
+		keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(b.t(lang, "admin_telegram_remove"), fmt.Sprintf("admin:telegram:remove:%d", product.ID))))
+	}
 	reply := tgbotapi.NewMessage(chatID, text)
 	reply.ReplyMarkup = keyboard
 	b.send(reply)
@@ -168,6 +217,17 @@ func (b *Bot) handleEditProductField(ctx context.Context, msg *tgbotapi.Message,
 	}
 
 	switch strings.ToLower(field) {
+	case "telegram", "telegramlink":
+		raw := value
+		if strings.TrimSpace(raw) == "-" {
+			raw = ""
+		}
+		link, err := storage.NormalizeTelegramURL(raw)
+		if err != nil {
+			b.send(tgbotapi.NewMessage(msg.Chat.ID, b.t(lang, "admin_telegram_invalid")))
+			return
+		}
+		product.TelegramURL = link
 	case "name":
 		product.Name = value
 	case "description":
@@ -178,7 +238,37 @@ func (b *Bot) handleEditProductField(ctx context.Context, msg *tgbotapi.Message,
 			b.send(tgbotapi.NewMessage(msg.Chat.ID, b.t(lang, "admin_invalid_price")))
 			return
 		}
-		product.PriceUSD = price
+		if price < 0 || math.IsNaN(price) || math.IsInf(price, 0) {
+			b.send(tgbotapi.NewMessage(msg.Chat.ID, b.t(lang, "admin_invalid_price")))
+			return
+		}
+		product.PriceRUB = &price
+		product.PriceUSD = 0
+		product.OpenPrice = false
+	case "openprice":
+		on, err := strconv.ParseBool(value)
+		if err != nil || product.SubPeriodDays > 0 {
+			b.send(tgbotapi.NewMessage(msg.Chat.ID, b.t(lang, "open_price_sub_error")))
+			return
+		}
+		product.OpenPrice = on
+		if on {
+			zero := float64(0)
+			product.PriceRUB = &zero
+			product.PriceUSD = 0
+			product.PriceStars = 0
+		}
+	case "infinitestock", "singleincart":
+		on, err := strconv.ParseBool(value)
+		if err != nil {
+			b.send(tgbotapi.NewMessage(msg.Chat.ID, b.t(lang, "admin_invalid_bool")))
+			return
+		}
+		if strings.EqualFold(field, "infinitestock") {
+			product.InfiniteStock = on
+		} else {
+			product.SingleInCart = on
+		}
 	case "stock":
 		stock, err := strconv.Atoi(value)
 		if err != nil {
@@ -215,13 +305,21 @@ func (b *Bot) handleEditProductField(ctx context.Context, msg *tgbotapi.Message,
 }
 
 func (b *Bot) handleDeleteProduct(ctx context.Context, msg *tgbotapi.Message) {
-	if !b.isAdmin(msg.From.ID) {
+	if !b.isAdmin(msg.From.ID) || msg.Chat.ID != msg.From.ID {
 		return
 	}
 	lang := msg.From.LanguageCode
 	id, err := strconv.ParseInt(strings.TrimSpace(msg.CommandArguments()), 10, 64)
-	if err != nil {
+	if err != nil || id <= 0 {
 		b.send(tgbotapi.NewMessage(msg.Chat.ID, b.t(lang, "admin_usage_deleteproduct")))
+		return
+	}
+	if _, err := b.products.GetProduct(ctx, id); err != nil {
+		if err == storage.ErrNotFound {
+			b.send(tgbotapi.NewMessage(msg.Chat.ID, b.t(lang, "admin_product_not_found")))
+		} else {
+			b.send(tgbotapi.NewMessage(msg.Chat.ID, b.t(lang, "admin_product_delete_failed")))
+		}
 		return
 	}
 	if err := b.products.DeleteProduct(ctx, id); err != nil {
@@ -274,4 +372,33 @@ func (b *Bot) routeEditProduct(ctx context.Context, msg *tgbotapi.Message) {
 	} else {
 		b.handleEditProductField(ctx, msg, id, args[1], strings.Join(args[2:], " "))
 	}
+}
+
+func (b *Bot) onAdminQuantitySetting(ctx context.Context, chatID int64, data, lang string) {
+	parts := strings.Split(data, ":")
+	if len(parts) != 3 {
+		return
+	}
+	id, err := strconv.ParseInt(parts[2], 10, 64)
+	if err != nil {
+		return
+	}
+	p, err := b.products.GetProduct(ctx, id)
+	if err != nil {
+		b.send(tgbotapi.NewMessage(chatID, b.t(lang, "admin_product_not_found")))
+		return
+	}
+	switch parts[1] {
+	case "infinitestock":
+		p.InfiniteStock = !p.InfiniteStock
+	case "singleincart":
+		p.SingleInCart = !p.SingleInCart
+	default:
+		return
+	}
+	if err := b.products.UpdateProduct(ctx, p); err != nil {
+		b.send(tgbotapi.NewMessage(chatID, b.t(lang, "admin_product_update_failed")))
+		return
+	}
+	b.sendAdminProductDetails(chatID, p, lang)
 }

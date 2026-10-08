@@ -357,6 +357,13 @@ func TestProductKeyboard_UsesQuantityStepper(t *testing.T) {
 	if kb[0][1].Text != "🧺 2 шт" {
 		t.Fatalf("quantity label = %q", kb[0][1].Text)
 	}
+	if kb[1][0].Text != "В корзину" || kb[1][0].CallbackData != "back:cart" {
+		t.Fatalf("added product action = %+v", kb[1][0])
+	}
+	emptyCart := b.productKeyboard(&storage.Product{ID: 7, CategoryID: 3}, false, 0, "ru")
+	if emptyCart[1][0].Text != "🛒 Добавить в корзину" || emptyCart[1][0].CallbackData != "cart:add:7" {
+		t.Fatalf("not-added product action = %+v", emptyCart[1][0])
+	}
 	if kb[2][0].Text != "💔 Убрать из желаемого" {
 		t.Fatalf("wishlist button label = %q", kb[2][0].Text)
 	}

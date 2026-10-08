@@ -20,5 +20,5 @@ func (b *Bot) handleAdmin(msg *tgbotapi.Message) {
 
 	text := b.t(msg.From.LanguageCode, "admin_panel")
 
-	b.send(tgbotapi.NewMessage(msg.Chat.ID, text))
+	b.sendOrEditStyled(msg.Chat.ID, 0, text, "", StyledKeyboard{})
 }

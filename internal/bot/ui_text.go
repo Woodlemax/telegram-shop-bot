@@ -3,6 +3,7 @@ package bot
 import (
 	"fmt"
 	"html"
+	"math"
 	"strings"
 
 	"shop_bot/internal/shop"
@@ -72,6 +73,8 @@ func (b *Bot) paymentMethodTextPlain(lang, method string) string {
 // display name; ok=false means the method is unknown to the app layer.
 func (b *Bot) paymentMethodLocalized(lang, method string) (string, bool) {
 	switch method {
+	case storage.PaymentMethodFree:
+		return b.t(lang, "payment_method_free"), true
 	case storage.PaymentMethodStars:
 		return b.t(lang, "payment_method_stars"), true
 	case storage.PaymentMethodCrypto:
@@ -92,14 +95,18 @@ func (b *Bot) paymentMethodLocalized(lang, method string) (string, bool) {
 }
 
 func (b *Bot) formatProductText(lang string, p *storage.Product) string {
-	return fmt.Sprintf(
-		b.t(lang, "product_card_text"),
+	text := fmt.Sprintf(
+		currencyText(b.t(lang, "product_card_text"), b.displayProductRUB(p)),
 		escapeHTML(p.Name),
 		escapeHTML(strings.TrimSpace(p.Description)),
-		p.PriceUSD,
+		b.displayProductAmount(p),
 		p.PriceStars,
-		b.productStockText(lang, p.Stock),
+		b.productAvailabilityText(lang, p),
 	)
+	if p.OpenPrice {
+		text += "\n\n" + b.t(lang, "open_price_hint")
+	}
+	return text
 }
 
 func (b *Bot) formatCategoryProductsText(lang string, category *storage.Category, products []storage.Product, page, totalPages int, wishlistIDs map[int64]struct{}) string {
@@ -124,13 +131,13 @@ func (b *Bot) formatCategoryProductsText(lang string, category *storage.Category
 		}
 
 		sb.WriteString(fmt.Sprintf(
-			b.t(lang, "product_list_item"),
+			currencyText(b.t(lang, "product_list_item"), b.displayProductRUB(&p)),
 			page*productsPerPage+i+1,
 			name,
 			desc,
-			p.PriceUSD,
+			b.displayProductAmount(&p),
 			p.PriceStars,
-			b.productStockText(lang, p.Stock),
+			b.productAvailabilityText(lang, &p),
 		))
 	}
 
@@ -146,14 +153,18 @@ func (b *Bot) formatCartText(lang string, view *shop.CartView) string {
 	sb.WriteString(b.t(lang, "cart_title"))
 	for _, item := range view.Items {
 		sb.WriteString(fmt.Sprintf(
-			b.t(lang, "cart_item_line"),
+			currencyText(b.t(lang, "cart_item_line"), b.displayProductRUB(&item.Product)),
 			escapeHTML(item.Product.Name),
 			item.Quantity,
-			item.Product.PriceUSD*float64(item.Quantity),
+			b.displayProductAmount(&item.Product)*float64(item.Quantity),
 			item.Product.PriceStars*item.Quantity,
 		))
 	}
-	sb.WriteString(fmt.Sprintf(b.t(lang, "cart_total"), view.TotalUSD, view.TotalStars))
+	total := view.TotalUSD
+	if view.BaseRUB || b.rubleDisplayEnabled() {
+		total = view.TotalRUB
+	}
+	sb.WriteString(fmt.Sprintf(currencyText(b.t(lang, "cart_total"), view.BaseRUB || b.rubleDisplayEnabled()), total, view.TotalStars))
 	return sb.String()
 }
 
@@ -163,14 +174,18 @@ func (b *Bot) formatCheckoutText(lang string, view *shop.CartView) string {
 	sb.WriteString(b.t(lang, "checkout_items_header"))
 	for _, item := range view.Items {
 		sb.WriteString(fmt.Sprintf(
-			b.t(lang, "checkout_item_line"),
+			currencyText(b.t(lang, "checkout_item_line"), b.displayProductRUB(&item.Product)),
 			escapeHTML(item.Product.Name),
 			item.Quantity,
-			item.Product.PriceUSD*float64(item.Quantity),
+			b.displayProductAmount(&item.Product)*float64(item.Quantity),
 			item.Product.PriceStars*item.Quantity,
 		))
 	}
-	sb.WriteString(fmt.Sprintf(b.t(lang, "checkout_total"), view.TotalUSD, view.TotalStars))
+	total := view.TotalUSD
+	if view.BaseRUB || b.rubleDisplayEnabled() {
+		total = view.TotalRUB
+	}
+	sb.WriteString(fmt.Sprintf(currencyText(b.t(lang, "checkout_total"), view.BaseRUB || b.rubleDisplayEnabled()), total, view.TotalStars))
 	return sb.String()
 }
 
@@ -180,14 +195,18 @@ func (b *Bot) formatPaymentMethodsText(lang string, orderID int64, view *shop.Ca
 	sb.WriteString(b.t(lang, "payment_methods_items_header"))
 	for _, item := range view.Items {
 		sb.WriteString(fmt.Sprintf(
-			b.t(lang, "payment_methods_item_line"),
+			currencyText(b.t(lang, "payment_methods_item_line"), b.displayProductRUB(&item.Product)),
 			escapeHTML(item.Product.Name),
 			item.Quantity,
-			item.Product.PriceUSD*float64(item.Quantity),
+			b.displayProductAmount(&item.Product)*float64(item.Quantity),
 			item.Product.PriceStars*item.Quantity,
 		))
 	}
-	sb.WriteString(fmt.Sprintf(b.t(lang, "payment_methods_total"), view.TotalUSD, view.TotalStars))
+	total := view.TotalUSD
+	if view.BaseRUB || b.rubleDisplayEnabled() {
+		total = view.TotalRUB
+	}
+	sb.WriteString(fmt.Sprintf(currencyText(b.t(lang, "payment_methods_total"), view.BaseRUB || b.rubleDisplayEnabled()), total, view.TotalStars))
 	sb.WriteString(b.t(lang, "payment_methods_hint"))
 	// Mirror of the crypto availability note: the RUB card total is only
 	// advertised when the YooKassa row is actually offered.
@@ -209,7 +228,15 @@ func (b *Bot) formatOrdersText(lang string, orders []storage.Order) string {
 	for _, o := range orders {
 		sb.WriteString(fmt.Sprintf(b.t(lang, "orders_order_line"), o.ID))
 		sb.WriteString(fmt.Sprintf(b.t(lang, "orders_date_line"), o.CreatedAt.Format("02.01.2006 15:04")))
-		sb.WriteString(fmt.Sprintf(b.t(lang, "orders_total_line"), o.TotalUSD, o.TotalStars))
+		total := o.TotalUSD
+		rub := o.TotalRUB > 0 || o.PaymentMethod == storage.PaymentMethodFree || b.rubleDisplayEnabled()
+		if rub {
+			total = o.TotalRUB
+			if total == 0 && o.TotalUSD > 0 && b.rubleDisplayEnabled() {
+				total = math.Round(o.TotalUSD*b.currentRUBRate()*100) / 100
+			}
+		}
+		sb.WriteString(fmt.Sprintf(currencyText(b.t(lang, "orders_total_line"), rub), total, o.TotalStars))
 		if o.PaymentMethod != "" {
 			sb.WriteString(fmt.Sprintf(b.t(lang, "orders_payment_line"), b.paymentMethodText(lang, o.PaymentMethod)))
 		}
@@ -264,9 +291,9 @@ func (b *Bot) formatWishlistText(lang string, products []storage.Product) string
 	sb.WriteString("\n\n")
 	for _, p := range products {
 		sb.WriteString(fmt.Sprintf(
-			b.t(lang, "wishlist_item_line"),
+			currencyText(b.t(lang, "wishlist_item_line"), b.displayProductRUB(&p)),
 			escapeHTML(p.Name),
-			p.PriceUSD,
+			b.displayProductAmount(&p),
 		))
 	}
 	return sb.String()
@@ -291,4 +318,15 @@ func loyaltyNextLevel(level string) (next string, threshold int) {
 	default:
 		return "", 0
 	}
+}
+
+func (b *Bot) rubleDisplayEnabled() bool { return b.starsOnlyPayments() && b.currentRUBRate() > 0 }
+func (b *Bot) displayProductRUB(p *storage.Product) bool {
+	return p.PriceRUB != nil || b.rubleDisplayEnabled()
+}
+func (b *Bot) displayProductAmount(p *storage.Product) float64 {
+	if p.PriceRUB == nil && b.rubleDisplayEnabled() {
+		return math.Round(p.PriceUSD*b.currentRUBRate()*100) / 100
+	}
+	return productAmount(p)
 }

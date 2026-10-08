@@ -42,9 +42,19 @@ func (b *Bot) sendCart(ctx context.Context, chatID, userID int64, msgID int, lan
 				b.styledBtn(BtnKeyCartRemove, "🗑 Убрать", "cart:del:"+pid, StyleDanger),
 			},
 		)
+		if item.Product.SingleInCart {
+			kb[len(kb)-1] = []StyledButton{Btn(b.t(lang, "product_single_in_cart"), "noop"), b.styledBtn(BtnKeyCartRemove, "🗑", "cart:del:"+pid, StyleDanger)}
+		}
+		if item.Product.OpenPrice {
+			kb = append(kb, []StyledButton{Btn(b.t(lang, "open_price_button"), "price:enter:"+pid)})
+		}
+	}
+	checkoutLabel := b.t(lang, "btn_checkout")
+	if freeCart(view) {
+		checkoutLabel = b.t(lang, "free_order_button")
 	}
 	kb = append(kb,
-		[]StyledButton{b.styledBtn(BtnKeyCartCheckout, b.t(lang, "btn_checkout"), "cart:checkout", StyleSuccess)},
+		[]StyledButton{b.styledBtn(BtnKeyCartCheckout, checkoutLabel, "cart:checkout", StyleSuccess)},
 		[]StyledButton{Btn(b.t(lang, "btn_back"), "back:catalog"), Btn(b.t(lang, "btn_menu"), "back:menu")},
 	)
 
@@ -164,9 +174,13 @@ func (b *Bot) onCartCheckout(ctx context.Context, chatID, userID int64, msgID in
 		return
 	}
 
+	confirmLabel := b.t(lang, "btn_confirm_order")
+	if freeCart(view) {
+		confirmLabel = b.t(lang, "free_order_button")
+	}
 	kb := StyledKeyboard{
 		{Btn(b.t(lang, "btn_enter_promo"), "promo:enter")},
-		{b.styledBtn(BtnKeyCartCheckout, b.t(lang, "btn_confirm_order"), "order:confirm", StyleSuccess)},
+		{b.styledBtn(BtnKeyCartCheckout, confirmLabel, "order:confirm", StyleSuccess)},
 		{Btn(b.t(lang, "btn_back_to_cart"), "back:cart"), Btn(b.t(lang, "btn_menu"), "back:menu")},
 	}
 

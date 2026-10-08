@@ -1,0 +1,1 @@
+ALTER TABLE products ADD COLUMN telegram_url TEXT NOT NULL DEFAULT '';

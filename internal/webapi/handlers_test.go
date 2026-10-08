@@ -542,6 +542,39 @@ func TestProductsPaged(t *testing.T) {
 	}
 }
 
+func TestProductGalleryDoesNotRepeatPhotos(t *testing.T) {
+	for _, cover := range []string{"AgACfileid", "https://img.example/cover.png", ""} {
+		t.Run(cover, func(t *testing.T) {
+			f := newFixture(t)
+			catalog := f.server.deps.Catalog.(*fakeCatalog)
+			product := catalog.products[2]
+			product.PhotoURL = cover
+			catalog.products[2] = product
+			f.server.deps.Photos = &fakePhotos{photos: []storage.ProductPhoto{
+				{FileID: cover}, {FileID: "second-photo"}, {FileID: cover},
+				{FileID: "second-photo"}, {FileID: ""}, {FileID: "third-photo"},
+			}}
+			rec := f.request(t, http.MethodGet, "/api/products/2", "", true)
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status=%d", rec.Code)
+			}
+			photos := decodeJSON(t, rec)["photos"].([]any)
+			want := []string{"/api/photo/second-photo", "/api/photo/third-photo"}
+			if cover != "" {
+				want = append([]string{photoRef(cover)}, want...)
+			}
+			if len(photos) != len(want) {
+				t.Fatalf("photos=%v, want %v", photos, want)
+			}
+			for i, ref := range want {
+				if photos[i] != ref {
+					t.Fatalf("photos=%v, want %v", photos, want)
+				}
+			}
+		})
+	}
+}
+
 func TestProductCardHasRatingAndPhotos(t *testing.T) {
 	f := newFixture(t)
 	rec := f.request(t, http.MethodGet, "/api/products/2", "", true)

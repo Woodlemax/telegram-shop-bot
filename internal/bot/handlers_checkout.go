@@ -84,22 +84,26 @@ func (b *Bot) handlePromoInput(ctx context.Context, msg *tgbotapi.Message) {
 	}
 
 	// Check category restriction if promo has one.
-	if promo.CategoryID != nil {
+	if promo.CategoryID != nil || len(promo.ProductIDs) > 0 {
 		hasMatch := false
 		for _, item := range view.Items {
-			if item.Product.CategoryID == *promo.CategoryID {
+			if storage.PromoMatchesProduct(promo, &item.Product) {
 				hasMatch = true
 				break
 			}
 		}
 		if !hasMatch {
-			b.sendOrEditStyled(chatID, 0, b.t(lang, "promo_category_mismatch"), "", nil)
+			b.sendOrEditStyled(chatID, 0, b.t(lang, promoScopeMismatchKey(promo)), "", nil)
 			return
 		}
 	}
 
-	discountedUSD := view.TotalUSD * float64(100-promo.Discount) / 100
-	discountedStars := view.TotalStars * (100 - promo.Discount) / 100
+	totals, err := shop.DiscountCart(view, promo)
+	if err != nil {
+		b.sendOrEditStyled(chatID, 0, b.t(lang, "promo_not_found"), "", nil)
+		return
+	}
+	discountedUSD, discountedStars := totals.TotalUSD, totals.TotalStars
 
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf(b.t(lang, "promo_applied_header"), promo.Code, promo.Discount))
@@ -198,16 +202,16 @@ func (b *Bot) onOrderConfirm(ctx context.Context, chatID, userID int64, msgID in
 			return
 		}
 
-		if promo.CategoryID != nil {
+		if promo.CategoryID != nil || len(promo.ProductIDs) > 0 {
 			hasMatch := false
 			for _, item := range view.Items {
-				if item.Product.CategoryID == *promo.CategoryID {
+				if storage.PromoMatchesProduct(promo, &item.Product) {
 					hasMatch = true
 					break
 				}
 			}
 			if !hasMatch {
-				b.sendOrEditStyled(chatID, 0, b.t(lang, "promo_category_mismatch"), "", nil)
+				b.sendOrEditStyled(chatID, 0, b.t(lang, promoScopeMismatchKey(promo)), "", nil)
 				return
 			}
 		}
@@ -216,6 +220,14 @@ func (b *Bot) onOrderConfirm(ctx context.Context, chatID, userID int64, msgID in
 	orderID, err := b.order.CreateFromCart(ctx, userID, view, promo)
 	if err != nil {
 		var stockErr *shop.ErrInsufficientStock
+		if errors.Is(err, storage.ErrSingleItemLimit) {
+			b.sendOrEditStyled(chatID, msgID, b.t(lang, "product_single_in_cart"), "", nil)
+			return
+		}
+		if errors.Is(err, storage.ErrDigitalArchiveNotReady) {
+			b.sendOrEditStyled(chatID, msgID, b.t(lang, "digital_archive_unavailable"), "", nil)
+			return
+		}
 		if errors.Is(err, storage.ErrSubscriptionOrderConflict) {
 			b.sendOrEditStyled(chatID, msgID, b.t(lang, "sub_already_active"), "", nil)
 			return
@@ -244,22 +256,36 @@ func (b *Bot) onOrderConfirm(ctx context.Context, chatID, userID int64, msgID in
 	view.TotalRUB = createdOrder.TotalRUB
 	view.TotalTONNano = createdOrder.TotalTonNano
 
+	adminTotal := view.TotalUSD
+	if view.BaseRUB {
+		adminTotal = view.TotalRUB
+	}
 	b.notifyAdmins(ctx, AdminEventOrderNew, fmt.Sprintf(
-		b.t("en", "admin_order_new"),
-		orderID, userID, view.TotalUSD, view.TotalStars,
+		currencyText(b.t("en", "admin_order_new"), view.BaseRUB),
+		orderID, userID, adminTotal, view.TotalStars,
 	))
+	if shop.IsFreeOrder(createdOrder) {
+		if err := b.order.ConfirmFreeOrder(ctx, orderID, userID); err != nil {
+			b.sendOrEditStyled(chatID, msgID, b.t(lang, "free_order_error"), "", StyledKeyboard{{Btn(b.t(lang, "free_order_button"), fmt.Sprintf("order:free:%d", orderID))}})
+			return
+		}
+		b.sendOrEditStyled(chatID, msgID, fmt.Sprintf(b.t(lang, "free_order_done"), orderID), "", StyledKeyboard{{Btn(b.t(lang, "btn_orders"), "back:orders"), Btn(b.t(lang, "btn_menu"), "back:menu")}})
+		b.ProcessDigitalDeliveries(ctx)
+		return
+	}
 
 	// Subscription products are payable with Stars only — hide crypto.
-	cryptoOK := b.cryptoPaymentsEnabled() && !cartHasSubscription(view)
-	yookassaOK := b.yooKassaPaymentsEnabled() && !cartHasSubscription(view) && view.TotalRUB > 0
-	stripeOK := b.stripePaymentsEnabled() && !cartHasSubscription(view)
-	tonOK := b.tonPaymentsEnabled() && !cartHasSubscription(view) && view.TotalTONNano > 0
-	nowpaymentsOK := b.nowpaymentsEnabled() && !cartHasSubscription(view)
+	starsOnly := cartHasSubscription(view)
+	cryptoOK := b.cryptoPaymentsEnabled() && !starsOnly
+	yookassaOK := b.yooKassaPaymentsEnabled() && !starsOnly && view.TotalRUB > 0
+	stripeOK := b.stripePaymentsEnabled() && !starsOnly
+	tonOK := b.tonPaymentsEnabled() && !starsOnly && view.TotalTONNano > 0
+	nowpaymentsOK := b.nowpaymentsEnabled() && !starsOnly
 	// The internal balance rail is offered only for non-subscription orders
 	// when the buyer holds a positive balance; a lookup failure hides the row
 	// rather than blocking checkout.
 	balanceUSD := 0.0
-	if b.balances != nil && !cartHasSubscription(view) {
+	if b.balances != nil && !starsOnly && !b.starsOnlyPayments() {
 		if bal, balErr := b.balances.GetBalance(ctx, userID); balErr == nil {
 			balanceUSD = bal
 		} else if !errors.Is(balErr, storage.ErrNotFound) {
@@ -273,6 +299,10 @@ func (b *Bot) onOrderConfirm(ctx context.Context, chatID, userID int64, msgID in
 }
 
 func paymentMethodKeyboard(orderID int64, cryptoEnabled, yookassaOK, stripeOK, tonOK, nowpaymentsOK bool, balanceUSD, totalRUB float64, totalStars int, totalUSD float64, totalTONNano int64, lang string, b *Bot) StyledKeyboard {
+	if b != nil && b.starsOnlyPayments() {
+		cryptoEnabled, yookassaOK, stripeOK, tonOK, nowpaymentsOK = false, false, false, false, false
+		balanceUSD = 0
+	}
 	starsLabel := fmt.Sprintf("⭐ Pay %d Stars", totalStars)
 	cryptoLabel := fmt.Sprintf("💎 Pay $%.2f USDT", totalUSD)
 	rubLabel := fmt.Sprintf("💳 Pay %.2f ₽", totalRUB)
@@ -352,6 +382,9 @@ func ensureOrderPayableForUser(order *storage.Order, userID int64) error {
 	if order.PaymentState == storage.PaymentStateNeedsReview {
 		return storage.ErrPaymentNeedsReview
 	}
+	if order.PaymentState != "" && order.PaymentState != storage.PaymentStatePending {
+		return storage.ErrOrderStatusConflict
+	}
 	return nil
 }
 
@@ -373,4 +406,11 @@ func (b *Bot) loadPayableOrder(ctx context.Context, userID, orderID int64) (*sto
 		return nil, err
 	}
 	return order, nil
+}
+
+func promoScopeMismatchKey(p *storage.PromoCode) string {
+	if len(p.ProductIDs) > 0 {
+		return "promo_product_mismatch"
+	}
+	return "promo_category_mismatch"
 }
