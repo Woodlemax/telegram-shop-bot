@@ -439,6 +439,9 @@ func (s *Server) handleProduct(w http.ResponseWriter, r *http.Request, _ *AuthRe
 		"rating_count": count,
 		"photos":       photos,
 	}
+	if p.OpenPrice {
+		resp["open_price_rates"] = s.openPriceRates()
+	}
 	s.writeJSON(w, http.StatusOK, resp)
 }
 
@@ -471,6 +474,7 @@ func (s *Server) cartJSON(view *shop.CartView) map[string]any {
 	}
 	return map[string]any{
 		"items":               items,
+		"open_price_rates":    s.openPriceRates(),
 		"stars_only":          sub || s.deps.StarsOnlyPayments,
 		"base_currency":       "RUB",
 		"free_checkout":       len(view.Items) > 0 && view.TotalUSD == 0 && view.TotalStars == 0 && view.TotalRUB == 0 && !sub,

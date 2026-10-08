@@ -40,6 +40,17 @@ The initial price becomes 0 RUB. A buyer can enter a whole amount from 0 to
 bot. The chosen amount belongs to that buyer's cart and is frozen on the order;
 it does not change the catalog price or another buyer's choice.
 
+The Mini App product card previews RUB / Stars immediately while the buyer
+enters a valid amount, using the current rate snapshot returned by the product
+or cart API. At 100 RUB per USD and 50 Stars per USD, entering 100 shows
+100 RUB / 50 Stars; zero remains 0 RUB / 0 Stars. Positive amounts use the same
+integer conversion and one-Star minimum as checkout. Typing alone does not
+save a choice. **Apply price** or adding the item saves it, then refreshes the
+headline from the server-confirmed cart amount and rate. Duplicate saves are
+blocked while the request is pending; a failure leaves retry available.
+Reopening the product shows that buyer's saved cart amount in both the bot and
+Mini App, while another buyer still sees the catalog's initial zero price.
+
 To return to a fixed price, use `/editproduct ID price <rubles>`.
 Disabling open price alone leaves the current catalog price at 0. Subscriptions
 cannot use open prices. A fixed-price product cannot be overridden by a custom

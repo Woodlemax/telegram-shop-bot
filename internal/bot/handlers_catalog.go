@@ -139,17 +139,29 @@ func (b *Bot) onProductSelected(ctx context.Context, chatID, userID int64, msgID
 		return
 	}
 
+	quantity := 0
+	view, cartErr := b.cart.Get(ctx, userID)
+	if cartErr != nil {
+		b.loggerFor(ctx).Warn("get cart for product view", "user_id", userID, "product_id", prodID, "error", cartErr)
+	} else {
+		for _, item := range view.Items {
+			if item.Product.ID == prodID {
+				quantity = item.Quantity
+				if p.OpenPrice {
+					p.PriceRUB = item.Product.PriceRUB
+					p.PriceUSD = item.Product.PriceUSD
+					p.PriceStars = item.Product.PriceStars
+				}
+				break
+			}
+		}
+	}
 	text := b.formatProductText(lang, p)
 	avg, reviewCount := b.productRating(ctx, prodID)
 	if reviewCount > 0 {
 		text += "\n" + b.formatRatingLine(lang, avg, reviewCount)
 	}
-
 	inWishlist, _ := b.wishlist.IsInWishlist(ctx, userID, prodID)
-	quantity, err := b.cartQuantity(ctx, userID, prodID)
-	if err != nil {
-		b.loggerFor(ctx).Warn("get cart quantity for product view", "user_id", userID, "product_id", prodID, "error", err)
-	}
 	kb := b.productKeyboard(p, inWishlist, quantity, lang)
 	if reviewCount > 0 {
 		kb = insertReviewsRow(kb, Btn(b.t(lang, "review_btn_list"), fmt.Sprintf("review:list:%d", prodID)))

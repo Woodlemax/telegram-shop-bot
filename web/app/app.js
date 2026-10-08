@@ -129,20 +129,29 @@
   function rub(n) { return Number(n).toFixed(2) + ' ₽'; }
   function productPrice(p) { return p.price_rub == null ? usd(p.price_usd) : rub(p.price_rub); }
   function savePrice(id, input, done) {
+    if (input.disabled) { return Promise.resolve(null); }
     var value = input.value.trim();
     if (!/^\d+$/.test(value) || Number(value) > 1000000) { showError(new Error('open_price_invalid')); return Promise.resolve(null); }
+    input.disabled = true;
+    if (input.priceSaveButton) { input.priceSaveButton.disabled = true; }
     return api('POST', '/api/cart', { product_id: id, price: Number(value) }).then(function (cart) {
       updateCartBadge(countItems(cart)); done(cart); return cart;
-    }).catch(function (err) { showError(err); return null; });
+    }).catch(function (err) { showError(err); return null; }).then(function (cart) {
+      input.disabled = false;
+      if (input.priceSaveButton) { input.priceSaveButton.disabled = false; }
+      return cart;
+    });
   }
-  function priceEditor(parent, id, current, done) {
+  function priceEditor(parent, id, current, done, changed) {
     var group = el('div', 'open-price');
     var label = el('label', 'product-desc', t('open_price_hint'));
     var input = el('input', 'input');
     input.type = 'number'; input.min = '0'; input.max = '1000000'; input.step = '1'; input.inputMode = 'numeric';
     input.value = String(current || 0);
+    if (changed) { input.oninput = function () { changed(input.value); }; }
     label.appendChild(input); group.appendChild(label);
     var save = el('button', 'btn secondary', t('open_price_apply'));
+    input.priceSaveButton = save;
     save.type = 'button'; save.onclick = function () { savePrice(id, input, done); };
     group.appendChild(save); parent.appendChild(group); return input;
   }
@@ -255,8 +264,21 @@
       }
 
       screenEl.appendChild(el('h2', 'product-name', p.name));
-      screenEl.appendChild(el('div', 'product-price', productPrice(p) + ' / ' + stars(p.price_stars)));
-      var customPrice = p.open_price ? priceEditor(screenEl, p.id, cartItem ? cartItem.price_rub : 0, added) : null;
+      var selectedPrice = p.open_price && cartItem ? cartItem : p;
+      var priceLine = el('div', 'product-price', productPrice(selectedPrice) + ' / ' + stars(selectedPrice.price_stars));
+      priceLine.setAttribute('aria-live', 'polite');
+      screenEl.appendChild(priceLine);
+      var priceRates = data.open_price_rates || cart.open_price_rates;
+      var customPrice = p.open_price ? priceEditor(screenEl, p.id, cartItem ? cartItem.price_rub : 0, added, previewPrice) : null;
+      function previewPrice(raw) {
+        var value = raw.trim();
+        if (!/^\d+$/.test(value) || Number(value) > 1000000) { priceLine.textContent = t('open_price_invalid'); return; }
+        var amount = Number(value);
+        if (amount === 0) { priceLine.textContent = rub(0) + ' / ' + stars(0); return; }
+        if (!priceRates || !(priceRates.rub_per_usd > 0) || !(priceRates.stars_per_usd > 0)) { return; }
+        var starAmount = Math.max(1, Math.floor((amount / priceRates.rub_per_usd) * priceRates.stars_per_usd));
+        priceLine.textContent = rub(amount) + ' / ' + stars(starAmount);
+      }
       if (data.rating_count > 0) {
         screenEl.appendChild(el('div', 'product-rating',
           '\u2605 ' + data.rating_avg.toFixed(1) + ' \u00b7 ' + tf('webapp_reviews', data.rating_count)));
@@ -285,6 +307,17 @@
       add.type = 'button';
       function added(cart) {
         updateCartBadge(countItems(cart));
+        if (p.open_price) {
+          priceRates = cart.open_price_rates || priceRates;
+          for (var j = 0; j < cart.items.length; j++) {
+            if (cart.items[j].product_id === p.id) {
+              var saved = cart.items[j];
+              priceLine.textContent = productPrice(saved) + ' / ' + stars(saved.price_stars);
+              customPrice.value = String(saved.price_rub);
+              break;
+            }
+          }
+        }
         inCart = true;
         add.textContent = t('product_go_to_cart');
         add.disabled = false;

@@ -31,3 +31,12 @@ func (s *Server) currentRUBRate() float64 {
 	}
 	return s.deps.USDToRUBRate
 }
+
+// openPriceRates is a read-only snapshot for input previews. Cart totals remain authoritative.
+func (s *Server) openPriceRates() map[string]any {
+	ex := s.deps.Exchange.Snapshot()
+	if ex == nil || !ex.RUBConfigured() || ex.GetUSDToStarsRate() <= 0 {
+		return nil
+	}
+	return map[string]any{"rub_per_usd": ex.GetUSDToRUBRate(), "stars_per_usd": ex.GetUSDToStarsRate()}
+}
