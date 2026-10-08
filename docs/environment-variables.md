@@ -136,3 +136,17 @@ Events: `order.paid`, `order.delivered`
 | `APP_ENV` | `development` | `development` → text logs; `production` → JSON logs + webhook secret enforced. |
 | `LOG_LEVEL` | `info` | Log verbosity: `debug`, `info`, `warn`, `error`. |
 | `LOCALES_DIR` | `locales` | Path to directory with translation files. Ships with 5 locales: `ru.json`, `en.json`, `es.json`, `de.json`, `zh.json`. Unknown/empty user language falls back to `en`. |
+
+## Welcome offer and contacts
+
+`SHOP_OFFER_URL` is an optional HTTPS link to the owner's actual published
+offer, without URL credentials. `SHOP_CONTACTS_TEXT` is optional plain text
+copied from the offer, at most 3000 characters. Literal `\n` becomes a newline.
+Each button stays hidden while its value is blank. Do not use the repository's
+generic purchase terms as the owner's offer. The contacts screen has a Back
+button and requires a private chat; purchasing remains in the Mini App.
+
+The owner's supplied Russian offer (edition 01.10.2026) is bundled at
+`/app/offer.html`; its editable source is `docs/public-offer.ru.md`.
+For the local shop, point SHOP_OFFER_URL at the public HTTPS address for that
+page and set SHOP_CONTACTS_TEXT to its seller name, email and Telegram contact.

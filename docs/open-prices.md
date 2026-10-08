@@ -87,6 +87,24 @@ Disabling open price alone leaves the current catalog price at 0. Subscriptions
 cannot use open prices. A fixed-price product cannot be overridden by a custom
 price request.
 
+## Welcome information buttons
+
+Configure `SHOP_OFFER_URL` with the HTTPS address of the owner's actual offer
+and `SHOP_CONTACTS_TEXT` with the seller's contact details copied from that
+offer. Contacts are plain text, up to 3000 characters; literal `\n` can be used
+for line breaks in environment configuration. Blank settings hide the related
+button rather than publishing placeholder terms or contacts.
+
+The private `/start` welcome keeps **Open shop** in its first row, with
+**Offer** and **Contacts** underneath when configured. Offer opens its published
+URL; Contacts edits the message to show the supplied contact text with **Back**
+to the same welcome. These read-only information callbacks are available to
+buyers and admins even in admin-only bot mode. Buyer purchasing callbacks
+remain disabled, and information views do not change the cart, orders or rates.
+The owner's supplied Russian offer, edition 01.10.2026, is bundled at
+`/app/offer.html`, with its source in `docs/public-offer.ru.md`. The local shop
+links to that public page and displays the seller contacts from section 7.
+
 ## Get without payment
 
 If every item makes the total zero, checkout shows **Get without payment**.

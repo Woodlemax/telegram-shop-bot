@@ -212,6 +212,9 @@ func (b *Bot) handleCallback(ctx context.Context, cb *tgbotapi.CallbackQuery) {
 		return
 	}
 
+	if b.handleShopInfoCallback(cb) {
+		return
+	}
 	data := cb.Data
 	chatID := cb.Message.Chat.ID
 	msgID := cb.Message.MessageID
