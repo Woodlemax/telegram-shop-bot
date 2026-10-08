@@ -281,7 +281,7 @@ func (b *Bot) onOrderConfirm(ctx context.Context, chatID, userID int64, msgID in
 	// when the buyer holds a positive balance; a lookup failure hides the row
 	// rather than blocking checkout.
 	balanceUSD := 0.0
-	if b.balances != nil && !starsOnly {
+	if b.balances != nil && !starsOnly && !b.starsOnlyPayments() {
 		if bal, balErr := b.balances.GetBalance(ctx, userID); balErr == nil {
 			balanceUSD = bal
 		} else if !errors.Is(balErr, storage.ErrNotFound) {
@@ -295,6 +295,10 @@ func (b *Bot) onOrderConfirm(ctx context.Context, chatID, userID int64, msgID in
 }
 
 func paymentMethodKeyboard(orderID int64, cryptoEnabled, yookassaOK, stripeOK, tonOK, nowpaymentsOK bool, balanceUSD, totalRUB float64, totalStars int, totalUSD float64, totalTONNano int64, lang string, b *Bot) StyledKeyboard {
+	if b != nil && b.starsOnlyPayments() {
+		cryptoEnabled, yookassaOK, stripeOK, tonOK, nowpaymentsOK = false, false, false, false, false
+		balanceUSD = 0
+	}
 	starsLabel := fmt.Sprintf("⭐ Pay %d Stars", totalStars)
 	cryptoLabel := fmt.Sprintf("💎 Pay $%.2f USDT", totalUSD)
 	rubLabel := fmt.Sprintf("💳 Pay %.2f ₽", totalRUB)

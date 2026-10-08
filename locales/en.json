@@ -1,4 +1,5 @@
 {
+  "stars_only_payment": "Only Telegram Stars payments are currently available.",
   "webapp_order_pay_continue": "Continue payment",
   "webapp_order_pay_unavailable": "This order can no longer be paid. Its status has changed.",
   "webapp_order_pay_method_unavailable": "This payment method is unavailable for this order. Choose another.",

@@ -23,6 +23,7 @@ type Config struct {
 	RedisPassword         string
 	TelegramWebhookSecret string
 	USDToStarsRate        int
+	StarsOnlyPayments     bool
 	LocalesDir            string
 	OutboundWebhookURL    string
 	OutboundWebhookSecret string
@@ -86,6 +87,15 @@ func load(lookup lookupFunc) (*Config, error) {
 	usdToStars, err := parsePositiveInt(value(lookup, "USD_TO_STARS_RATE"), defaultUSDToStarsRate)
 	if err != nil {
 		return nil, fmt.Errorf("USD_TO_STARS_RATE: %w", err)
+	}
+
+	starsOnly := false
+	if raw := strings.TrimSpace(value(lookup, "STARS_ONLY_PAYMENTS")); raw != "" {
+		var err error
+		starsOnly, err = strconv.ParseBool(raw)
+		if err != nil {
+			return nil, fmt.Errorf("STARS_ONLY_PAYMENTS: %w", err)
+		}
 	}
 
 	adminGroupID, err := parseOptionalInt64(value(lookup, "ADMIN_GROUP_ID"))
@@ -179,6 +189,7 @@ func load(lookup lookupFunc) (*Config, error) {
 		RedisPassword:         value(lookup, "REDIS_PASSWORD"),
 		TelegramWebhookSecret: webhookSecret,
 		USDToStarsRate:        usdToStars,
+		StarsOnlyPayments:     starsOnly,
 		LocalesDir:            getEnv(lookup, "LOCALES_DIR", "locales"),
 		OutboundWebhookURL:    value(lookup, "OUTBOUND_WEBHOOK_URL"),
 		OutboundWebhookSecret: value(lookup, "OUTBOUND_WEBHOOK_SECRET"),

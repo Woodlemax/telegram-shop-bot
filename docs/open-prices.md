@@ -42,3 +42,24 @@ the promotion's usage.
 Tests use real SQLite storage for ruble snapshots, whole-number validation,
 free and paid bot/Mini App checkout, archive delivery, updates, ownership,
 revoked access, and mixed-cart protection. No real payments are made.
+
+## Temporary Stars-only checkout
+
+Set `STARS_ONLY_PAYMENTS=true`, `USD_TO_RUB_RATE=100` and
+`USD_TO_STARS_RATE=50`: 1 USD = 100 RUB = 50 Stars. Whole-ruble open prices
+convert through the same quote in the bot and Mini App; for example 100 RUB
+charges 50 Stars. Positive amounts have at least one Star, with existing integer
+rounding. Product prices already stored in RUB are kept; old order currency
+amounts and captured payments are not rewritten.
+
+Both interfaces show prices as RUB / Stars in catalog, cart, checkout and order
+history. Legacy USD catalog prices are displayed as rubles without updating the
+stored product or order. Only Stars is offered for a positive checkout and for
+resuming an existing order. CryptoBot, TON, NOWPayments, YooKassa, Stripe and
+internal balance are hidden and rejected through direct API requests and stale
+bot callbacks too. Zero-total orders keep free fulfillment. Existing payment
+receipts, reconciliation and refund workflows remain available.
+
+The example .env enables this mode. An omitted flag preserves compatibility;
+setting it to false restores configured methods. Provider credentials are kept
+in the existing private .env rather than removed to turn payments off.

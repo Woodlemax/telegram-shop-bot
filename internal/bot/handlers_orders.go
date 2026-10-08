@@ -104,7 +104,7 @@ func (b *Bot) onOrderResume(ctx context.Context, cbID string, chatID, userID int
 	tonOK := b.tonPaymentsEnabled() && !starsOnly && order.TotalTonNano > 0
 	nowOK := b.nowpaymentsEnabled() && !starsOnly && math.Round(order.TotalUSD*100) > 0
 	balance := 0.0
-	if b.balances != nil && !starsOnly && order.TotalUSD > 0 {
+	if b.balances != nil && !starsOnly && !b.starsOnlyPayments() && order.TotalUSD > 0 {
 		if value, err := b.balances.GetBalance(ctx, userID); err == nil {
 			balance = value
 		}

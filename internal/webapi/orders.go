@@ -14,17 +14,18 @@ const ordersPerPage = 10
 // Only buyer-visible snapshots are returned: no provider identifiers, user IDs,
 // archive references or administrative payment records.
 type orderJSON struct {
-	ID             int64           `json:"id"`
-	Status         string          `json:"status"`
-	PaymentState   string          `json:"payment_state"`
-	PaymentMethod  string          `json:"payment_method"`
-	TotalRUB       float64         `json:"total_rub"`
-	TotalUSD       float64         `json:"total_usd"`
-	TotalStars     int             `json:"total_stars"`
-	CreatedAt      time.Time       `json:"created_at"`
-	UpdatedAt      time.Time       `json:"updated_at"`
-	Items          []orderItemJSON `json:"items"`
-	PaymentMethods []string        `json:"payment_methods,omitempty"`
+	ID              int64           `json:"id"`
+	Status          string          `json:"status"`
+	PaymentState    string          `json:"payment_state"`
+	PaymentMethod   string          `json:"payment_method"`
+	TotalRUB        float64         `json:"total_rub"`
+	TotalUSD        float64         `json:"total_usd"`
+	TotalStars      int             `json:"total_stars"`
+	CreatedAt       time.Time       `json:"created_at"`
+	UpdatedAt       time.Time       `json:"updated_at"`
+	Items           []orderItemJSON `json:"items"`
+	PaymentMethods  []string        `json:"payment_methods,omitempty"`
+	DisplayTotalRUB *float64        `json:"display_total_rub,omitempty"`
 }
 type orderItemJSON struct {
 	ProductID         int64  `json:"product_id"`
@@ -61,7 +62,7 @@ func (s *Server) handleOrders(w http.ResponseWriter, r *http.Request, auth *Auth
 	items := make([]orderJSON, 0, len(orders))
 	for _, o := range orders {
 		if o.UserID == auth.User.ID {
-			items = append(items, toOrderJSON(&o))
+			items = append(items, s.displayOrderJSON(&o))
 		}
 	}
 	s.writeJSON(w, http.StatusOK, map[string]any{"orders": items, "total": total, "page": page, "per_page": ordersPerPage})
@@ -83,7 +84,7 @@ func (s *Server) handleOrder(w http.ResponseWriter, r *http.Request, auth *AuthR
 		s.writeError(w, http.StatusInternalServerError, "webapp_err_internal")
 		return
 	}
-	result := toOrderJSON(o)
+	result := s.displayOrderJSON(o)
 	result.PaymentMethods = s.orderPaymentMethods(o)
 	if s.deps.Archives != nil {
 		files, err := s.deps.Archives.ForOrder(r.Context(), auth.User.ID, id)

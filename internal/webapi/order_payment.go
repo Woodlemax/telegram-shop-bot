@@ -27,7 +27,7 @@ func (s *Server) orderPaymentMethods(order *storage.Order) []string {
 	if s.deps.Tg != nil && order.TotalStars > 0 {
 		methods = append(methods, storage.PaymentMethodStars)
 	}
-	if sub {
+	if sub || s.deps.StarsOnlyPayments {
 		return methods
 	}
 	if s.deps.Crypto != nil && s.deps.Crypto.Configured() && math.Round(order.TotalUSD*100) > 0 {

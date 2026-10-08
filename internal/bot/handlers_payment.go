@@ -473,6 +473,10 @@ func (b *Bot) onPayNowpayments(ctx context.Context, cbID string, chatID, userID 
 // and commits the settlement in one step, then the standard announce surface
 // delivers the notifications.
 func (b *Bot) onPayBalance(ctx context.Context, cbID string, chatID, userID int64, msgID int, data, lang string) {
+	if b.starsOnlyPayments() {
+		b.alert(cbID, b.t(lang, "stars_only_payment"))
+		return
+	}
 	orderID, err := parseIDFromCallback(data, "pay:balance:")
 	if err != nil {
 		b.loggerFor(ctx).Error("parse pay:balance callback", "error", err)

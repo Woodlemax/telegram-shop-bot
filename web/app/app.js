@@ -315,7 +315,7 @@
           var row = el('div', 'cart-row');
           var info = el('div', 'card-info');
           info.appendChild(el('div', 'card-name', item.name));
-          info.appendChild(el('div', 'card-price', productPrice(item) + ' \u00d7 ' + item.quantity));
+          info.appendChild(el('div', 'card-price', productPrice(item) + ' / ' + stars(item.price_stars) + ' \u00d7 ' + item.quantity));
           if (item.open_price) { priceEditor(info, item.product_id, item.price_rub, renderCart); }
           row.appendChild(info);
 
@@ -441,8 +441,9 @@
   // ---- screen: order history ----------------------------------------------------
 
   function orderTotal(order) {
-    if (order.total_rub > 0 || (order.total_usd === 0 && order.total_stars === 0)) { return rub(order.total_rub); }
-    if (order.total_usd > 0) { return usd(order.total_usd); }
+    var amount = order.display_total_rub != null ? order.display_total_rub : order.total_rub;
+    if (amount > 0 || (order.total_usd === 0 && order.total_stars === 0)) { return rub(amount) + ' / ' + stars(order.total_stars); }
+    if (order.total_usd > 0) { return usd(order.total_usd) + ' / ' + stars(order.total_stars); }
     return stars(order.total_stars);
   }
 
@@ -532,7 +533,6 @@
       }
       screenEl.appendChild(list);
       screenEl.appendChild(el('div', 'cart-total', t('webapp_total') + ': ' + orderTotal(order)));
-      if (order.payment_method === 'stars') { screenEl.appendChild(el('div', 'card-price', stars(order.total_stars))); }
       var refresh = el('button', 'btn secondary', t('webapp_orders_refresh'));
       refresh.type = 'button'; refresh.onclick = function () { renderOrder(id); }; screenEl.appendChild(refresh);
       if (order.status === 'pending' && order.payment_state === 'pending') {

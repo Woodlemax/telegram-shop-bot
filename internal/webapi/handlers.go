@@ -135,23 +135,25 @@ type Localizer interface {
 
 // Deps carries every dependency of the Mini App API server.
 type Deps struct {
-	Auth        *Authenticator
-	Catalog     CatalogService
-	Cart        CartService
-	Orders      OrderService
-	Users       storage.UserStore
-	Promos      PromoStore
-	Reviews     RatingStore
-	Photos      PhotoStore
-	I18n        Localizer
-	Tg          TelegramAPI
-	Crypto      CryptoInvoicer
-	YooKassa    YooKassaInvoicer
-	Stripe      StripeInvoicer
-	TON         TONLinker
-	Nowpayments NowpaymentsInvoicer
-	Files       FileURLResolver
-	Archives    OrderArchives
+	Auth              *Authenticator
+	Catalog           CatalogService
+	Cart              CartService
+	Orders            OrderService
+	Users             storage.UserStore
+	Promos            PromoStore
+	Reviews           RatingStore
+	Photos            PhotoStore
+	I18n              Localizer
+	Tg                TelegramAPI
+	Crypto            CryptoInvoicer
+	YooKassa          YooKassaInvoicer
+	Stripe            StripeInvoicer
+	TON               TONLinker
+	Nowpayments       NowpaymentsInvoicer
+	Files             FileURLResolver
+	Archives          OrderArchives
+	StarsOnlyPayments bool
+	USDToRUBRate      float64
 
 	// The *Available flags are the config-level rail availability rendered
 	// into the cart payload as *_enabled booleans. main computes them with
@@ -368,7 +370,7 @@ func (s *Server) handleProducts(w http.ResponseWriter, r *http.Request, _ *AuthR
 	}
 	out := make([]productJSON, 0, len(prods))
 	for i := range prods {
-		out = append(out, toProductJSON(&prods[i]))
+		out = append(out, s.displayProductJSON(&prods[i]))
 	}
 	s.writeJSON(w, http.StatusOK, map[string]any{
 		"products": out,
@@ -427,7 +429,7 @@ func (s *Server) handleProduct(w http.ResponseWriter, r *http.Request, _ *AuthRe
 	}
 
 	resp := map[string]any{
-		"product":      toProductJSON(p),
+		"product":      s.displayProductJSON(p),
 		"rating_avg":   avg,
 		"rating_count": count,
 		"photos":       photos,
@@ -454,7 +456,7 @@ func (s *Server) cartJSON(view *shop.CartView) map[string]any {
 			"photo":          photoRef(it.Product.PhotoURL),
 			"price_usd":      it.Product.PriceUSD,
 			"price_stars":    it.Product.PriceStars,
-			"price_rub":      it.Product.PriceRUB,
+			"price_rub":      s.displayProductJSON(&it.Product).PriceRUB,
 			"open_price":     it.Product.OpenPrice,
 			"quantity":       it.Quantity,
 			"is_digital":     it.Product.IsDigital,
@@ -464,17 +466,17 @@ func (s *Server) cartJSON(view *shop.CartView) map[string]any {
 	}
 	return map[string]any{
 		"items":               items,
-		"stars_only":          sub,
+		"stars_only":          sub || s.deps.StarsOnlyPayments,
 		"base_currency":       "RUB",
 		"free_checkout":       len(view.Items) > 0 && view.TotalUSD == 0 && view.TotalStars == 0 && view.TotalRUB == 0 && !sub,
 		"total_usd":           view.TotalUSD,
 		"total_stars":         view.TotalStars,
 		"total_rub":           view.TotalRUB,
 		"total_ton_nano":      view.TotalTONNano,
-		"yookassa_enabled":    s.deps.YooKassaAvailable && !sub && view.TotalRUB > 0,
-		"stripe_enabled":      s.deps.StripeAvailable && !sub,
-		"ton_enabled":         s.deps.TONAvailable && !sub && view.TotalTONNano > 0,
-		"nowpayments_enabled": s.deps.NowpaymentsAvailable && !sub,
+		"yookassa_enabled":    s.deps.YooKassaAvailable && !sub && !s.deps.StarsOnlyPayments && view.TotalRUB > 0,
+		"stripe_enabled":      s.deps.StripeAvailable && !sub && !s.deps.StarsOnlyPayments,
+		"ton_enabled":         s.deps.TONAvailable && !sub && !s.deps.StarsOnlyPayments && view.TotalTONNano > 0,
+		"nowpayments_enabled": s.deps.NowpaymentsAvailable && !sub && !s.deps.StarsOnlyPayments,
 	}
 }
 
@@ -587,6 +589,10 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request, auth *Au
 		Promo  string `json:"promo"`
 	}
 	if !s.decodeBody(w, r, &req) {
+		return
+	}
+	if s.deps.StarsOnlyPayments && req.Method != storage.PaymentMethodFree && req.Method != storage.PaymentMethodStars {
+		s.writeError(w, http.StatusBadRequest, "stars_only_payment")
 		return
 	}
 	if req.Method != storage.PaymentMethodFree && req.Method != storage.PaymentMethodStars && req.Method != storage.PaymentMethodCrypto && req.Method != storage.PaymentMethodYooKassa && req.Method != storage.PaymentMethodStripe && req.Method != storage.PaymentMethodTON && req.Method != storage.PaymentMethodNowpayments {

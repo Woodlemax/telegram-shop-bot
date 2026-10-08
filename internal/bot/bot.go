@@ -271,36 +271,38 @@ func (b *Bot) API() *tgbotapi.BotAPI {
 	return b.api
 }
 
+func (b *Bot) starsOnlyPayments() bool { return b.cfg != nil && b.cfg.StarsOnlyPayments }
+
 func (b *Bot) cryptoPaymentsEnabled() bool {
-	return b.crypto != nil && b.crypto.Configured()
+	return !b.starsOnlyPayments() && b.crypto != nil && b.crypto.Configured()
 }
 
 // yooKassaPaymentsEnabled reports whether RUB card payments can be offered:
 // credentials configured AND a positive RUB exchange rate AND the order has a
 // positive RUB snapshot (checked per-order at button build time).
 func (b *Bot) yooKassaPaymentsEnabled() bool {
-	return b.yookassa != nil && b.yookassa.Configured() && b.cfg != nil && b.cfg.USDToRUBRate > 0
+	return !b.starsOnlyPayments() && b.yookassa != nil && b.yookassa.Configured() && b.cfg != nil && b.cfg.USDToRUBRate > 0
 }
 
 // stripePaymentsEnabled reports whether USD card payments via Stripe can be
 // offered: the adapter is fully configured. No conversion is needed — the
 // order's USD snapshot is charged directly.
 func (b *Bot) stripePaymentsEnabled() bool {
-	return b.stripe != nil && b.stripe.Configured()
+	return !b.starsOnlyPayments() && b.stripe != nil && b.stripe.Configured()
 }
 
 // tonPaymentsEnabled reports whether TON on-chain transfers can be offered:
 // a wallet address configured AND a positive USD/TON rate. The order's
 // nanoton snapshot is checked per-order at button build time.
 func (b *Bot) tonPaymentsEnabled() bool {
-	return b.ton != nil && b.ton.Configured() && b.cfg != nil && b.cfg.USDPerTON > 0
+	return !b.starsOnlyPayments() && b.ton != nil && b.ton.Configured() && b.cfg != nil && b.cfg.USDPerTON > 0
 }
 
 // nowpaymentsEnabled reports whether hosted crypto invoices via NOWPayments
 // can be offered: the adapter is fully configured. No conversion is needed —
 // the order's USD snapshot is priced directly.
 func (b *Bot) nowpaymentsEnabled() bool {
-	return b.nowpayments != nil && b.nowpayments.Configured()
+	return !b.starsOnlyPayments() && b.nowpayments != nil && b.nowpayments.Configured()
 }
 
 // registerCommands registers the bot command list with Telegram so the "/" menu shows up.

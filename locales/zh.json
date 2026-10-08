@@ -1,4 +1,5 @@
 {
+  "stars_only_payment": "目前仅支持使用 Telegram Stars 付款。",
   "webapp_order_pay_continue": "继续付款",
   "webapp_order_pay_unavailable": "此订单已无法付款，订单状态已更新。",
   "webapp_order_pay_method_unavailable": "此订单无法使用该付款方式，请选择其他方式。",

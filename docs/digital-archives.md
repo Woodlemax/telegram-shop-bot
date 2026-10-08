@@ -85,6 +85,7 @@ Real payments are not used in automated checks.
 ## Telegram payment requirements
 
 Telegram requires Stars for digital goods sold inside bots and Mini Apps:
-https://core.telegram.org/bots/payments-stars#faq. This fork does not enforce
-that restriction for ZIP products. Recurring subscription products retain their
-existing Stars-only payment path.
+https://core.telegram.org/bots/payments-stars#faq. The example configuration enables
+`STARS_ONLY_PAYMENTS=true`, enforcing Stars for all positive checkouts. Other
+configured methods remain available when that switch is false. Recurring
+subscription products retain their Stars-only payment path.
