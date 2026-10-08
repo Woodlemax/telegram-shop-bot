@@ -242,7 +242,7 @@
   "admin_export_bad_date": "❗ Invalid date: \"%s\". Format: YYYY-MM-DD, e.g.: /export_orders 2026-01-01 2026-02-01",
   "admin_export_failed": "❌ Failed to export orders.",
   "admin_export_caption": "Order export: %d rows",
-  "admin_panel": "🔧 Admin panel\n\nProducts:\n/addproduct — Add product\n/editproduct <id> — Edit product\n/deleteproduct <id> — Delete product\n\nCategories:\n/addcategory <emoji> <name> — Create category\n/editcategory <id> name|emoji <value> — Change field\n/deletecategory <id> — Delete category\n/listcategories — Category list with IDs\n\nOrders:\n/orders_all [status] — All orders\n/order <id> — Order card\n/setdelivered <id> — Mark order as delivered\n/reviews — Latest reviews (moderation)\n/export_orders — Export orders to CSV\n/payreview — Payment review queue\n/paystatus — Payment provider status\n/refund <order_id> [amount] — Refund a paid order (two-tap confirm)\n/setbalance <user_id> <±amount> [reason] — Adjust user balance\n\nPromo codes:\n/addpromo <code> <discount%> [max_uses] [days] [category_id] — Create promo code\n/listpromos — Active promo codes\n/deletepromo <id> — Deactivate promo code\n\nDesign:\n/btnstyle — Configure button colors\n\nAnalytics:\n/analytics — Sales statistics",
+  "admin_panel": "🔧 Admin panel\n\nProducts:\n/addproduct — Add product\n/editproduct <id> — Edit product\n/deleteproduct <id> — Delete product\n\nCategories:\n/addcategory <emoji> <name> — Create category\n/editcategory <id> name|emoji <value> — Change field\n/deletecategory <id> — Delete category\n/listcategories — Category list with IDs\n\nOrders:\n/orders_all [status] — All orders\n/order <id> — Order card\n/setdelivered <id> — Mark order as delivered\n/reviews — Latest reviews (moderation)\n/export_orders — Export orders to CSV\n/payreview — Payment review queue\n/paystatus — Payment provider status\n/refund <order_id> [amount] — Refund a paid order (two-tap confirm)\n/setbalance <user_id> <±amount> [reason] — Adjust user balance\n\nPromo codes:\n/addpromo <code> <discount%> [max_uses] [days] [category_id] — Create promo code\n/listpromos — Active promo codes\n/deletepromo <id> — Deactivate promo code\n\nDesign:\n/btnstyle — Configure button colors\n\nAnalytics:\n/analytics — Sales statistics\n\n/rubrate [RUB per USD] — RUB exchange rate",
   "admin_delivered_ok": "✅ Order #%d marked as delivered.",
   "admin_product_create_failed": "❌ Failed to create product.",
   "admin_add_product_name": "📝 Enter the product name:",
@@ -457,5 +457,14 @@
   "webapp_err_sub_stars_only": "Subscriptions can only be paid with Telegram Stars.",
   "webapp_err_sub_alone": "Please order a subscription separately from other items.",
   "webapp_err_sub_active": "This subscription is already active or awaiting payment.",
-  "btn_menu": "🏠 Main Menu"
+  "btn_menu": "🏠 Main Menu",
+  "admin_rub_rate_button": "💱 RUB exchange rate",
+  "admin_rub_rate_current": "💱 RUB rate: 1 USD = %s ₽.\n1 USD = %d ⭐.\n\nApplies to new purchases in the bot and Mini App. Existing order amounts stay unchanged.",
+  "admin_rub_rate_edit": "Change rate",
+  "admin_rub_rate_prompt": "Enter rubles per 1 USD, e.g. 100 or 92.5. Cancel: /cancel. Expires in 15 minutes.",
+  "admin_rub_rate_invalid": "Enter a number from 1 to 1000000, with up to 4 decimal places (dot or comma).",
+  "admin_rub_rate_saved": "✅ Rate saved: 1 USD = %s ₽. Active in the bot and Mini App without restarting.",
+  "admin_rub_rate_failed": "Could not save the rate. The previous rate remains active.",
+  "admin_rub_rate_private": "Open exchange rate settings in your private chat with the bot.",
+  "admin_rub_rate_cancel": "Cancel"
 }

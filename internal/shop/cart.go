@@ -73,6 +73,7 @@ func (s *CartService) Get(ctx context.Context, userID int64) (*CartView, error) 
 		return nil, fmt.Errorf("cart service: get items: %w", err)
 	}
 
+	exchange := s.exchange.Snapshot()
 	view := &CartView{
 		Items:   make([]CartItemView, 0, len(items)),
 		BaseRUB: true,
@@ -89,22 +90,22 @@ func (s *CartService) Get(ctx context.Context, userID int64) (*CartView, error) 
 		if p.PriceRUB == nil && !p.OpenPrice {
 			view.BaseRUB = false
 		}
-		applyProductPrice(p, s.exchange)
+		applyProductPrice(p, exchange)
 		if p.OpenPrice {
 			rub := float64(ci.CustomPrice)
 			p.PriceRUB = &rub
-			if rub > 0 && (s.exchange == nil || !s.exchange.RUBConfigured()) {
+			if rub > 0 && (exchange == nil || !exchange.RUBConfigured()) {
 				return nil, ErrRUBRate
 			}
 			p.PriceUSD = 0
 			p.PriceStars = 0
-			if s.exchange != nil {
-				p.PriceUSD = s.exchange.ConvertRUBToUSD(rub)
-				p.PriceStars = s.exchange.ConvertUSDToStars(p.PriceUSD)
+			if exchange != nil {
+				p.PriceUSD = exchange.ConvertRUBToUSD(rub)
+				p.PriceStars = exchange.ConvertUSDToStars(p.PriceUSD)
 			}
 		}
 		if p.PriceRUB != nil {
-			if *p.PriceRUB > 0 && (s.exchange == nil || !s.exchange.RUBConfigured()) {
+			if *p.PriceRUB > 0 && (exchange == nil || !exchange.RUBConfigured()) {
 				return nil, ErrRUBRate
 			}
 			view.TotalRUB += *p.PriceRUB * float64(ci.Quantity)
@@ -122,11 +123,11 @@ func (s *CartService) Get(ctx context.Context, userID int64) (*CartView, error) 
 
 	// Convert once from the accumulated TotalUSD: per-item conversion would
 	// drift the total through repeated kopeck/nanoton rounding.
-	if s.exchange != nil {
+	if exchange != nil {
 		if !view.BaseRUB {
-			view.TotalRUB = s.exchange.ConvertUSDToRUB(view.TotalUSD)
+			view.TotalRUB = exchange.ConvertUSDToRUB(view.TotalUSD)
 		}
-		view.TotalTONNano = s.exchange.ConvertUSDToNanoTON(view.TotalUSD)
+		view.TotalTONNano = exchange.ConvertUSDToNanoTON(view.TotalUSD)
 	}
 
 	return view, nil

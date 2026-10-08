@@ -2,13 +2,34 @@
 
 Product administration uses RUB. Existing USD orders retain their committed
 amounts. Configure a positive `USD_TO_RUB_RATE` for conversion from the RUB
-catalog to Stars, USD/USDT, TON and internal USD balance. The quote is fixed in
-configuration; checkout does not fetch exchange rates from the internet.
+catalog to Stars, USD/USDT, TON and internal USD balance. The quote starts from the environment default and can be saved by an
+administrator; checkout does not fetch exchange rates from the internet.
 
 Existing products with a null `price_rub` are legacy USD products. A deployment
 may convert them once with `ROUND(price_usd * <confirmed quote>, 2)`. Do not
 update order snapshots during this conversion. New product prices are stored
 in `price_rub`; changing a conversion quote does not change these ruble prices.
+
+## Change the RUB exchange rate
+
+In the bot's private administrator chat, open `/admin` → **RUB exchange rate**
+→ **Change rate**, then send the number of rubles per 1 USD. For example `100`
+or `92,5`. `/rubrate` shows the current rate; `/rubrate 100` saves directly.
+Values must be between 1 and 1,000,000 with at most four decimal places. A dot
+or comma is accepted. `/cancel`, the cancel button or another command ends the
+15-minute input dialog. Only configured administrators can use it in private.
+
+The rate is persisted in SQLite and restored at startup before services run.
+It overrides `USD_TO_RUB_RATE`; the environment value is the default until the
+first admin save. Save failures leave the active rate unchanged. Bot catalog,
+cart, checkout and Mini App use the same exchange service without restarting.
+A cart calculation uses one fixed rate snapshot even during an admin change.
+Reopen a product or refresh the cart to see updated prices in an open screen.
+
+Stored RUB product prices, selected open amounts, existing orders and their
+invoice amounts remain unchanged. New orders use the new rate. With
+`USD_TO_STARS_RATE=50`, a rate of 100 means 100 RUB / 50 Stars; a rate of 200
+means 100 RUB / 25 Stars. Stars-only checkout and zero-total grants are retained.
 
 ## Enable an open price
 

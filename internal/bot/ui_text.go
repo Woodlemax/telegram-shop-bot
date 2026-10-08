@@ -233,7 +233,7 @@ func (b *Bot) formatOrdersText(lang string, orders []storage.Order) string {
 		if rub {
 			total = o.TotalRUB
 			if total == 0 && o.TotalUSD > 0 && b.rubleDisplayEnabled() {
-				total = math.Round(o.TotalUSD*b.cfg.USDToRUBRate*100) / 100
+				total = math.Round(o.TotalUSD*b.currentRUBRate()*100) / 100
 			}
 		}
 		sb.WriteString(fmt.Sprintf(currencyText(b.t(lang, "orders_total_line"), rub), total, o.TotalStars))
@@ -320,13 +320,13 @@ func loyaltyNextLevel(level string) (next string, threshold int) {
 	}
 }
 
-func (b *Bot) rubleDisplayEnabled() bool { return b.starsOnlyPayments() && b.cfg.USDToRUBRate > 0 }
+func (b *Bot) rubleDisplayEnabled() bool { return b.starsOnlyPayments() && b.currentRUBRate() > 0 }
 func (b *Bot) displayProductRUB(p *storage.Product) bool {
 	return p.PriceRUB != nil || b.rubleDisplayEnabled()
 }
 func (b *Bot) displayProductAmount(p *storage.Product) float64 {
 	if p.PriceRUB == nil && b.rubleDisplayEnabled() {
-		return math.Round(p.PriceUSD*b.cfg.USDToRUBRate*100) / 100
+		return math.Round(p.PriceUSD*b.currentRUBRate()*100) / 100
 	}
 	return productAmount(p)
 }

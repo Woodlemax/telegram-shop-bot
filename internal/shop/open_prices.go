@@ -11,6 +11,7 @@ var ErrOpenPrice = errors.New("open price must be an integer from zero to 100000
 var ErrRUBRate = errors.New("RUB exchange rate unavailable")
 
 func applyProductPrice(p *storage.Product, exchange *service.ExchangeService) {
+	exchange = exchange.Snapshot()
 	if p.OpenPrice {
 		zero := float64(0)
 		p.PriceRUB = &zero

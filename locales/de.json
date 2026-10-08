@@ -242,7 +242,7 @@
   "admin_export_bad_date": "❗ Ungültiges Datum: „%s“. Format: YYYY-MM-DD, z. B.: /export_orders 2026-01-01 2026-02-01",
   "admin_export_failed": "❌ Bestellungen konnten nicht exportiert werden.",
   "admin_export_caption": "Bestellexport: %d Zeilen",
-  "admin_panel": "🔧 Admin-Panel\n\nProdukte:\n/addproduct — Produkt hinzufügen\n/editproduct <id> — Produkt bearbeiten\n/deleteproduct <id> — Produkt löschen\n\nKategorien:\n/addcategory <emoji> <Name> — Kategorie erstellen\n/editcategory <id> name|emoji <Wert> — Feld ändern\n/deletecategory <id> — Kategorie löschen\n/listcategories — Kategorienliste mit IDs\n\nBestellungen:\n/orders_all [Status] — Alle Bestellungen\n/order <id> — Bestellkarte\n/setdelivered <id> — Bestellung als geliefert markieren\n/reviews — Neueste Bewertungen (Moderation)\n/export_orders — Bestellungen als CSV exportieren\n/payreview — Zahlungsprüfungswarteschlange\n/paystatus — Status der Zahlungsanbieter\n/refund <bestell_id> [betrag] — Bezahlte Bestellung erstatten (Doppelbestätigung)\n/setbalance <user_id> <±betrag> [grund] — Nutzerguthaben anpassen\n\nPromo-Codes:\n/addpromo <Code> <Rabatt%> [max_Nutzungen] [Tage] [category_id] — Promo-Code erstellen\n/listpromos — Aktive Promo-Codes\n/deletepromo <id> — Promo-Code deaktivieren\n\nDesign:\n/btnstyle — Buttonfarben anpassen\n\nAnalytik:\n/analytics — Verkaufsstatistik",
+  "admin_panel": "🔧 Admin-Panel\n\nProdukte:\n/addproduct — Produkt hinzufügen\n/editproduct <id> — Produkt bearbeiten\n/deleteproduct <id> — Produkt löschen\n\nKategorien:\n/addcategory <emoji> <Name> — Kategorie erstellen\n/editcategory <id> name|emoji <Wert> — Feld ändern\n/deletecategory <id> — Kategorie löschen\n/listcategories — Kategorienliste mit IDs\n\nBestellungen:\n/orders_all [Status] — Alle Bestellungen\n/order <id> — Bestellkarte\n/setdelivered <id> — Bestellung als geliefert markieren\n/reviews — Neueste Bewertungen (Moderation)\n/export_orders — Bestellungen als CSV exportieren\n/payreview — Zahlungsprüfungswarteschlange\n/paystatus — Status der Zahlungsanbieter\n/refund <bestell_id> [betrag] — Bezahlte Bestellung erstatten (Doppelbestätigung)\n/setbalance <user_id> <±betrag> [grund] — Nutzerguthaben anpassen\n\nPromo-Codes:\n/addpromo <Code> <Rabatt%> [max_Nutzungen] [Tage] [category_id] — Promo-Code erstellen\n/listpromos — Aktive Promo-Codes\n/deletepromo <id> — Promo-Code deaktivieren\n\nDesign:\n/btnstyle — Buttonfarben anpassen\n\nAnalytik:\n/analytics — Verkaufsstatistik\n\n/rubrate [RUB pro USD] — Rubelkurs",
   "admin_delivered_ok": "✅ Bestellung #%d als geliefert markiert.",
   "admin_product_create_failed": "❌ Produkt konnte nicht erstellt werden.",
   "admin_add_product_name": "📝 Gib den Produktnamen ein:",
@@ -457,5 +457,14 @@
   "webapp_err_sub_stars_only": "Abos können nur mit Telegram Stars bezahlt werden.",
   "webapp_err_sub_alone": "Bitte bestelle ein Abo getrennt von anderen Artikeln.",
   "webapp_err_sub_active": "Dieses Abo ist bereits aktiv oder wartet auf Zahlung.",
-  "btn_menu": "🏠 Hauptmenü"
+  "btn_menu": "🏠 Hauptmenü",
+  "admin_rub_rate_button": "💱 Rubelkurs",
+  "admin_rub_rate_current": "💱 Rubelkurs: 1 USD = %s ₽.\n1 USD = %d ⭐.\n\nGilt für neue Käufe im Bot und in der Mini App. Bestehende Bestellsummen bleiben erhalten.",
+  "admin_rub_rate_edit": "Kurs ändern",
+  "admin_rub_rate_prompt": "Rubel pro 1 USD eingeben, z. B. 100 oder 92,5. Abbrechen: /cancel. Gültig für 15 Minuten.",
+  "admin_rub_rate_invalid": "Eine Zahl von 1 bis 1000000 mit bis zu 4 Nachkommastellen (Punkt oder Komma) eingeben.",
+  "admin_rub_rate_saved": "✅ Kurs gespeichert: 1 USD = %s ₽. Sofort im Bot und in der Mini App aktiv.",
+  "admin_rub_rate_failed": "Kurs konnte nicht gespeichert werden. Der bisherige Kurs bleibt aktiv.",
+  "admin_rub_rate_private": "Kurseinstellungen im privaten Chat mit dem Bot öffnen.",
+  "admin_rub_rate_cancel": "Abbrechen"
 }

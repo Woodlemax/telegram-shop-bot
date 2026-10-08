@@ -35,6 +35,7 @@ A full-featured e-commerce bot for Telegram — catalog, cart, Telegram Stars & 
 - Cart & checkout inside Telegram
 - Bot order history with resume/cancel actions, and one latest archive per purchased product
 - Mini App order history with latest ZIP downloads, resumed payment and confirmation before canceling an unpaid order. [Usage](docs/order-history.md).
+- **RUB exchange rate** editable in `/admin` → **RUB exchange rate** or `/rubrate 100`; saved in SQLite and applied to bot and Mini App without restarting
 - **Telegram Stars** payments (built-in); shared `STARS_ONLY_PAYMENTS` switch disables every other checkout method in the bot and Mini App
 - **Digital ZIP models** — admin document uploads, automatic delivery after confirmed payment, retries, and downloads of updated archives for existing buyers. [Setup](docs/digital-archives.md).
 - **Ruble catalog and open prices** — set product prices in RUB, let buyers choose a whole-ruble amount from zero, and fulfill zero-total carts without payment. [Setup](docs/open-prices.md).

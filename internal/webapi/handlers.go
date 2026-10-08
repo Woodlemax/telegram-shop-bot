@@ -18,6 +18,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
 	"shop_bot/internal/payment"
+	"shop_bot/internal/service"
 	"shop_bot/internal/shop"
 	"shop_bot/internal/storage"
 )
@@ -153,7 +154,8 @@ type Deps struct {
 	Files             FileURLResolver
 	Archives          OrderArchives
 	StarsOnlyPayments bool
-	USDToRUBRate      float64
+	USDToRUBRate      float64 // Fallback for callers without a shared exchange service.
+	Exchange          *service.ExchangeService
 
 	// The *Available flags are the config-level rail availability rendered
 	// into the cart payload as *_enabled booleans. main computes them with
@@ -473,7 +475,7 @@ func (s *Server) cartJSON(view *shop.CartView) map[string]any {
 		"total_stars":         view.TotalStars,
 		"total_rub":           view.TotalRUB,
 		"total_ton_nano":      view.TotalTONNano,
-		"yookassa_enabled":    s.deps.YooKassaAvailable && !sub && !s.deps.StarsOnlyPayments && view.TotalRUB > 0,
+		"yookassa_enabled":    s.deps.YooKassaAvailable && (s.deps.Exchange == nil || s.deps.Exchange.RUBConfigured()) && !sub && !s.deps.StarsOnlyPayments && view.TotalRUB > 0,
 		"stripe_enabled":      s.deps.StripeAvailable && !sub && !s.deps.StarsOnlyPayments,
 		"ton_enabled":         s.deps.TONAvailable && !sub && !s.deps.StarsOnlyPayments && view.TotalTONNano > 0,
 		"nowpayments_enabled": s.deps.NowpaymentsAvailable && !sub && !s.deps.StarsOnlyPayments,

@@ -69,6 +69,8 @@ type payLedgerStore interface {
 type Bot struct {
 	api             *tgbotapi.BotAPI
 	cfg             *config.Config
+	exchange        *service.ExchangeService
+	rubRateInput    sync.Map
 	catalog         *shop.CatalogService
 	cart            *shop.CartService
 	order           *shop.OrderService
@@ -170,7 +172,10 @@ func NewWithAPI(cfg *config.Config, api *tgbotapi.BotAPI, db *storage.DB, metric
 	analyticsStore := storage.NewSQLAnalyticsStore(db)
 	referralStore := storage.NewReferralStore(db.Conn())
 	referralSvc := service.NewReferralService(2.0, 1.0, 100, redisClient)
-	exchangeSvc := service.NewExchangeService(cfg.USDToStarsRate, cfg.USDToRUBRate, cfg.USDPerTON)
+	exchangeSvc, err := service.NewPersistentExchangeService(context.Background(), storage.NewSQLRUBRateStore(db.Conn()), cfg.USDToStarsRate, cfg.USDToRUBRate, cfg.USDPerTON)
+	if err != nil {
+		return nil, err
+	}
 	loyaltyStore := storage.NewLoyaltyStore(db.Conn())
 	loyaltySvc := service.NewLoyaltyService(loyaltyStore, 1)
 
@@ -200,6 +205,7 @@ func NewWithAPI(cfg *config.Config, api *tgbotapi.BotAPI, db *storage.DB, metric
 	b := &Bot{
 		api:             api,
 		cfg:             cfg,
+		exchange:        exchangeSvc,
 		catalog:         shop.NewCatalogService(cachedPS, exchangeSvc),
 		cart:            shop.NewCartService(cs, cachedPS, exchangeSvc),
 		order:           shop.NewOrderService(os, cs, cachedPS, paymentDeps, logger, exchangeSvc),
@@ -266,6 +272,9 @@ func (b *Bot) ensureHandler(ctx context.Context) {
 	})
 }
 
+// ExchangeService is shared by bot checkout and Mini App pricing.
+func (b *Bot) ExchangeService() *service.ExchangeService { return b.exchange }
+
 // API returns the underlying Telegram Bot API instance.
 func (b *Bot) API() *tgbotapi.BotAPI {
 	return b.api
@@ -281,7 +290,7 @@ func (b *Bot) cryptoPaymentsEnabled() bool {
 // credentials configured AND a positive RUB exchange rate AND the order has a
 // positive RUB snapshot (checked per-order at button build time).
 func (b *Bot) yooKassaPaymentsEnabled() bool {
-	return !b.starsOnlyPayments() && b.yookassa != nil && b.yookassa.Configured() && b.cfg != nil && b.cfg.USDToRUBRate > 0
+	return !b.starsOnlyPayments() && b.yookassa != nil && b.yookassa.Configured() && b.currentRUBRate() > 0
 }
 
 // stripePaymentsEnabled reports whether USD card payments via Stripe can be

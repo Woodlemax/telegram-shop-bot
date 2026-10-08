@@ -242,7 +242,7 @@
   "admin_export_bad_date": "❗ Неверная дата: «%s». Формат: YYYY-MM-DD, например: /export_orders 2026-01-01 2026-02-01",
   "admin_export_failed": "❌ Не удалось выгрузить заказы.",
   "admin_export_caption": "Экспорт заказов: %d строк",
-  "admin_panel": "🔧 Панель администратора\n\nТовары:\n/addproduct — Добавить товар\n/editproduct <id> — Редактировать товар\n/deleteproduct <id> — Удалить товар\n\nКатегории:\n/addcategory <emoji> <название> — Создать категорию\n/editcategory <id> name|emoji <значение> — Изменить поле\n/deletecategory <id> — Удалить категорию\n/listcategories — Список категорий с ID\n\nЗаказы:\n/orders_all [статус] — Все заказы\n/order <id> — Карточка заказа\n/setdelivered <id> — Отметить заказ доставленным\n/reviews — Последние отзывы (модерация)\n/export_orders — Экспорт заказов в CSV\n/payreview — Очередь проверки платежей\n/paystatus — Статус платёжных провайдеров\n/refund <id_заказа> [сумма] — Возврат оплаченного заказа (двойное подтверждение)\n/setbalance <user_id> <±сумма> [причина] — Изменить баланс пользователя\n\nПромокоды:\n/addpromo <код> <скидка%> [макс_использований] [дней] [category_id] — Создать промокод\n/listpromos — Активные промокоды\n/deletepromo <id> — Деактивировать промокод\n\nДизайн:\n/btnstyle — Настроить цвета кнопок\n\nАналитика:\n/analytics — Статистика продаж",
+  "admin_panel": "🔧 Панель администратора\n\nТовары:\n/addproduct — Добавить товар\n/editproduct <id> — Редактировать товар\n/deleteproduct <id> — Удалить товар\n\nКатегории:\n/addcategory <emoji> <название> — Создать категорию\n/editcategory <id> name|emoji <значение> — Изменить поле\n/deletecategory <id> — Удалить категорию\n/listcategories — Список категорий с ID\n\nЗаказы:\n/orders_all [статус] — Все заказы\n/order <id> — Карточка заказа\n/setdelivered <id> — Отметить заказ доставленным\n/reviews — Последние отзывы (модерация)\n/export_orders — Экспорт заказов в CSV\n/payreview — Очередь проверки платежей\n/paystatus — Статус платёжных провайдеров\n/refund <id_заказа> [сумма] — Возврат оплаченного заказа (двойное подтверждение)\n/setbalance <user_id> <±сумма> [причина] — Изменить баланс пользователя\n\nПромокоды:\n/addpromo <код> <скидка%> [макс_использований] [дней] [category_id] — Создать промокод\n/listpromos — Активные промокоды\n/deletepromo <id> — Деактивировать промокод\n\nДизайн:\n/btnstyle — Настроить цвета кнопок\n\nАналитика:\n/analytics — Статистика продаж\n\n/rubrate [рублей за USD] — Курс рубля",
   "admin_delivered_ok": "✅ Заказ #%d отмечен как доставленный.",
   "admin_product_create_failed": "❌ Не удалось создать товар.",
   "admin_add_product_name": "📝 Введите название товара:",
@@ -457,5 +457,14 @@
   "webapp_err_sub_stars_only": "Подписку можно оплатить только Telegram Stars.",
   "webapp_err_sub_alone": "Пожалуйста, оформляйте подписку отдельно от других товаров.",
   "webapp_err_sub_active": "Эта подписка уже активна или ожидает оплаты.",
-  "btn_menu": "🏠 Главное меню"
+  "btn_menu": "🏠 Главное меню",
+  "admin_rub_rate_button": "💱 Курс рубля",
+  "admin_rub_rate_current": "💱 Курс рубля: 1 USD = %s ₽.\n1 USD = %d ⭐.\n\nКурс применяется к новым покупкам в боте и Mini App. Суммы оформленных заказов сохраняются.",
+  "admin_rub_rate_edit": "Изменить курс",
+  "admin_rub_rate_prompt": "Введите количество рублей за 1 USD, например 100 или 92,5. Отмена: /cancel. Ожидание — 15 минут.",
+  "admin_rub_rate_invalid": "Введите число от 1 до 1000000, не более 4 знаков после точки или запятой.",
+  "admin_rub_rate_saved": "✅ Курс сохранён: 1 USD = %s ₽. Изменение действует в боте и Mini App без перезапуска.",
+  "admin_rub_rate_failed": "Не удалось сохранить курс. Прежний курс остаётся действующим.",
+  "admin_rub_rate_private": "Откройте настройку курса в личном чате с ботом.",
+  "admin_rub_rate_cancel": "Отмена"
 }

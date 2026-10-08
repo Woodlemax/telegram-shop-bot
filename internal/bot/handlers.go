@@ -31,6 +31,9 @@ func (b *Bot) routeMessage(ctx context.Context, msg *tgbotapi.Message) {
 		b.handleSuccessfulPayment(ctx, msg)
 		return
 	}
+	if b.handleRUBRateInput(ctx, msg) {
+		return
+	}
 	if b.handleArchiveUpload(ctx, msg) {
 		return
 	}
@@ -109,6 +112,8 @@ func (b *Bot) routeMessage(ctx context.Context, msg *tgbotapi.Message) {
 		b.handleCancel(ctx, msg)
 
 	// Admin commands.
+	case "rubrate":
+		b.handleRUBRate(ctx, msg)
 	case "admin":
 		b.handleAdmin(msg)
 	case "addproduct":
@@ -206,7 +211,19 @@ func (b *Bot) handleCallback(ctx context.Context, cb *tgbotapi.CallbackQuery) {
 	userID := cb.From.ID
 	lang := cb.From.LanguageCode
 
+	if data != "admin:rubrate:edit" {
+		b.rubRateInput.Delete(userID)
+	}
 	switch {
+	case data == "admin:rubrate", data == "admin:rubrate:edit":
+		b.ack(cb.ID)
+		if b.isAdmin(userID) && chatID == userID {
+			if data == "admin:rubrate:edit" {
+				b.beginRUBRateInput(ctx, chatID, userID, lang)
+			} else {
+				b.sendRUBRate(chatID, msgID, lang)
+			}
+		}
 	case strings.HasPrefix(data, "price:enter:"):
 		b.ack(cb.ID)
 		b.onOpenPrice(ctx, chatID, userID, data, lang)

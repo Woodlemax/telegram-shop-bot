@@ -3,18 +3,21 @@ package service
 import (
 	"math"
 	"sync"
+
+	"shop_bot/internal/storage"
 )
 
 // ExchangeService holds the current USD conversion rates for every payment
 // rail: USD→Stars (set by Telegram's pricing, ~50 Stars per $1, rarely
 // changes), USD→RUB and the USD-per-TON quote. Override them at startup via
 // the USD_TO_STARS_RATE, USD_TO_RUB_RATE and USD_PER_TON environment
-// variables.
+// variables; a saved administrator RUB rate takes precedence over its env default.
 type ExchangeService struct {
 	mu         sync.RWMutex
 	usdToStars int
 	usdToRUB   float64
 	usdPerTON  float64
+	rubRates   storage.RUBRateStore
 }
 
 // NewExchangeService creates the service with the given initial rates.

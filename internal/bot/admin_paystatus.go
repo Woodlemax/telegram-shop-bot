@@ -34,7 +34,7 @@ func (b *Bot) formatPayStatus(lang string) string {
 	)
 	// Whitespace-only values are misconfiguration, not configuration — trim like doctor.go does.
 	if b.cfg != nil {
-		yooRate = b.cfg.USDToRUBRate
+		yooRate = b.currentRUBRate()
 		tonRate = b.cfg.USDPerTON
 		tonAddress = strings.TrimSpace(b.cfg.TONWalletAddress)
 		tonAPIKey = strings.TrimSpace(b.cfg.TONAPIKey)

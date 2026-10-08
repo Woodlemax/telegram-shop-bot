@@ -242,7 +242,7 @@
   "admin_export_bad_date": "❗ Fecha no válida: «%s». Formato: YYYY-MM-DD, p. ej.: /export_orders 2026-01-01 2026-02-01",
   "admin_export_failed": "❌ No se pudieron exportar los pedidos.",
   "admin_export_caption": "Exportación de pedidos: %d filas",
-  "admin_panel": "🔧 Panel de administración\n\nProductos:\n/addproduct — Añadir producto\n/editproduct <id> — Editar producto\n/deleteproduct <id> — Eliminar producto\n\nCategorías:\n/addcategory <emoji> <nombre> — Crear categoría\n/editcategory <id> name|emoji <valor> — Cambiar campo\n/deletecategory <id> — Eliminar categoría\n/listcategories — Lista de categorías con ID\n\nPedidos:\n/orders_all [estado] — Todos los pedidos\n/order <id> — Ficha del pedido\n/setdelivered <id> — Marcar pedido como entregado\n/reviews — Últimas reseñas (moderación)\n/export_orders — Exportar pedidos a CSV\n/payreview — Cola de revisión de pagos\n/paystatus — Estado de los proveedores de pago\n/refund <id_pedido> [importe] — Reembolsar un pedido pagado (confirmación doble)\n/setbalance <user_id> <±cantidad> [motivo] — Ajustar saldo del usuario\n\nCódigos promocionales:\n/addpromo <código> <descuento%> [usos_máx] [días] [category_id] — Crear código promocional\n/listpromos — Códigos promocionales activos\n/deletepromo <id> — Desactivar código promocional\n\nDiseño:\n/btnstyle — Configurar colores de botones\n\nAnalítica:\n/analytics — Estadísticas de ventas",
+  "admin_panel": "🔧 Panel de administración\n\nProductos:\n/addproduct — Añadir producto\n/editproduct <id> — Editar producto\n/deleteproduct <id> — Eliminar producto\n\nCategorías:\n/addcategory <emoji> <nombre> — Crear categoría\n/editcategory <id> name|emoji <valor> — Cambiar campo\n/deletecategory <id> — Eliminar categoría\n/listcategories — Lista de categorías con ID\n\nPedidos:\n/orders_all [estado] — Todos los pedidos\n/order <id> — Ficha del pedido\n/setdelivered <id> — Marcar pedido como entregado\n/reviews — Últimas reseñas (moderación)\n/export_orders — Exportar pedidos a CSV\n/payreview — Cola de revisión de pagos\n/paystatus — Estado de los proveedores de pago\n/refund <id_pedido> [importe] — Reembolsar un pedido pagado (confirmación doble)\n/setbalance <user_id> <±cantidad> [motivo] — Ajustar saldo del usuario\n\nCódigos promocionales:\n/addpromo <código> <descuento%> [usos_máx] [días] [category_id] — Crear código promocional\n/listpromos — Códigos promocionales activos\n/deletepromo <id> — Desactivar código promocional\n\nDiseño:\n/btnstyle — Configurar colores de botones\n\nAnalítica:\n/analytics — Estadísticas de ventas\n\n/rubrate [RUB por USD] — Tipo de cambio RUB",
   "admin_delivered_ok": "✅ Pedido #%d marcado como entregado.",
   "admin_product_create_failed": "❌ No se pudo crear el producto.",
   "admin_add_product_name": "📝 Introduce el nombre del producto:",
@@ -457,5 +457,14 @@
   "webapp_err_sub_stars_only": "Las suscripciones solo se pueden pagar con Telegram Stars.",
   "webapp_err_sub_alone": "Pide la suscripción por separado de otros artículos.",
   "webapp_err_sub_active": "Esta suscripción ya está activa o pendiente de pago.",
-  "btn_menu": "🏠 Menú principal"
+  "btn_menu": "🏠 Menú principal",
+  "admin_rub_rate_button": "💱 Tipo de cambio RUB",
+  "admin_rub_rate_current": "💱 Tipo RUB: 1 USD = %s ₽.\n1 USD = %d ⭐.\n\nSe aplica a compras nuevas en el bot y la Mini App. Los importes de pedidos existentes se conservan.",
+  "admin_rub_rate_edit": "Cambiar tipo",
+  "admin_rub_rate_prompt": "Introduce rublos por 1 USD, por ejemplo 100 o 92,5. Cancelar: /cancel. Caduca en 15 minutos.",
+  "admin_rub_rate_invalid": "Introduce un número entre 1 y 1000000 con hasta 4 decimales (punto o coma).",
+  "admin_rub_rate_saved": "✅ Tipo guardado: 1 USD = %s ₽. Activo en el bot y la Mini App sin reiniciar.",
+  "admin_rub_rate_failed": "No se pudo guardar el tipo. El tipo anterior sigue activo.",
+  "admin_rub_rate_private": "Abre la configuración en tu chat privado con el bot.",
+  "admin_rub_rate_cancel": "Cancelar"
 }

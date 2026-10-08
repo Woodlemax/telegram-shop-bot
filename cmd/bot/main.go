@@ -272,13 +272,12 @@ func runBot() {
 	// Lost-webhook backup for RUB card payments: the YooKassa webhook stays
 	// the primary settlement path, so a slower cadence than crypto/TON (60s)
 	// is enough and each tick just re-scans a bounded window where replays
-	// are ledger no-ops. The rate guard is the exact checkout-button
-	// predicate (bot.go: yooKassaPaymentsEnabled): without a positive
-	// USDToRUBRate checkout never snapshots orders.total_rub, so no RUB
-	// receipt can ever settle. Separate instance from the webapi-facing one
-	// below, mirroring cryptoPayments/tonPayments.
+	// are ledger no-ops. Keep reconciliation independent of the active RUB
+	// rate: an admin can enable conversion without restarting, and existing
+	// orders retain their currency snapshots. Separate provider instance
+	// from the webapi-facing one, mirroring cryptoPayments/tonPayments.
 	yookassaPollerPayments := payment.NewYooKassaPayment(cfg.YooKassaShopID, cfg.YooKassaSecretKey, cfg.YooKassaReturnURL)
-	if yookassaPollerPayments.Configured() && cfg.USDToRUBRate > 0 {
+	if yookassaPollerPayments.Configured() {
 		yookassaW := worker.NewYooKassaPollingWorker(yookassaPollerPayments, b.OrderService(),
 			func(ctx context.Context, outcome *shop.PaymentOutcome) {
 				b.AnnouncePaidOutcome(ctx, outcome, storage.PaymentMethodYooKassa)
@@ -308,7 +307,7 @@ func runBot() {
 	// Stripe / NOWPayments webhook and TON polling pipeline.
 	var apiServer *webapi.Server
 	if cfg.WebAppURL != "" {
-		exchangeSvc := service.NewExchangeService(cfg.USDToStarsRate, cfg.USDToRUBRate, cfg.USDPerTON)
+		exchangeSvc := b.ExchangeService()
 		productStore := storage.NewSQLProductStore(db)
 		apiServer = webapi.New(webapi.Deps{
 			Auth:              webapi.NewAuthenticator(cfg.BotToken, webapi.DefaultAuthTTL),
@@ -329,12 +328,13 @@ func runBot() {
 			Files:             b.API(),
 			Archives:          storage.NewDigitalArchiveStore(db),
 			StarsOnlyPayments: cfg.StarsOnlyPayments,
-			USDToRUBRate:      cfg.USDToRUBRate,
+			Exchange:          exchangeSvc,
 			// Rendered-availability flags for the Mini App cart payload —
 			// the exact predicates of the bot's payment keyboard (bot.go:
 			// yooKassaPaymentsEnabled & co.): configured credentials, plus
-			// a positive rate for the converted (RUB/TON) rails.
-			YooKassaAvailable:    yookassaPayments.Configured() && cfg.USDToRUBRate > 0,
+			// a positive rate for the converted (RUB/TON) rails. The API reads
+			// the live RUB rate; the TON quote remains fixed in configuration.
+			YooKassaAvailable:    yookassaPayments.Configured(),
 			StripeAvailable:      stripePayments.Configured(),
 			TONAvailable:         tonPayments.Configured() && cfg.USDPerTON > 0,
 			NowpaymentsAvailable: nowpaymentsPayments.Configured(),

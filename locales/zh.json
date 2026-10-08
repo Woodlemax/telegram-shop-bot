@@ -242,7 +242,7 @@
   "admin_export_bad_date": "❗ 日期无效：“%s”。格式：YYYY-MM-DD，例如：/export_orders 2026-01-01 2026-02-01",
   "admin_export_failed": "❌ 订单导出失败。",
   "admin_export_caption": "订单导出：%d 行",
-  "admin_panel": "🔧 管理员面板\n\n商品：\n/addproduct — 添加商品\n/editproduct <id> — 编辑商品\n/deleteproduct <id> — 删除商品\n\n分类：\n/addcategory <emoji> <名称> — 创建分类\n/editcategory <id> name|emoji <值> — 修改字段\n/deletecategory <id> — 删除分类\n/listcategories — 分类列表（含 ID）\n\n订单：\n/orders_all [状态] — 全部订单\n/order <id> — 订单详情\n/setdelivered <id> — 标记订单已发货\n/reviews — 最新评价（审核）\n/export_orders — 导出订单为 CSV\n/payreview — 支付审核队列\n/paystatus — 支付渠道状态\n/refund <订单号> [金额] — 为已支付订单退款（两次确认）\n/setbalance <user_id> <±金额> [原因] — 调整用户余额\n\n优惠码：\n/addpromo <代码> <折扣%> [最大使用次数] [天数] [category_id] — 创建优惠码\n/listpromos — 有效优惠码\n/deletepromo <id> — 停用优惠码\n\n外观：\n/btnstyle — 设置按钮颜色\n\n数据分析：\n/analytics — 销售统计",
+  "admin_panel": "🔧 管理员面板\n\n商品：\n/addproduct — 添加商品\n/editproduct <id> — 编辑商品\n/deleteproduct <id> — 删除商品\n\n分类：\n/addcategory <emoji> <名称> — 创建分类\n/editcategory <id> name|emoji <值> — 修改字段\n/deletecategory <id> — 删除分类\n/listcategories — 分类列表（含 ID）\n\n订单：\n/orders_all [状态] — 全部订单\n/order <id> — 订单详情\n/setdelivered <id> — 标记订单已发货\n/reviews — 最新评价（审核）\n/export_orders — 导出订单为 CSV\n/payreview — 支付审核队列\n/paystatus — 支付渠道状态\n/refund <订单号> [金额] — 为已支付订单退款（两次确认）\n/setbalance <user_id> <±金额> [原因] — 调整用户余额\n\n优惠码：\n/addpromo <代码> <折扣%> [最大使用次数] [天数] [category_id] — 创建优惠码\n/listpromos — 有效优惠码\n/deletepromo <id> — 停用优惠码\n\n外观：\n/btnstyle — 设置按钮颜色\n\n数据分析：\n/analytics — 销售统计\n\n/rubrate [RUB/USD] — 卢布汇率",
   "admin_delivered_ok": "✅ 订单 #%d 已标记为已发货。",
   "admin_product_create_failed": "❌ 创建商品失败。",
   "admin_add_product_name": "📝 请输入商品名称：",
@@ -457,5 +457,14 @@
   "webapp_err_sub_stars_only": "订阅只能使用 Telegram Stars 支付。",
   "webapp_err_sub_alone": "请将订阅与其他商品分开下单。",
   "webapp_err_sub_active": "此订阅已激活或正在等待付款。",
-  "btn_menu": "🏠 主菜单"
+  "btn_menu": "🏠 主菜单",
+  "admin_rub_rate_button": "💱 卢布汇率",
+  "admin_rub_rate_current": "💱 卢布汇率：1 USD = %s ₽。\n1 USD = %d ⭐。\n\n用于机器人和 Mini App 中的新购买。已有订单金额保持不变。",
+  "admin_rub_rate_edit": "修改汇率",
+  "admin_rub_rate_prompt": "输入每 1 USD 的卢布金额，例如 100 或 92.5。取消：/cancel。15 分钟后过期。",
+  "admin_rub_rate_invalid": "请输入 1 到 1000000 之间的数字，最多 4 位小数（点或逗号）。",
+  "admin_rub_rate_saved": "✅ 汇率已保存：1 USD = %s ₽。机器人和 Mini App 无需重启即可生效。",
+  "admin_rub_rate_failed": "汇率保存失败。原汇率仍然有效。",
+  "admin_rub_rate_private": "请在与机器人的私人聊天中打开汇率设置。",
+  "admin_rub_rate_cancel": "取消"
 }
