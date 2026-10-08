@@ -436,8 +436,23 @@
       for (var i = 0; i < cart.items.length; i++) {
         (function (item) {
           var row = el('div', 'cart-row');
+          function openProduct() { push(function () { renderProduct(item.product_id); }); }
+          if (item.photo) {
+            var photoLink = el('button', 'cart-product-photo');
+            photoLink.type = 'button';
+            photoLink.setAttribute('aria-label', item.name);
+            var photo = el('img', 'thumb');
+            photo.alt = '';
+            loadImage(photo, item.photo);
+            photoLink.appendChild(photo);
+            photoLink.onclick = openProduct;
+            row.appendChild(photoLink);
+          }
           var info = el('div', 'card-info');
-          info.appendChild(el('div', 'card-name', item.name));
+          var productLink = el('button', 'card-name cart-product-link', item.name);
+          productLink.type = 'button';
+          productLink.onclick = openProduct;
+          info.appendChild(productLink);
           var priceLine = el('div', 'card-price');
           priceLine.setAttribute('aria-live', 'polite'); info.appendChild(priceLine);
           var input = item.open_price ? priceEditor(info, item.product_id, item.price_rub, function (updated) {
