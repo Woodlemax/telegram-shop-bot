@@ -337,6 +337,8 @@ type PromoCode struct {
 	UsedCount  int        `db:"used_count"`
 	ExpiresAt  *time.Time `db:"expires_at"`
 	CategoryID *int64     `db:"category_id"`
+	// ProductIDs restricts the code to these products; empty means no product filter.
+	ProductIDs []int64 `db:"product_ids"`
 	// BoundUserID is the Telegram user ID the promo is personally bound to.
 	// nil = public promo. Bound promos must be rejected for any other user.
 	BoundUserID *int64    `db:"bound_user_id"`

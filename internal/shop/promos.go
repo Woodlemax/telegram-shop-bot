@@ -6,7 +6,7 @@ import (
 )
 
 // DiscountCart is shared by preview and order creation. It never mutates the
-// cart or its items; category restrictions apply only to eligible line totals.
+// cart or its items; product/category restrictions apply only to eligible line totals.
 func DiscountCart(view *CartView, promo *storage.PromoCode) (*CartView, error) {
 	result := *view
 	if result.BaseRUB {
@@ -19,12 +19,12 @@ func DiscountCart(view *CartView, promo *storage.PromoCode) (*CartView, error) {
 		return nil, err
 	}
 	usd, rub, stars := result.TotalUSD, view.TotalRUB, view.TotalStars
-	if promo.CategoryID != nil {
+	if promo.CategoryID != nil || len(promo.ProductIDs) > 0 {
 		matched := false
 		rawUSD := float64(0)
 		rub, stars = 0, 0
 		for _, item := range view.Items {
-			if item.Product.CategoryID != *promo.CategoryID {
+			if !storage.PromoMatchesProduct(promo, &item.Product) {
 				continue
 			}
 			matched = true

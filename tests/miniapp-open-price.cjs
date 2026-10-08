@@ -23,16 +23,27 @@ async function fixture(initial = [[1, 100, 1]], options = {}) {
   let items = initial.map(([id, amount, quantity]) => ({product_id: id, price_rub: amount, quantity, name: 'Plane ' + id, open_price: true, single_in_cart: true}));
   const stars = n => n ? Math.max(1, Math.floor(n / rate * 50)) : 0;
   const cart = () => ({items: items.map(item => ({...item, price_stars: stars(item.price_rub)})), total_rub: items.reduce((n, item) => n + item.price_rub * item.quantity, 0), total_stars: items.reduce((n, item) => n + stars(item.price_rub) * item.quantity, 0), stars_only: true, free_checkout: items.length > 0 && items.every(item => item.price_rub === 0), open_price_rates: {rub_per_usd: rate, stars_per_usd: 50}});
-  const codes = {SAVE10: {code: 'SAVE10', discount: 10}, FREE100: {code: 'FREE100', discount: 100}, CATEGORY10: {code: 'CATEGORY10', discount: 10, category_id: 1}, CATEGORY100: {code: 'CATEGORY100', discount: 100, category_id: 1}};
+  const codes = {
+    PRODUCT10: {code: 'PRODUCT10', discount: 10, product_ids: [2]},
+    PRODUCT100: {code: 'PRODUCT100', discount: 100, product_ids: [2]},
+    MODELS100: {code: 'MODELS100', discount: 100, product_ids: [1,2]},
+    OTHER10: {code: 'OTHER10', discount: 10, product_ids: [99]},
+    SAVE10: {code: 'SAVE10', discount: 10},
+    FREE100: {code: 'FREE100', discount: 100},
+    CATEGORY10: {code: 'CATEGORY10', discount: 10, category_id: 1},
+    CATEGORY100: {code: 'CATEGORY100', discount: 100, category_id: 1}
+  };
   function quote(code, snapshot = cart()) {
     const promo = codes[String(code || '').trim().toUpperCase()];
     if (code && (!promo || unavailable.has(promo.code))) return {error: 'promo_not_found'};
     if (!promo) return snapshot;
-    let eligibleRub = 0, eligibleStars = 0;
+    let eligibleRub = 0, eligibleStars = 0, matched = false;
     for (const item of snapshot.items) {
       if (promo.category_id && item.product_id !== promo.category_id) continue;
-      eligibleRub += item.price_rub * item.quantity; eligibleStars += item.price_stars * item.quantity;
+      if (promo.product_ids && !promo.product_ids.includes(item.product_id)) continue;
+      matched = true; eligibleRub += item.price_rub * item.quantity; eligibleStars += item.price_stars * item.quantity;
     }
+    if (!matched) return {error: promo.product_ids ? 'promo_product_mismatch' : 'promo_category_mismatch'};
     const rub = Math.round((snapshot.total_rub - eligibleRub + eligibleRub * (100 - promo.discount) / 100) * 100) / 100;
     const totalStars = Math.max(rub > 0 ? 1 : 0, snapshot.total_stars - eligibleStars + Math.floor(eligibleStars * (100 - promo.discount) / 100));
     return {...snapshot, promo, original_total_rub: snapshot.total_rub, original_total_stars: snapshot.total_stars, total_rub: rub, total_stars: totalStars, free_checkout: rub === 0 && totalStars === 0};

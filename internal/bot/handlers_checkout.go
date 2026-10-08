@@ -84,16 +84,16 @@ func (b *Bot) handlePromoInput(ctx context.Context, msg *tgbotapi.Message) {
 	}
 
 	// Check category restriction if promo has one.
-	if promo.CategoryID != nil {
+	if promo.CategoryID != nil || len(promo.ProductIDs) > 0 {
 		hasMatch := false
 		for _, item := range view.Items {
-			if item.Product.CategoryID == *promo.CategoryID {
+			if storage.PromoMatchesProduct(promo, &item.Product) {
 				hasMatch = true
 				break
 			}
 		}
 		if !hasMatch {
-			b.sendOrEditStyled(chatID, 0, b.t(lang, "promo_category_mismatch"), "", nil)
+			b.sendOrEditStyled(chatID, 0, b.t(lang, promoScopeMismatchKey(promo)), "", nil)
 			return
 		}
 	}
@@ -202,16 +202,16 @@ func (b *Bot) onOrderConfirm(ctx context.Context, chatID, userID int64, msgID in
 			return
 		}
 
-		if promo.CategoryID != nil {
+		if promo.CategoryID != nil || len(promo.ProductIDs) > 0 {
 			hasMatch := false
 			for _, item := range view.Items {
-				if item.Product.CategoryID == *promo.CategoryID {
+				if storage.PromoMatchesProduct(promo, &item.Product) {
 					hasMatch = true
 					break
 				}
 			}
 			if !hasMatch {
-				b.sendOrEditStyled(chatID, 0, b.t(lang, "promo_category_mismatch"), "", nil)
+				b.sendOrEditStyled(chatID, 0, b.t(lang, promoScopeMismatchKey(promo)), "", nil)
 				return
 			}
 		}
@@ -406,4 +406,11 @@ func (b *Bot) loadPayableOrder(ctx context.Context, userID, orderID int64) (*sto
 		return nil, err
 	}
 	return order, nil
+}
+
+func promoScopeMismatchKey(p *storage.PromoCode) string {
+	if len(p.ProductIDs) > 0 {
+		return "promo_product_mismatch"
+	}
+	return "promo_category_mismatch"
 }

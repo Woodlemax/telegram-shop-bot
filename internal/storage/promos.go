@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
@@ -21,7 +22,36 @@ func ValidatePromo(p *PromoCode) error {
 	if p == nil || !promoCodePattern.MatchString(p.Code) || p.Discount < 1 || p.Discount > 100 || p.MaxUses < 0 || (p.CategoryID != nil && *p.CategoryID <= 0) || (p.BoundUserID != nil && *p.BoundUserID <= 0) {
 		return ErrInvalidPromo
 	}
+	if len(p.ProductIDs) > 100 || (p.CategoryID != nil && len(p.ProductIDs) > 0) {
+		return ErrInvalidPromo
+	}
+	seen := make(map[int64]bool, len(p.ProductIDs))
+	for _, id := range p.ProductIDs {
+		if id <= 0 || seen[id] {
+			return ErrInvalidPromo
+		}
+		seen[id] = true
+	}
 	return nil
+}
+
+// PromoMatchesProduct applies optional scope consistently to preview and checkout.
+func PromoMatchesProduct(p *PromoCode, product *Product) bool {
+	if p == nil || product == nil {
+		return false
+	}
+	if p.CategoryID != nil && product.CategoryID != *p.CategoryID {
+		return false
+	}
+	if len(p.ProductIDs) == 0 {
+		return true
+	}
+	for _, id := range p.ProductIDs {
+		if id == product.ID {
+			return true
+		}
+	}
+	return false
 }
 
 // SQLite may return either a time.Time or a legacy text date. Normalize both
@@ -82,15 +112,16 @@ func (s *SQLPromoStore) GetPromoByCode(ctx context.Context, code string) (*Promo
 	var expiresAt promoTime
 	var categoryID sql.NullInt64
 	var boundUserID sql.NullInt64
+	var productIDs string
 	err := s.db.QueryRowContext(ctx,
-		`SELECT id, code, discount, max_uses, used_count, expires_at, is_active, created_at, category_id, bound_user_id
+		`SELECT id, code, discount, max_uses, used_count, expires_at, is_active, created_at, category_id, bound_user_id, product_ids
 		 FROM promo_codes
 		 WHERE code = ? AND is_active = 1
 		   AND discount BETWEEN 1 AND 100
 		   AND (max_uses = 0 OR used_count < max_uses)`,
 		strings.ToUpper(strings.TrimSpace(code)),
 	).Scan(&p.ID, &p.Code, &p.Discount, &p.MaxUses, &p.UsedCount,
-		&expiresAt, &p.IsActive, &p.CreatedAt, &categoryID, &boundUserID)
+		&expiresAt, &p.IsActive, &p.CreatedAt, &categoryID, &boundUserID, &productIDs)
 	if err == sql.ErrNoRows {
 		return nil, ErrNotFound
 	}
@@ -109,6 +140,15 @@ func (s *SQLPromoStore) GetPromoByCode(ctx context.Context, code string) (*Promo
 	}
 	if boundUserID.Valid {
 		p.BoundUserID = &boundUserID.Int64
+	}
+	if err := json.Unmarshal([]byte(productIDs), &p.ProductIDs); err != nil {
+		return nil, fmt.Errorf("promo store: product scope: %w", err)
+	}
+	if p.ProductIDs == nil {
+		return nil, ErrInvalidPromo
+	}
+	if err := ValidatePromo(&p); err != nil {
+		return nil, err
 	}
 	return &p, nil
 }
@@ -166,9 +206,17 @@ func (s *SQLPromoStore) CreatePromo(ctx context.Context, p *PromoCode) (int64, e
 	if p.ExpiresAt != nil {
 		expires = p.ExpiresAt.UTC().Format(time.RFC3339Nano)
 	}
+	ids := p.ProductIDs
+	if ids == nil {
+		ids = []int64{}
+	}
+	productIDs, err := json.Marshal(ids)
+	if err != nil {
+		return 0, err
+	}
 	res, err := s.db.ExecContext(ctx,
-		`INSERT INTO promo_codes (code, discount, max_uses, expires_at, category_id, bound_user_id) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(code) DO NOTHING`,
-		p.Code, p.Discount, p.MaxUses, expires, p.CategoryID, p.BoundUserID,
+		`INSERT INTO promo_codes (code, discount, max_uses, expires_at, category_id, bound_user_id, product_ids) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(code) DO NOTHING`,
+		p.Code, p.Discount, p.MaxUses, expires, p.CategoryID, p.BoundUserID, string(productIDs),
 	)
 	if err != nil {
 		return 0, fmt.Errorf("promo store: create promo: %w", err)
@@ -200,7 +248,7 @@ func (s *SQLPromoStore) CreatePersonal(ctx context.Context, code string, discoun
 // ListPromos returns all active promo codes ordered by creation date.
 func (s *SQLPromoStore) ListPromos(ctx context.Context) ([]PromoCode, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, code, discount, max_uses, used_count, expires_at, is_active, created_at, category_id, bound_user_id
+		`SELECT id, code, discount, max_uses, used_count, expires_at, is_active, created_at, category_id, bound_user_id, product_ids
 		 FROM promo_codes WHERE is_active = 1 ORDER BY created_at DESC`)
 	if err != nil {
 		return nil, fmt.Errorf("promo store: list promos: %w", err)
@@ -213,22 +261,23 @@ func (s *SQLPromoStore) ListPromos(ctx context.Context) ([]PromoCode, error) {
 		var expiresAt promoTime
 		var categoryID sql.NullInt64
 		var boundUserID sql.NullInt64
+		var productIDs string
 		if err := rows.Scan(&p.ID, &p.Code, &p.Discount, &p.MaxUses, &p.UsedCount,
-			&expiresAt, &p.IsActive, &p.CreatedAt, &categoryID, &boundUserID); err != nil {
+			&expiresAt, &p.IsActive, &p.CreatedAt, &categoryID, &boundUserID, &productIDs); err != nil {
 			return nil, fmt.Errorf("promo store: scan promo: %w", err)
 		}
 		if expiresAt.Valid {
 			t := expiresAt.Time
 			p.ExpiresAt = &t
-			if !time.Now().Before(t) {
-				return nil, ErrNotFound
-			}
 		}
 		if categoryID.Valid {
 			p.CategoryID = &categoryID.Int64
 		}
 		if boundUserID.Valid {
 			p.BoundUserID = &boundUserID.Int64
+		}
+		if err := json.Unmarshal([]byte(productIDs), &p.ProductIDs); err != nil {
+			return nil, fmt.Errorf("promo store: product scope: %w", err)
 		}
 		promos = append(promos, p)
 	}

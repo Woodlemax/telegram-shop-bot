@@ -251,7 +251,7 @@
   "admin_export_bad_date": "❗ Fecha no válida: «%s». Formato: YYYY-MM-DD, p. ej.: /export_orders 2026-01-01 2026-02-01",
   "admin_export_failed": "❌ No se pudieron exportar los pedidos.",
   "admin_export_caption": "Exportación de pedidos: %d filas",
-  "admin_panel": "🔧 Panel de administración\n\nProductos:\n/addproduct — Añadir producto\n/editproduct <id> — Editar producto\n/deleteproduct <id> — Eliminar producto\n\nCategorías:\n/addcategory <emoji> <nombre> — Crear categoría\n/editcategory <id> name|emoji <valor> — Cambiar campo\n/deletecategory <id> — Eliminar categoría\n/listcategories — Lista de categorías con ID\n\nPedidos:\n/orders_all [estado] — Todos los pedidos\n/order <id> — Ficha del pedido\n/setdelivered <id> — Marcar pedido como entregado\n/reviews — Últimas reseñas (moderación)\n/export_orders — Exportar pedidos a CSV\n/payreview — Cola de revisión de pagos\n/paystatus — Estado de los proveedores de pago\n/refund <id_pedido> [importe] — Reembolsar un pedido pagado (confirmación doble)\n/setbalance <user_id> <±cantidad> [motivo] — Ajustar saldo del usuario\n\nCódigos promocionales:\n/addpromo <código> <descuento%> [usos_máx] [días] [category_id] — Crear código promocional\n/listpromos — Códigos promocionales activos\n/deletepromo <id> — Desactivar código promocional\n\nDiseño:\n/btnstyle — Configurar colores de botones\n\nAnalítica:\n/analytics — Estadísticas de ventas\n\n/rubrate [RUB por USD] — Tipo de cambio RUB",
+  "admin_panel": "🔧 Panel de administración\n\nProductos:\n/addproduct — Añadir producto\n/editproduct <id> — Editar producto\n/deleteproduct <id> — Eliminar producto\n\nCategorías:\n/addcategory <emoji> <nombre> — Crear categoría\n/editcategory <id> name|emoji <valor> — Cambiar campo\n/deletecategory <id> — Eliminar categoría\n/listcategories — Lista de categorías con ID\n\nPedidos:\n/orders_all [estado] — Todos los pedidos\n/order <id> — Ficha del pedido\n/setdelivered <id> — Marcar pedido como entregado\n/reviews — Últimas reseñas (moderación)\n/export_orders — Exportar pedidos a CSV\n/payreview — Cola de revisión de pagos\n/paystatus — Estado de los proveedores de pago\n/refund <id_pedido> [importe] — Reembolsar un pedido pagado (confirmación doble)\n/setbalance <user_id> <±cantidad> [motivo] — Ajustar saldo del usuario\n\nCódigos promocionales:\n/addpromo <código> <descuento%> [usos_máx] [días] [category_id | products=ID,ID] — Crear código promocional\n/listpromos — Códigos promocionales activos\n/deletepromo <id> — Desactivar código promocional\n\nDiseño:\n/btnstyle — Configurar colores de botones\n\nAnalítica:\n/analytics — Estadísticas de ventas\n\n/rubrate [RUB por USD] — Tipo de cambio RUB",
   "admin_delivered_ok": "✅ Pedido #%d marcado como entregado.",
   "admin_product_create_failed": "❌ No se pudo crear el producto.",
   "admin_add_product_name": "📝 Introduce el nombre del producto:",
@@ -484,7 +484,7 @@
   "admin_telegram_remove": "Eliminar enlace de Telegram",
   "admin_telegram_prompt": "Envía el enlace al grupo o canal de Telegram para el producto #%d: https://t.me/nombre, @nombre o una invitación. Opcional: - elimina el enlace. Cancelar: /cancel. Caduca en 15 minutos.",
   "admin_telegram_invalid": "Introduce https://t.me/nombre, @nombre o un enlace de invitación de Telegram. - elimina el enlace.",
-  "admin_promo_usage": "Uso: /addpromo CÓDIGO descuento [límite] [días] [ID de categoría]. Descuento: entero 1–100. Código: 1–32 caracteres A–Z, 0–9, _ o -. Límite 0: ilimitado; días 0: sin vencimiento.",
+  "admin_promo_usage": "Uso: /addpromo CÓDIGO descuento [límite] [días] [ID de categoría | products=ID,ID]. Descuento: entero 1–100. Código: 1–32 caracteres A–Z, 0–9, _ o -. Límite 0: ilimitado; días 0: sin vencimiento. Ejemplo: /addpromo MODEL10 10 products=2,5. Hasta 100 ID únicos; no se pueden combinar categoría y productos.",
   "admin_promo_category_invalid": "❌ Categoría no encontrada. Consulta /listcategories.",
   "admin_promo_exists": "❌ El código ya existe. Elige otro código.",
   "admin_promo_empty": "No hay códigos activos.",
@@ -496,5 +496,8 @@
   "admin_promo_missing": "❌ No hay un código activo con este ID.",
   "webapp_promo_checking": "Comprobando código…",
   "webapp_promo_applied": "Código %s aplicado",
-  "webapp_promo_original": "Antes del descuento"
+  "webapp_promo_original": "Antes del descuento",
+  "admin_promo_product_invalid": "❌ Producto no encontrado. Comprueba los ID en la ficha de administración del producto.",
+  "admin_promo_product_details": "Usos: %d / %s; vence: %s; ID de productos: %s\n\n",
+  "promo_product_mismatch": "❌ El carrito no contiene productos válidos para este código promocional."
 }

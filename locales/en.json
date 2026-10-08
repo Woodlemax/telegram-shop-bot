@@ -251,7 +251,7 @@
   "admin_export_bad_date": "❗ Invalid date: \"%s\". Format: YYYY-MM-DD, e.g.: /export_orders 2026-01-01 2026-02-01",
   "admin_export_failed": "❌ Failed to export orders.",
   "admin_export_caption": "Order export: %d rows",
-  "admin_panel": "🔧 Admin panel\n\nProducts:\n/addproduct — Add product\n/editproduct <id> — Edit product\n/deleteproduct <id> — Delete product\n\nCategories:\n/addcategory <emoji> <name> — Create category\n/editcategory <id> name|emoji <value> — Change field\n/deletecategory <id> — Delete category\n/listcategories — Category list with IDs\n\nOrders:\n/orders_all [status] — All orders\n/order <id> — Order card\n/setdelivered <id> — Mark order as delivered\n/reviews — Latest reviews (moderation)\n/export_orders — Export orders to CSV\n/payreview — Payment review queue\n/paystatus — Payment provider status\n/refund <order_id> [amount] — Refund a paid order (two-tap confirm)\n/setbalance <user_id> <±amount> [reason] — Adjust user balance\n\nPromo codes:\n/addpromo <code> <discount%> [max_uses] [days] [category_id] — Create promo code\n/listpromos — Active promo codes\n/deletepromo <id> — Deactivate promo code\n\nDesign:\n/btnstyle — Configure button colors\n\nAnalytics:\n/analytics — Sales statistics\n\n/rubrate [RUB per USD] — RUB exchange rate",
+  "admin_panel": "🔧 Admin panel\n\nProducts:\n/addproduct — Add product\n/editproduct <id> — Edit product\n/deleteproduct <id> — Delete product\n\nCategories:\n/addcategory <emoji> <name> — Create category\n/editcategory <id> name|emoji <value> — Change field\n/deletecategory <id> — Delete category\n/listcategories — Category list with IDs\n\nOrders:\n/orders_all [status] — All orders\n/order <id> — Order card\n/setdelivered <id> — Mark order as delivered\n/reviews — Latest reviews (moderation)\n/export_orders — Export orders to CSV\n/payreview — Payment review queue\n/paystatus — Payment provider status\n/refund <order_id> [amount] — Refund a paid order (two-tap confirm)\n/setbalance <user_id> <±amount> [reason] — Adjust user balance\n\nPromo codes:\n/addpromo <code> <discount%> [max_uses] [days] [category_id | products=ID,ID] — Create promo code\n/listpromos — Active promo codes\n/deletepromo <id> — Deactivate promo code\n\nDesign:\n/btnstyle — Configure button colors\n\nAnalytics:\n/analytics — Sales statistics\n\n/rubrate [RUB per USD] — RUB exchange rate",
   "admin_delivered_ok": "✅ Order #%d marked as delivered.",
   "admin_product_create_failed": "❌ Failed to create product.",
   "admin_add_product_name": "📝 Enter the product name:",
@@ -484,7 +484,7 @@
   "admin_telegram_remove": "Remove Telegram link",
   "admin_telegram_prompt": "Send a Telegram group or channel link for product #%d: https://t.me/name, @name or an invite link. Optional: send - to remove it. Cancel: /cancel. Expires in 15 minutes.",
   "admin_telegram_invalid": "Enter https://t.me/name, @name or a Telegram invite link. Send - to remove it.",
-  "admin_promo_usage": "Usage: /addpromo CODE discount [limit] [days] [category ID]. Discount: integer 1–100. Code: 1–32 characters A–Z, 0–9, _ or -. Limit 0: unlimited; days 0: no expiry.",
+  "admin_promo_usage": "Usage: /addpromo CODE discount [limit] [days] [category ID | products=ID,ID]. Discount: integer 1–100. Code: 1–32 characters A–Z, 0–9, _ or -. Limit 0: unlimited; days 0: no expiry. Product example: /addpromo MODEL10 10 products=2,5. Up to 100 unique IDs; category and products cannot be combined.",
   "admin_promo_category_invalid": "❌ Category not found. See /listcategories.",
   "admin_promo_exists": "❌ Promo code already exists. Choose another code.",
   "admin_promo_empty": "No active promo codes.",
@@ -496,5 +496,8 @@
   "admin_promo_missing": "❌ No active promo found with this ID.",
   "webapp_promo_checking": "Checking promo code…",
   "webapp_promo_applied": "Promo %s applied",
-  "webapp_promo_original": "Before discount"
+  "webapp_promo_original": "Before discount",
+  "admin_promo_product_invalid": "❌ Product not found. Check IDs in the administrator product card.",
+  "admin_promo_product_details": "Used: %d / %s; expires: %s; product IDs: %s\n\n",
+  "promo_product_mismatch": "❌ Your cart has no products eligible for this promo code."
 }

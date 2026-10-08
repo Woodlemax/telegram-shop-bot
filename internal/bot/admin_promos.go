@@ -18,7 +18,7 @@ func (b *Bot) handleAddPromo(ctx context.Context, msg *tgbotapi.Message) {
 	lang := msg.From.LanguageCode
 	fail := func(key string) { b.send(tgbotapi.NewMessage(msg.Chat.ID, b.t(lang, key))) }
 	args := strings.Fields(msg.CommandArguments())
-	if len(args) < 2 || len(args) > 5 {
+	if len(args) < 2 || len(args) > 6 {
 		fail("admin_promo_usage")
 		return
 	}
@@ -28,6 +28,31 @@ func (b *Bot) handleAddPromo(ctx context.Context, msg *tgbotapi.Message) {
 		return
 	}
 	p := &storage.PromoCode{Code: strings.ToUpper(args[0]), Discount: discount, IsActive: true}
+	// Named product selector does not consume the legacy positional options.
+	positional := append([]string(nil), args[:2]...)
+	for _, arg := range args[2:] {
+		if strings.HasPrefix(arg, "products=") {
+			if len(p.ProductIDs) > 0 {
+				fail("admin_promo_usage")
+				return
+			}
+			for _, value := range strings.Split(strings.TrimPrefix(arg, "products="), ",") {
+				id, err := strconv.ParseInt(value, 10, 64)
+				if err != nil || id <= 0 {
+					fail("admin_promo_usage")
+					return
+				}
+				p.ProductIDs = append(p.ProductIDs, id)
+			}
+		} else {
+			positional = append(positional, arg)
+		}
+	}
+	args = positional
+	if len(args) > 5 {
+		fail("admin_promo_usage")
+		return
+	}
 	if len(args) > 2 {
 		p.MaxUses, err = strconv.Atoi(args[2])
 		if err != nil || p.MaxUses < 0 {
@@ -61,6 +86,16 @@ func (b *Bot) handleAddPromo(ctx context.Context, msg *tgbotapi.Message) {
 	if err := storage.ValidatePromo(p); err != nil {
 		fail("admin_promo_usage")
 		return
+	}
+	for _, id := range p.ProductIDs {
+		if _, err := b.products.GetProduct(ctx, id); err != nil {
+			if errors.Is(err, storage.ErrNotFound) {
+				fail("admin_promo_product_invalid")
+			} else {
+				fail("error_short")
+			}
+			return
+		}
 	}
 	if _, err := b.promos.CreatePromo(ctx, p); err != nil {
 		if errors.Is(err, storage.ErrPromoExists) {
@@ -103,7 +138,15 @@ func (b *Bot) handleListPromos(ctx context.Context, msg *tgbotapi.Message) {
 			category = strconv.FormatInt(*p.CategoryID, 10)
 		}
 		sb.WriteString(fmt.Sprintf("%d: %s (−%d%%)\n", p.ID, p.Code, p.Discount))
-		sb.WriteString(fmt.Sprintf(b.t(lang, "admin_promo_details"), p.UsedCount, limit, expires, category))
+		if len(p.ProductIDs) > 0 {
+			ids := make([]string, len(p.ProductIDs))
+			for i, id := range p.ProductIDs {
+				ids[i] = strconv.FormatInt(id, 10)
+			}
+			sb.WriteString(fmt.Sprintf(b.t(lang, "admin_promo_product_details"), p.UsedCount, limit, expires, strings.Join(ids, ", ")))
+		} else {
+			sb.WriteString(fmt.Sprintf(b.t(lang, "admin_promo_details"), p.UsedCount, limit, expires, category))
+		}
 	}
 	b.send(tgbotapi.NewMessage(msg.Chat.ID, sb.String()))
 }

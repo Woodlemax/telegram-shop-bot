@@ -112,3 +112,82 @@ func TestPromoLegacyTextExpiryAndList(t *testing.T) {
 		t.Fatal("legacy expiry missing in list", err)
 	}
 }
+
+func TestPromoProductScopeUpgradePersistenceAndExpiredList(t *testing.T) {
+	db := migrationDBBefore(t, "029_promo_product_ids.sql")
+	if _, err := db.Conn().Exec(`INSERT INTO categories(id,name) VALUES(2,'Planes'); INSERT INTO promo_codes(code,discount,max_uses,category_id) VALUES('ALL10',10,0,NULL),('CATEGORY10',10,0,2)`); err != nil {
+		t.Fatal(err)
+	}
+	applyMigrationsFrom(t, db, "029_promo_product_ids.sql")
+	ctx := context.Background()
+	store := NewSQLPromoStore(db)
+	for _, code := range []string{"ALL10", "CATEGORY10"} {
+		p, err := store.GetPromoByCode(ctx, code)
+		if err != nil || len(p.ProductIDs) != 0 {
+			t.Fatal("legacy scope changed", p, err)
+		}
+		if code == "CATEGORY10" && (p.CategoryID == nil || *p.CategoryID != 2) {
+			t.Fatal("category scope lost")
+		}
+	}
+	id, err := store.CreatePromo(ctx, &PromoCode{Code: "PRODUCT10", Discount: 10, ProductIDs: []int64{2, 5}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// No product rows exist: a removed product must not turn the code global.
+	for _, s := range []*SQLPromoStore{store, NewSQLPromoStore(db)} {
+		p, err := s.GetPromoByCode(ctx, "PRODUCT10")
+		if err != nil || len(p.ProductIDs) != 2 || p.ProductIDs[0] != 2 || p.ProductIDs[1] != 5 {
+			t.Fatal("scope not persisted", p, err)
+		}
+		if PromoMatchesProduct(p, &Product{ID: 3}) || !PromoMatchesProduct(p, &Product{ID: 5}) {
+			t.Fatal("removed product became global")
+		}
+	}
+	past := time.Now().Add(-time.Hour)
+	expired, err := store.CreatePromo(ctx, &PromoCode{Code: "EXPIRED", Discount: 10, ExpiresAt: &past})
+	if err != nil {
+		t.Fatal(err)
+	}
+	list, err := store.ListPromos(ctx)
+	if err != nil || len(list) != 4 {
+		t.Fatal("expired promo broke admin listing", len(list), err)
+	}
+	found := false
+	for _, p := range list {
+		if p.ID == id {
+			found = len(p.ProductIDs) == 2 && p.ProductIDs[1] == 5
+		}
+	}
+	if !found {
+		t.Fatal("list omitted products")
+	}
+	if err := store.DeactivatePromo(ctx, expired); err != nil {
+		t.Fatal("expired promo cannot be removed", err)
+	}
+	category := int64(1)
+	for _, p := range []*PromoCode{
+		{Code: "BAD", Discount: 10, ProductIDs: []int64{0}},
+		{Code: "BAD", Discount: 10, ProductIDs: []int64{-1}},
+		{Code: "BAD", Discount: 10, ProductIDs: []int64{2, 2}},
+		{Code: "BAD", Discount: 10, ProductIDs: make([]int64, 101)},
+		{Code: "BAD", Discount: 10, ProductIDs: []int64{2}, CategoryID: &category},
+	} {
+		if _, err := store.CreatePromo(ctx, p); !errors.Is(err, ErrInvalidPromo) {
+			t.Fatal("invalid scope accepted", p, err)
+		}
+	}
+	if _, err := db.Conn().Exec(`UPDATE promo_codes SET product_ids='["bad"]' WHERE id=?`, id); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.GetPromoByCode(ctx, "PRODUCT10"); err == nil {
+		t.Fatal("corrupt scope became global")
+	}
+	if _, err := db.Conn().Exec(`UPDATE promo_codes SET product_ids='null' WHERE id=?`, id); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.GetPromoByCode(ctx, "PRODUCT10"); err == nil {
+		t.Fatal("null scope became global")
+	}
+
+}

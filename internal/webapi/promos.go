@@ -42,7 +42,7 @@ func (s *Server) handlePromoPreview(w http.ResponseWriter, r *http.Request, auth
 	response["original_total_rub"] = view.TotalRUB
 	response["original_total_stars"] = view.TotalStars
 	if promo != nil {
-		response["promo"] = map[string]any{"code": promo.Code, "discount": promo.Discount, "category_id": promo.CategoryID}
+		response["promo"] = map[string]any{"code": promo.Code, "discount": promo.Discount, "category_id": promo.CategoryID, "product_ids": promo.ProductIDs}
 	}
 	s.writeJSON(w, http.StatusOK, response)
 }

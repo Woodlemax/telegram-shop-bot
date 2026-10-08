@@ -854,15 +854,18 @@ func (s *Server) resolvePromo(ctx context.Context, userID int64, code string, vi
 		}
 	}
 
-	if promo.CategoryID != nil {
+	if promo.CategoryID != nil || len(promo.ProductIDs) > 0 {
 		match := false
 		for _, it := range view.Items {
-			if it.Product.CategoryID == *promo.CategoryID {
+			if storage.PromoMatchesProduct(promo, &it.Product) {
 				match = true
 				break
 			}
 		}
 		if !match {
+			if len(promo.ProductIDs) > 0 {
+				return nil, "promo_product_mismatch"
+			}
 			return nil, "promo_category_mismatch"
 		}
 	}

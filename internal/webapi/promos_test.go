@@ -299,3 +299,105 @@ func TestPromoFullDiscountStarsRequestUsesFreeGrant(t *testing.T) {
 		t.Fatal("free order created Telegram invoice")
 	}
 }
+
+func TestPromoProductScopePreviewAndCheckout(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		discount int
+		all      bool
+		rub      float64
+	}{
+		{"one", 10, false, 280}, {"one_free", 100, false, 100}, {"multiple", 10, true, 270}, {"all_free", 100, true, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f, db, open, fixed := realOpenPriceFixture(t)
+			ctx := context.Background()
+			promos := storage.NewSQLPromoStore(db)
+			f.server.deps.Promos = promos
+			f.server.deps.StarsOnlyPayments = true
+			ids := []int64{fixed}
+			if tc.all {
+				ids = append(ids, open)
+			}
+			_, err := promos.CreatePromo(ctx, &storage.PromoCode{Code: "MODELS", Discount: tc.discount, ProductIDs: ids})
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, body := range []string{fmt.Sprintf(`{"product_id":%d,"price":100}`, open), fmt.Sprintf(`{"product_id":%d,"delta":1}`, fixed)} {
+				r := f.request(t, http.MethodPost, "/api/cart", body, true)
+				if r.Code != 200 {
+					t.Fatal(r.Body.String())
+				}
+			}
+			original := decodeJSON(t, f.request(t, http.MethodGet, "/api/cart", "", true))
+			items := original["items"].([]any)
+			var eligible int64
+			for _, item := range items {
+				m := item.(map[string]any)
+				if tc.all || int64(m["product_id"].(float64)) == fixed {
+					eligible += int64(m["price_stars"].(float64)) * int64(m["quantity"].(float64))
+				}
+			}
+			wantStars := int64(original["total_stars"].(float64)) - eligible + eligible*int64(100-tc.discount)/100
+			r := f.request(t, http.MethodPost, "/api/cart/promo", `{"promo":"MODELS"}`, true)
+			if r.Code != 200 {
+				t.Fatal(r.Body.String())
+			}
+			quote := decodeJSON(t, r)
+			if quote["total_rub"] != tc.rub || quote["total_stars"] != float64(wantStars) || quote["free_checkout"] != (tc.rub == 0) {
+				t.Fatal("wrong scoped quote", quote)
+			}
+			if len(quote["promo"].(map[string]any)["product_ids"].([]any)) != len(ids) {
+				t.Fatal("preview omitted scope")
+			}
+			var count int
+			db.Conn().QueryRow(`SELECT COUNT(*) FROM orders`).Scan(&count)
+			if count != 0 {
+				t.Fatal("preview created order")
+			}
+			if tc.rub > 0 {
+				denied := f.request(t, http.MethodPost, "/api/checkout", `{"method":"free","promo":"MODELS"}`, true)
+				if denied.Code != 400 {
+					t.Fatal("unrelated product became free")
+				}
+			}
+			r = f.request(t, http.MethodPost, "/api/checkout", `{"method":"stars","promo":"MODELS"}`, true)
+			if r.Code != 200 {
+				t.Fatal(r.Body.String())
+			}
+			var rub float64
+			var stars int64
+			db.Conn().QueryRow(`SELECT total_rub,total_stars FROM orders ORDER BY id DESC LIMIT 1`).Scan(&rub, &stars)
+			if rub != tc.rub || stars != wantStars {
+				t.Fatal("order differs from preview", rub, stars)
+			}
+			if tc.rub == 0 && decodeJSON(t, r)["free"] != true {
+				t.Fatal("full product discount created invoice")
+			}
+		})
+	}
+}
+func TestPromoWrongProductRejectedWithoutMutation(t *testing.T) {
+	f, db, open, fixed := realOpenPriceFixture(t)
+	promos := storage.NewSQLPromoStore(db)
+	f.server.deps.Promos = promos
+	if _, err := promos.CreatePromo(context.Background(), &storage.PromoCode{Code: "OTHER", Discount: 100, ProductIDs: []int64{open}}); err != nil {
+		t.Fatal(err)
+	}
+	f.request(t, http.MethodPost, "/api/cart", fmt.Sprintf(`{"product_id":%d,"delta":1}`, fixed), true)
+	for _, path := range []string{"/api/cart/promo", "/api/checkout"} {
+		r := f.request(t, http.MethodPost, path, `{"method":"stars","promo":"OTHER"}`, true)
+		if r.Code != 400 || decodeJSON(t, r)["error"] != "promo_product_mismatch" {
+			t.Fatal("wrong product accepted", r.Body.String())
+		}
+	}
+	var n int
+	db.Conn().QueryRow(`SELECT COUNT(*) FROM orders`).Scan(&n)
+	if n != 0 {
+		t.Fatal("rejection created order")
+	}
+	db.Conn().QueryRow(`SELECT COUNT(*) FROM cart_items`).Scan(&n)
+	if n != 1 {
+		t.Fatal("rejection mutated cart")
+	}
+}

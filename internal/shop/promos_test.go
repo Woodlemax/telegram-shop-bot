@@ -29,3 +29,30 @@ func TestPromoTotalsScopedAndImmutable(t *testing.T) {
 		}
 	}
 }
+
+func TestPromoProductsSameCategoryMultipleUnits(t *testing.T) {
+	a, b := float64(100), float64(200)
+	view := &CartView{BaseRUB: true, TotalRUB: 400, TotalUSD: 4, TotalStars: 200, Items: []CartItemView{
+		{Product: storage.Product{ID: 2, CategoryID: 1, PriceRUB: &a, PriceUSD: 1, PriceStars: 50}, Quantity: 2},
+		{Product: storage.Product{ID: 5, CategoryID: 1, PriceRUB: &b, PriceUSD: 2, PriceStars: 100}, Quantity: 1},
+	}}
+	for _, tc := range []struct {
+		ids      []int64
+		discount int
+		rub      float64
+		stars    int
+	}{
+		{[]int64{2}, 10, 380, 190}, {[]int64{5}, 100, 200, 100}, {[]int64{2, 5}, 10, 360, 180}, {[]int64{2, 5}, 100, 0, 0},
+	} {
+		result, err := DiscountCart(view, &storage.PromoCode{Code: "MODELS", Discount: tc.discount, ProductIDs: tc.ids})
+		if err != nil || result.TotalRUB != tc.rub || result.TotalStars != tc.stars {
+			t.Fatal("product discount leaked to another item", tc, result, err)
+		}
+	}
+	if _, err := DiscountCart(view, &storage.PromoCode{Code: "OTHER", Discount: 10, ProductIDs: []int64{7}}); !errors.Is(err, storage.ErrInvalidPromo) {
+		t.Fatal("wrong product accepted", err)
+	}
+	if view.TotalRUB != 400 || view.Items[0].Quantity != 2 {
+		t.Fatal("source changed")
+	}
+}

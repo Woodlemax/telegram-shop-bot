@@ -108,3 +108,38 @@ func TestPromoAdminStorageFailureDoesNotClaimSuccess(t *testing.T) {
 	e.bot.handleAddPromo(context.Background(), msg)
 	requireCall(t, e.tg.since(before), "sendMessage", e.bot.t("ru", "error_short"))
 }
+
+func TestPromoAdminProductSelector(t *testing.T) {
+	e := newE2EEnvWithConfig(t, func(c *config.Config) { c.BotAdminOnly = true })
+	var a, b int64
+	if err := e.db.Conn().QueryRow(`SELECT MIN(id),MAX(id) FROM products`).Scan(&a, &b); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		code, options string
+		ids           int
+	}{
+		{"ONE10", fmt.Sprintf("products=%d", a), 1},
+		{"TWO20", fmt.Sprintf("3 7 products=%d,%d", a, b), 2},
+	} {
+		requireCall(t, e.cmd(e2eAdminID, "/addpromo "+tc.code+" 10 "+tc.options, "ru"), "sendMessage", e.bot.t("ru", "admin_promo_created"))
+		p, err := e.bot.promos.GetPromoByCode(context.Background(), tc.code)
+		if err != nil || len(p.ProductIDs) != tc.ids || p.CategoryID != nil {
+			t.Fatal("command scope lost", p, err)
+		}
+		if tc.ids == 2 && (p.MaxUses != 3 || p.ExpiresAt == nil) {
+			t.Fatal("positional limits lost")
+		}
+	}
+	text := requireCall(t, e.cmd(e2eAdminID, "/listpromos", "ru"), "sendMessage", "TWO20").Params.Get("text")
+	if !strings.Contains(text, fmt.Sprintf("товары (ID): %d, %d", a, b)) {
+		t.Fatal("scope not shown", text)
+	}
+	before := e.qInt(`SELECT COUNT(*) FROM promo_codes`)
+	for _, args := range []string{"products=", "products=0", "products=-1", "products=abc", "products=1,", "products=1,1", "products=999999", fmt.Sprintf("products=%d products=%d", a, b), fmt.Sprintf("0 0 %d products=%d", e.catID, a), "items=1"} {
+		e.cmd(e2eAdminID, "/addpromo BAD10 10 "+args, "ru")
+	}
+	if e.qInt(`SELECT COUNT(*) FROM promo_codes`) != before {
+		t.Fatal("invalid product filter created promo")
+	}
+}

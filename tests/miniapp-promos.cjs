@@ -45,4 +45,13 @@ async function priceWritesAndNavigation() {
  f.button(dict.webapp_pay_stars).click();await drain();assert.equal(f.requests.find(r=>r.checkout).promo,'SAVE10');assert.equal(f.invoices.length,1);
  const z=await cart([[1,0,1]]);type(z,'FREE100');await settle(z);z.button(dict.free_order_button);
 }
-(async()=>{await discounts();await failureAndRetry();await staleRepliesAndRemoval();await priceWritesAndNavigation();console.log('Mini App promo journeys passed: totals, category scope, free checkout, stale replies, removal, retries, expiry, pending price saves and navigation.');})().catch(err=>{console.error(err);process.exitCode=1;});
+async function selectedProducts() {
+ const f=await cart([[1,100,1],[2,200,1]]);
+ type(f,'PRODUCT10');await settle(f);assert.equal(total(f),dict.webapp_total+': 280.00 ₽ / 140 ⭐');
+ type(f,'PRODUCT100');await settle(f);assert.equal(total(f),dict.webapp_total+': 100.00 ₽ / 50 ⭐');f.button(dict.webapp_pay_stars);
+ f.type(1,'150');await settle(f);assert.equal(total(f),dict.webapp_total+': 150.00 ₽ / 75 ⭐','Unselected price was discounted');
+ type(f,'OTHER10');await settle(f);assert.equal(status(f),dict.promo_product_mismatch);assert.equal(payments(f).length,0);
+ type(f,'MODELS100');await settle(f);assert.equal(total(f),dict.webapp_total+': 0.00 ₽ / 0 ⭐');
+ f.button(dict.free_order_button).click();await drain();assert.equal(f.checkouts(),1);assert.equal(f.invoices.length,0);
+}
+(async()=>{await selectedProducts();await discounts();await failureAndRetry();await staleRepliesAndRemoval();await priceWritesAndNavigation();console.log('Mini App promo journeys passed: totals, product/category scope, free checkout, stale replies, removal, retries, expiry, pending price saves and navigation.');})().catch(err=>{console.error(err);process.exitCode=1;});
