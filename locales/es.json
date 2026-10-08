@@ -263,7 +263,7 @@
   "admin_invalid_stock": "❌ Cantidad no válida.",
   "admin_invalid_category_id": "❌ ID de categoría no válido.",
   "admin_invalid_bool": "❌ Usa true o false.",
-  "admin_supported_fields": "❌ Campos admitidos: name, description, price, stock, category, active, openprice, infinitestock, singleincart.",
+  "admin_supported_fields": "❌ Campos admitidos: name, description, price, stock, category, active, openprice, infinitestock, singleincart, telegram.",
   "admin_product_update_failed": "❌ No se pudo actualizar el producto.",
   "admin_product_updated": "✅ Producto actualizado.",
   "admin_usage_deleteproduct": "Uso: /deleteproduct <id>",
@@ -466,5 +466,13 @@
   "admin_rub_rate_saved": "✅ Tipo guardado: 1 USD = %s ₽. Activo en el bot y la Mini App sin reiniciar.",
   "admin_rub_rate_failed": "No se pudo guardar el tipo. El tipo anterior sigue activo.",
   "admin_rub_rate_private": "Abre la configuración en tu chat privado con el bot.",
-  "admin_rub_rate_cancel": "Cancelar"
+  "admin_rub_rate_cancel": "Cancelar",
+  "product_telegram_link": "Grupo / canal de Telegram",
+  "admin_telegram_empty": "Sin enlace",
+  "admin_telegram_current": "Telegram del modelo: %s",
+  "admin_telegram_usage": "/editproduct %d telegram <enlace o @nombre>\n/editproduct %d telegram - — eliminar enlace",
+  "admin_telegram_edit": "✏️ Enlace al grupo / canal",
+  "admin_telegram_remove": "Eliminar enlace de Telegram",
+  "admin_telegram_prompt": "Envía el enlace al grupo o canal de Telegram para el producto #%d: https://t.me/nombre, @nombre o una invitación. Opcional: - elimina el enlace. Cancelar: /cancel. Caduca en 15 minutos.",
+  "admin_telegram_invalid": "Introduce https://t.me/nombre, @nombre o un enlace de invitación de Telegram. - elimina el enlace."
 }

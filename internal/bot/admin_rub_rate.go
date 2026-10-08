@@ -57,6 +57,7 @@ func (b *Bot) handleRUBRate(ctx context.Context, msg *tgbotapi.Message) {
 }
 func (b *Bot) beginRUBRateInput(ctx context.Context, chatID, userID int64, lang string) {
 	// End other dialogs so the next number cannot edit a product or a buyer's price.
+	b.telegramInput.Delete(userID)
 	_ = b.archives.CancelUpload(ctx, userID)
 	b.cart.CancelPriceInput(ctx, userID)
 	_ = b.fsm.DelAddProductState(ctx, userID)

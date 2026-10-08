@@ -263,7 +263,7 @@
   "admin_invalid_stock": "❌ Некорректное количество.",
   "admin_invalid_category_id": "❌ Некорректный ID категории.",
   "admin_invalid_bool": "❌ Используйте true или false.",
-  "admin_supported_fields": "❌ Поддерживаются поля: name, description, price, stock, category, active, openprice, infinitestock, singleincart.",
+  "admin_supported_fields": "❌ Поддерживаются поля: name, description, price, stock, category, active, openprice, infinitestock, singleincart, telegram.",
   "admin_product_update_failed": "❌ Не удалось обновить товар.",
   "admin_product_updated": "✅ Товар обновлён.",
   "admin_usage_deleteproduct": "Использование: /deleteproduct <id>",
@@ -466,5 +466,13 @@
   "admin_rub_rate_saved": "✅ Курс сохранён: 1 USD = %s ₽. Изменение действует в боте и Mini App без перезапуска.",
   "admin_rub_rate_failed": "Не удалось сохранить курс. Прежний курс остаётся действующим.",
   "admin_rub_rate_private": "Откройте настройку курса в личном чате с ботом.",
-  "admin_rub_rate_cancel": "Отмена"
+  "admin_rub_rate_cancel": "Отмена",
+  "product_telegram_link": "Группа / канал в Telegram",
+  "admin_telegram_empty": "Ссылка не указана",
+  "admin_telegram_current": "Telegram модели: %s",
+  "admin_telegram_usage": "/editproduct %d telegram <ссылка или @имя>\n/editproduct %d telegram - — убрать ссылку",
+  "admin_telegram_edit": "✏️ Ссылка на группу / канал",
+  "admin_telegram_remove": "Убрать ссылку Telegram",
+  "admin_telegram_prompt": "Отправьте ссылку на Telegram-группу или канал для товара #%d: https://t.me/имя, @имя или пригласительную ссылку. Поле необязательное: «-» убирает ссылку. Отмена: /cancel. Ожидание — 15 минут.",
+  "admin_telegram_invalid": "Укажите ссылку https://t.me/имя, @имя или пригласительную ссылку Telegram. Чтобы убрать ссылку, отправьте «-»."
 }

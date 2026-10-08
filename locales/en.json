@@ -263,7 +263,7 @@
   "admin_invalid_stock": "❌ Invalid quantity.",
   "admin_invalid_category_id": "❌ Invalid category ID.",
   "admin_invalid_bool": "❌ Use true or false.",
-  "admin_supported_fields": "❌ Supported fields: name, description, price, stock, category, active, openprice, infinitestock, singleincart.",
+  "admin_supported_fields": "❌ Supported fields: name, description, price, stock, category, active, openprice, infinitestock, singleincart, telegram.",
   "admin_product_update_failed": "❌ Failed to update product.",
   "admin_product_updated": "✅ Product updated.",
   "admin_usage_deleteproduct": "Usage: /deleteproduct <id>",
@@ -466,5 +466,13 @@
   "admin_rub_rate_saved": "✅ Rate saved: 1 USD = %s ₽. Active in the bot and Mini App without restarting.",
   "admin_rub_rate_failed": "Could not save the rate. The previous rate remains active.",
   "admin_rub_rate_private": "Open exchange rate settings in your private chat with the bot.",
-  "admin_rub_rate_cancel": "Cancel"
+  "admin_rub_rate_cancel": "Cancel",
+  "product_telegram_link": "Telegram group / channel",
+  "admin_telegram_empty": "No link set",
+  "admin_telegram_current": "Model Telegram: %s",
+  "admin_telegram_usage": "/editproduct %d telegram <link or @name>\n/editproduct %d telegram - — remove link",
+  "admin_telegram_edit": "✏️ Group / channel link",
+  "admin_telegram_remove": "Remove Telegram link",
+  "admin_telegram_prompt": "Send a Telegram group or channel link for product #%d: https://t.me/name, @name or an invite link. Optional: send - to remove it. Cancel: /cancel. Expires in 15 minutes.",
+  "admin_telegram_invalid": "Enter https://t.me/name, @name or a Telegram invite link. Send - to remove it."
 }

@@ -147,6 +147,12 @@ func (b *Bot) sendAdminProductDetails(chatID int64, product *storage.Product, la
 		text += "\n" + b.t(lang, "open_price_hint")
 	}
 
+	linkText := product.TelegramURL
+	if linkText == "" {
+		linkText = b.t(lang, "admin_telegram_empty")
+	}
+	text += "\n" + fmt.Sprintf(b.t(lang, "admin_telegram_current"), linkText)
+	text += "\n" + fmt.Sprintf(b.t(lang, "admin_telegram_usage"), product.ID, product.ID)
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(infiniteLabel, fmt.Sprintf("admin:infinitestock:%d", product.ID))),
 		tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(singleLabel, fmt.Sprintf("admin:singleincart:%d", product.ID))),
@@ -165,6 +171,10 @@ func (b *Bot) sendAdminProductDetails(chatID int64, product *storage.Product, la
 		keyboard.InlineKeyboard = append(keyboard.InlineKeyboard[:3], keyboard.InlineKeyboard[4:]...)
 	}
 
+	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(b.t(lang, "admin_telegram_edit"), fmt.Sprintf("admin:telegram:edit:%d", product.ID))))
+	if product.TelegramURL != "" {
+		keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(b.t(lang, "admin_telegram_remove"), fmt.Sprintf("admin:telegram:remove:%d", product.ID))))
+	}
 	reply := tgbotapi.NewMessage(chatID, text)
 	reply.ReplyMarkup = keyboard
 	b.send(reply)
@@ -207,6 +217,17 @@ func (b *Bot) handleEditProductField(ctx context.Context, msg *tgbotapi.Message,
 	}
 
 	switch strings.ToLower(field) {
+	case "telegram", "telegramlink":
+		raw := value
+		if strings.TrimSpace(raw) == "-" {
+			raw = ""
+		}
+		link, err := storage.NormalizeTelegramURL(raw)
+		if err != nil {
+			b.send(tgbotapi.NewMessage(msg.Chat.ID, b.t(lang, "admin_telegram_invalid")))
+			return
+		}
+		product.TelegramURL = link
 	case "name":
 		product.Name = value
 	case "description":

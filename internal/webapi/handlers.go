@@ -304,6 +304,7 @@ type productJSON struct {
 	CategoryID    int64    `json:"category_id"`
 	Name          string   `json:"name"`
 	Description   string   `json:"description"`
+	TelegramURL   string   `json:"telegram_url,omitempty"`
 	Photo         string   `json:"photo,omitempty"`
 	PriceUSD      float64  `json:"price_usd"`
 	PriceStars    int      `json:"price_stars"`
@@ -317,11 +318,13 @@ type productJSON struct {
 }
 
 func toProductJSON(p *storage.Product) productJSON {
+	link, _ := storage.NormalizeTelegramURL(p.TelegramURL)
 	return productJSON{
 		ID:            p.ID,
 		CategoryID:    p.CategoryID,
 		Name:          p.Name,
 		Description:   p.Description,
+		TelegramURL:   link,
 		Photo:         photoRef(p.PhotoURL),
 		PriceUSD:      p.PriceUSD,
 		PriceStars:    p.PriceStars,

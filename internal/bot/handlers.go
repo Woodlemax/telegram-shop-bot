@@ -31,6 +31,9 @@ func (b *Bot) routeMessage(ctx context.Context, msg *tgbotapi.Message) {
 		b.handleSuccessfulPayment(ctx, msg)
 		return
 	}
+	if b.handleProductTelegramInput(ctx, msg) {
+		return
+	}
 	if b.handleRUBRateInput(ctx, msg) {
 		return
 	}
@@ -214,7 +217,13 @@ func (b *Bot) handleCallback(ctx context.Context, cb *tgbotapi.CallbackQuery) {
 	if data != "admin:rubrate:edit" {
 		b.rubRateInput.Delete(userID)
 	}
+	b.telegramInput.Delete(userID)
 	switch {
+	case strings.HasPrefix(data, "admin:telegram:"):
+		b.ack(cb.ID)
+		if b.isAdmin(userID) && chatID == userID {
+			b.onAdminProductTelegram(ctx, chatID, userID, data, lang)
+		}
 	case data == "admin:rubrate", data == "admin:rubrate:edit":
 		b.ack(cb.ID)
 		if b.isAdmin(userID) && chatID == userID {

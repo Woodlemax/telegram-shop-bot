@@ -139,6 +139,7 @@ body {
 .product-rating { color: var(--hint); margin-top: 4px; }
 .product-sub { color: var(--link); margin-top: 4px; font-size: 14px; }
 .product-desc { color: var(--text); line-height: 1.4; }
+.product-telegram { text-align: center; text-decoration: none; }
 .product-stock { color: var(--hint); font-size: 13px; margin: 8px 0 16px; }
 
 .btn {

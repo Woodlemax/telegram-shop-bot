@@ -263,7 +263,7 @@
   "admin_invalid_stock": "❌ 数量无效。",
   "admin_invalid_category_id": "❌ 分类 ID 无效。",
   "admin_invalid_bool": "❌ 请使用 true 或 false。",
-  "admin_supported_fields": "❌ 支持的字段：name、description、price、stock、category、active, openprice。, infinitestock, singleincart.",
+  "admin_supported_fields": "❌ 支持的字段：name、description、price、stock、category、active, openprice。, infinitestock, singleincart, telegram.",
   "admin_product_update_failed": "❌ 更新商品失败。",
   "admin_product_updated": "✅ 商品已更新。",
   "admin_usage_deleteproduct": "用法：/deleteproduct <id>",
@@ -466,5 +466,13 @@
   "admin_rub_rate_saved": "✅ 汇率已保存：1 USD = %s ₽。机器人和 Mini App 无需重启即可生效。",
   "admin_rub_rate_failed": "汇率保存失败。原汇率仍然有效。",
   "admin_rub_rate_private": "请在与机器人的私人聊天中打开汇率设置。",
-  "admin_rub_rate_cancel": "取消"
+  "admin_rub_rate_cancel": "取消",
+  "product_telegram_link": "Telegram 群组 / 频道",
+  "admin_telegram_empty": "未设置链接",
+  "admin_telegram_current": "模型的 Telegram：%s",
+  "admin_telegram_usage": "/editproduct %d telegram <链接或 @名称>\n/editproduct %d telegram - — 删除链接",
+  "admin_telegram_edit": "✏️ 群组 / 频道链接",
+  "admin_telegram_remove": "删除 Telegram 链接",
+  "admin_telegram_prompt": "发送商品 #%d 的 Telegram 群组或频道链接：https://t.me/name、@name 或邀请链接。可选：发送 - 删除链接。取消：/cancel。15 分钟后过期。",
+  "admin_telegram_invalid": "请输入 https://t.me/name、@name 或 Telegram 邀请链接。发送 - 删除链接。"
 }

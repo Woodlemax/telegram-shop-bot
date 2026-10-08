@@ -71,6 +71,7 @@ type Bot struct {
 	cfg             *config.Config
 	exchange        *service.ExchangeService
 	rubRateInput    sync.Map
+	telegramInput   sync.Map
 	catalog         *shop.CatalogService
 	cart            *shop.CartService
 	order           *shop.OrderService

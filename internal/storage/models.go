@@ -124,6 +124,7 @@ type Product struct {
 	Name           string    `db:"name"`
 	Description    string    `db:"description"`
 	PhotoURL       string    `db:"photo_url"`
+	TelegramURL    string    `db:"telegram_url"`
 	PriceUSD       float64   `db:"price_usd"`
 	PriceStars     int       `db:"price_stars"`
 	OpenPrice      bool      `db:"open_price"`

@@ -267,6 +267,16 @@
       if (p.description) {
         screenEl.appendChild(el('p', 'product-desc', p.description));
       }
+      if (p.telegram_url && /^https:\/\/t\.me\//.test(p.telegram_url)) {
+        var community = el('a', 'btn secondary product-telegram', t('product_telegram_link'));
+        community.href = p.telegram_url;
+        community.target = '_blank';
+        community.rel = 'noopener noreferrer';
+        community.onclick = function (event) {
+          if (tg && tg.openTelegramLink) { event.preventDefault(); tg.openTelegramLink(p.telegram_url); }
+        };
+        screenEl.appendChild(community);
+      }
       screenEl.appendChild(el('div', 'product-stock', p.infinite_stock ? t('product_infinite_stock') : tf('webapp_stock', p.stock)));
 
       if (p.is_digital) { screenEl.appendChild(el('div', 'product-stock', t('digital_product'))); }

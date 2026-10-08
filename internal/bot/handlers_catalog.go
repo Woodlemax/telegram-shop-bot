@@ -274,6 +274,9 @@ func (b *Bot) productKeyboard(p *storage.Product, inWishlist bool, quantity int,
 	if p.OpenPrice {
 		kb = append(StyledKeyboard{{Btn(b.t(lang, "open_price_button"), fmt.Sprintf("price:enter:%d", p.ID))}}, kb...)
 	}
+	if link, err := storage.NormalizeTelegramURL(p.TelegramURL); err == nil && link != "" {
+		kb = append(StyledKeyboard{{BtnURL(b.t(lang, "product_telegram_link"), link)}}, kb...)
+	}
 	return kb
 }
 

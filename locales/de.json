@@ -263,7 +263,7 @@
   "admin_invalid_stock": "❌ Ungültige Menge.",
   "admin_invalid_category_id": "❌ Ungültige Kategorie-ID.",
   "admin_invalid_bool": "❌ Verwende true oder false.",
-  "admin_supported_fields": "❌ Unterstützte Felder: name, description, price, stock, category, active, openprice, infinitestock, singleincart.",
+  "admin_supported_fields": "❌ Unterstützte Felder: name, description, price, stock, category, active, openprice, infinitestock, singleincart, telegram.",
   "admin_product_update_failed": "❌ Produkt konnte nicht aktualisiert werden.",
   "admin_product_updated": "✅ Produkt aktualisiert.",
   "admin_usage_deleteproduct": "Verwendung: /deleteproduct <id>",
@@ -466,5 +466,13 @@
   "admin_rub_rate_saved": "✅ Kurs gespeichert: 1 USD = %s ₽. Sofort im Bot und in der Mini App aktiv.",
   "admin_rub_rate_failed": "Kurs konnte nicht gespeichert werden. Der bisherige Kurs bleibt aktiv.",
   "admin_rub_rate_private": "Kurseinstellungen im privaten Chat mit dem Bot öffnen.",
-  "admin_rub_rate_cancel": "Abbrechen"
+  "admin_rub_rate_cancel": "Abbrechen",
+  "product_telegram_link": "Telegram-Gruppe / Kanal",
+  "admin_telegram_empty": "Kein Link hinterlegt",
+  "admin_telegram_current": "Telegram zum Modell: %s",
+  "admin_telegram_usage": "/editproduct %d telegram <Link oder @Name>\n/editproduct %d telegram - — Link entfernen",
+  "admin_telegram_edit": "✏️ Gruppen- / Kanal-Link",
+  "admin_telegram_remove": "Telegram-Link entfernen",
+  "admin_telegram_prompt": "Telegram-Gruppe oder Kanal für Produkt #%d senden: https://t.me/name, @name oder Einladungslink. Optional: - entfernt den Link. Abbrechen: /cancel. Gültig für 15 Minuten.",
+  "admin_telegram_invalid": "https://t.me/name, @name oder Telegram-Einladungslink eingeben. - entfernt den Link."
 }
