@@ -224,23 +224,14 @@ func (s *OrderService) CreateFromCart(ctx context.Context, userID int64, cartVie
 		}
 	}
 
-	totalUSD := cartView.TotalUSD
-	if cartView.BaseRUB {
-		totalUSD = math.Round(totalUSD*100) / 100
+	totals, err := DiscountCart(cartView, promo)
+	if err != nil {
+		return 0, err
 	}
-	totalStars := cartView.TotalStars
-	discountPct := 0
-	promoCode := ""
-
+	totalUSD, totalStars, totalRUB := totals.TotalUSD, totals.TotalStars, totals.TotalRUB
+	discountPct, promoCode := 0, ""
 	if promo != nil {
-		discountPct = promo.Discount
-		promoCode = promo.Code
-		totalUSD = totalUSD * float64(100-discountPct) / 100
-		totalStars = totalStars * (100 - discountPct) / 100
-	}
-	totalRUB := cartView.TotalRUB
-	if promo != nil {
-		totalRUB = math.Round(totalRUB*float64(100-discountPct)) / 100
+		discountPct, promoCode = promo.Discount, promo.Code
 	}
 	// TON snapshot: convert the final USD total (already discounted above)
 	// once, mirroring the RUB promo placement — discounting a pre-converted

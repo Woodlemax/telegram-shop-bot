@@ -98,8 +98,12 @@ func (b *Bot) handlePromoInput(ctx context.Context, msg *tgbotapi.Message) {
 		}
 	}
 
-	discountedUSD := view.TotalUSD * float64(100-promo.Discount) / 100
-	discountedStars := view.TotalStars * (100 - promo.Discount) / 100
+	totals, err := shop.DiscountCart(view, promo)
+	if err != nil {
+		b.sendOrEditStyled(chatID, 0, b.t(lang, "promo_not_found"), "", nil)
+		return
+	}
+	discountedUSD, discountedStars := totals.TotalUSD, totals.TotalStars
 
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf(b.t(lang, "promo_applied_header"), promo.Code, promo.Discount))

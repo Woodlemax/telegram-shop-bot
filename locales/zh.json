@@ -483,5 +483,18 @@
   "admin_telegram_edit": "✏️ 群组 / 频道链接",
   "admin_telegram_remove": "删除 Telegram 链接",
   "admin_telegram_prompt": "发送商品 #%d 的 Telegram 群组或频道链接：https://t.me/name、@name 或邀请链接。可选：发送 - 删除链接。取消：/cancel。15 分钟后过期。",
-  "admin_telegram_invalid": "请输入 https://t.me/name、@name 或 Telegram 邀请链接。发送 - 删除链接。"
+  "admin_telegram_invalid": "请输入 https://t.me/name、@name 或 Telegram 邀请链接。发送 - 删除链接。",
+  "admin_promo_usage": "用法：/addpromo 代码 折扣 [次数限制] [天数] [分类ID]。折扣为1–100整数。代码为1–32个A–Z、0–9、_或-字符。限制0表示不限；天数0表示不过期。",
+  "admin_promo_category_invalid": "❌ 未找到分类，请查看 /listcategories。",
+  "admin_promo_exists": "❌ 优惠码已存在，请选择其他代码。",
+  "admin_promo_empty": "没有有效的优惠码。",
+  "admin_promo_unlimited": "不限",
+  "admin_promo_no_expiry": "不过期",
+  "admin_promo_all_categories": "全部",
+  "admin_promo_details": "已用：%d / %s；到期：%s；分类：%s\n\n",
+  "admin_promo_delete_usage": "用法：/deletepromo ID — 使用 /listpromos 查看ID。",
+  "admin_promo_missing": "❌ 未找到该ID的有效优惠码。",
+  "webapp_promo_checking": "正在验证优惠码…",
+  "webapp_promo_applied": "已应用优惠码 %s",
+  "webapp_promo_original": "折扣前"
 }

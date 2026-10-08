@@ -14,20 +14,41 @@ class Element {
 }
 function flatten(node) { return [node, ...node.children.flatMap(flatten)]; }
 async function drain() { for (let i = 0; i < 12; i++) await new Promise(setImmediate); }
-async function fixture(initial = [[1, 100, 1]]) {
+async function fixture(initial = [[1, 100, 1]], options = {}) {
   const nodes = Object.fromEntries(['screen', 'title', 'back-btn', 'cart-btn', 'cart-badge'].map(id => [id, new Element('div')]));
   const products = [1, 2].map(id => ({id, name: 'Plane ' + id, description: 'Model', price_rub: 0, price_stars: 0, stock: 0, infinite_stock: true, single_in_cart: true, open_price: true}));
   const timers = new Map(), alerts = [], requests = [], invoices = [];
   let timerID = 0, rate = 100, held = false, release, fail = false, checkouts = 0;
+  let previewHeld = false, previewFail = false; const previewReleases = [], unavailable = new Set();
   let items = initial.map(([id, amount, quantity]) => ({product_id: id, price_rub: amount, quantity, name: 'Plane ' + id, open_price: true, single_in_cart: true}));
   const stars = n => n ? Math.max(1, Math.floor(n / rate * 50)) : 0;
   const cart = () => ({items: items.map(item => ({...item, price_stars: stars(item.price_rub)})), total_rub: items.reduce((n, item) => n + item.price_rub * item.quantity, 0), total_stars: items.reduce((n, item) => n + stars(item.price_rub) * item.quantity, 0), stars_only: true, free_checkout: items.length > 0 && items.every(item => item.price_rub === 0), open_price_rates: {rub_per_usd: rate, stars_per_usd: 50}});
+  const codes = {SAVE10: {code: 'SAVE10', discount: 10}, FREE100: {code: 'FREE100', discount: 100}, CATEGORY10: {code: 'CATEGORY10', discount: 10, category_id: 1}, CATEGORY100: {code: 'CATEGORY100', discount: 100, category_id: 1}};
+  function quote(code, snapshot = cart()) {
+    const promo = codes[String(code || '').trim().toUpperCase()];
+    if (code && (!promo || unavailable.has(promo.code))) return {error: 'promo_not_found'};
+    if (!promo) return snapshot;
+    let eligibleRub = 0, eligibleStars = 0;
+    for (const item of snapshot.items) {
+      if (promo.category_id && item.product_id !== promo.category_id) continue;
+      eligibleRub += item.price_rub * item.quantity; eligibleStars += item.price_stars * item.quantity;
+    }
+    const rub = Math.round((snapshot.total_rub - eligibleRub + eligibleRub * (100 - promo.discount) / 100) * 100) / 100;
+    const totalStars = Math.max(rub > 0 ? 1 : 0, snapshot.total_stars - eligibleStars + Math.floor(eligibleStars * (100 - promo.discount) / 100));
+    return {...snapshot, promo, original_total_rub: snapshot.total_rub, original_total_stars: snapshot.total_stars, total_rub: rub, total_stars: totalStars, free_checkout: rub === 0 && totalStars === 0};
+  }
   const fetch = async (url, opts = {}) => {
     let data, ok = true;
     if (url.startsWith('/api/i18n')) data = dict;
     else if (url === '/api/catalog') data = {categories: [{id: 1, name: 'Planes'}]};
     else if (url.startsWith('/api/products?')) data = {products, total: 2, per_page: 10};
     else if (url.startsWith('/api/products/')) data = {product: products.find(p => p.id === Number(url.split('/').pop())), photos: [], rating_count: 0, open_price_rates: {rub_per_usd: rate, stars_per_usd: 50}};
+    else if (url === '/api/cart/promo') {
+      const body = JSON.parse(opts.body), snapshot = cart(); requests.push({preview: body.promo, amounts: snapshot.items.map(item => item.price_rub)});
+      const response = quote(body.promo, snapshot);
+      if (previewHeld) await new Promise(resolve => {previewReleases.push(resolve);});
+      data = previewFail ? {error: 'webapp_err_internal'} : response; previewFail = false; ok = !data.error;
+    }
     else if (url === '/api/cart' && opts.method === 'POST') {
       const body = JSON.parse(opts.body); requests.push(body);
       if (held) await new Promise(resolve => { release = resolve; });
@@ -43,9 +64,12 @@ async function fixture(initial = [[1, 100, 1]]) {
       const id = Number(url.split('=').pop()); requests.push({delete: id}); items = items.filter(item => item.product_id !== id); data = cart();
     } else if (url === '/api/cart') data = cart();
     else if (url === '/api/checkout') {
-      checkouts++; const body = JSON.parse(opts.body); requests.push({checkout: body.method, amounts: items.map(item => item.price_rub)});
-      assert.equal(body.method, cart().free_checkout ? 'free' : 'stars', 'Checkout used an obsolete free/paid action');
-      data = cart().free_checkout ? {free: true, order_id: 1} : {invoice_link: 'test-invoice'};
+      const body = JSON.parse(opts.body), result = quote(body.promo); checkouts++; requests.push({checkout: body.method, promo: body.promo, amounts: items.map(item => item.price_rub)});
+      if (result.error) { ok = false; data = result; }
+      else {
+        assert.equal(body.method, result.free_checkout ? 'free' : 'stars', 'Checkout used an obsolete free/paid action');
+        data = result.free_checkout ? {free: true, order_id: 1} : {invoice_link: 'test-invoice'};
+      }
     } else throw Error('Unexpected request ' + url);
     return {ok, json: async () => data};
   };
@@ -58,7 +82,7 @@ async function fixture(initial = [[1, 100, 1]]) {
   const tick = async () => {const callbacks = [...timers.values()]; timers.clear(); callbacks.forEach(fn => fn()); await drain();};
   const product = async id => {button('Planes').click(); await drain(); all().filter(n => n.className === 'card')[id - 1].click(); await drain();};
   await drain();
-  return {nodes, all, button, input, type, tick, product, requests, alerts, invoices, cart, setRate: n => {rate = n;}, hold: () => {held = true;}, release: () => {held = false; release();}, fail: () => {fail = true;}, checkouts: () => checkouts};
+  return {nodes, all, button, input, type, tick, product, requests, alerts, invoices, cart, holdPreview: () => {previewHeld = true;}, releasePreview: index => {previewReleases[index]();}, unholdPreview: () => {previewHeld = false;}, failPreview: () => {previewFail = true;}, expirePromo: code => {unavailable.add(code);}, setRate: n => {rate = n;}, hold: () => {held = true;}, release: () => {held = false; release();}, fail: () => {fail = true;}, checkouts: () => checkouts};
 }
 async function productAutosave() {
   const f = await fixture([]); await f.product(1);
@@ -113,4 +137,6 @@ async function quantityAndInvalidNavigation() {
   f.type(1, '300'); f.hold(); f.nodes['back-btn'].click(); f.nodes['back-btn'].click(); await drain(); f.release(); await drain();
   assert.equal(f.nodes.title.textContent, dict.webapp_catalog, 'Repeated navigation escaped its save barrier'); assert.equal(f.cart().items[0].price_rub, 300);
 }
-(async () => {await productAutosave(); await cartAutosave(); await checkoutFlushFailureAndFree(); await quantityAndInvalidNavigation(); console.log('Mini App open-price tests passed: preview, autosave, cart totals, preserved input, concurrent edits, navigation, checkout, zero/positive, invalid input, retries, quantity and removal.');})().catch(err => {console.error(err); process.exitCode = 1;});
+if (require.main === module) (async () => {await productAutosave(); await cartAutosave(); await checkoutFlushFailureAndFree(); await quantityAndInvalidNavigation(); console.log('Mini App open-price tests passed: preview, autosave, cart totals, preserved input, concurrent edits, navigation, checkout, zero/positive, invalid input, retries, quantity and removal.');})().catch(err => {console.error(err); process.exitCode = 1;});
+
+module.exports = {fixture, drain, dict};

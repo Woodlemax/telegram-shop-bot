@@ -483,5 +483,18 @@
   "admin_telegram_edit": "✏️ Ссылка на группу / канал",
   "admin_telegram_remove": "Убрать ссылку Telegram",
   "admin_telegram_prompt": "Отправьте ссылку на Telegram-группу или канал для товара #%d: https://t.me/имя, @имя или пригласительную ссылку. Поле необязательное: «-» убирает ссылку. Отмена: /cancel. Ожидание — 15 минут.",
-  "admin_telegram_invalid": "Укажите ссылку https://t.me/имя, @имя или пригласительную ссылку Telegram. Чтобы убрать ссылку, отправьте «-»."
+  "admin_telegram_invalid": "Укажите ссылку https://t.me/имя, @имя или пригласительную ссылку Telegram. Чтобы убрать ссылку, отправьте «-».",
+  "admin_promo_usage": "Использование: /addpromo КОД скидка [лимит] [дней] [ID категории]. Скидка — целое число от 1 до 100. Код: 1–32 символа A–Z, 0–9, _ или -. Лимит 0 — без ограничения, дней 0 — без срока.",
+  "admin_promo_category_invalid": "❌ Категория не найдена. Посмотрите /listcategories.",
+  "admin_promo_exists": "❌ Такой промокод уже существует. Выберите другой код.",
+  "admin_promo_empty": "Активных промокодов нет.",
+  "admin_promo_unlimited": "без лимита",
+  "admin_promo_no_expiry": "без срока",
+  "admin_promo_all_categories": "все",
+  "admin_promo_details": "Использовано: %d / %s; срок: %s; категория: %s\n\n",
+  "admin_promo_delete_usage": "Использование: /deletepromo ID — ID можно посмотреть через /listpromos.",
+  "admin_promo_missing": "❌ Активный промокод с таким ID не найден.",
+  "webapp_promo_checking": "Проверяем промокод…",
+  "webapp_promo_applied": "Промокод %s применён",
+  "webapp_promo_original": "Без скидки"
 }

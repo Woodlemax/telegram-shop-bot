@@ -206,3 +206,6 @@ body {
 }
 
 .price-save-status { min-height: 1em; font-size: 0.85em; color: var(--hint); }
+
+.cart-original { color: var(--hint); font-size: 14px; margin: 8px 0; }
+.promo-status { min-height: 1.4em; color: var(--hint); font-size: 14px; margin: 8px 0; overflow-wrap: anywhere; }

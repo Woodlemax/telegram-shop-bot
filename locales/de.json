@@ -483,5 +483,18 @@
   "admin_telegram_edit": "✏️ Gruppen- / Kanal-Link",
   "admin_telegram_remove": "Telegram-Link entfernen",
   "admin_telegram_prompt": "Telegram-Gruppe oder Kanal für Produkt #%d senden: https://t.me/name, @name oder Einladungslink. Optional: - entfernt den Link. Abbrechen: /cancel. Gültig für 15 Minuten.",
-  "admin_telegram_invalid": "https://t.me/name, @name oder Telegram-Einladungslink eingeben. - entfernt den Link."
+  "admin_telegram_invalid": "https://t.me/name, @name oder Telegram-Einladungslink eingeben. - entfernt den Link.",
+  "admin_promo_usage": "Verwendung: /addpromo CODE Rabatt [Limit] [Tage] [Kategorie-ID]. Rabatt: ganze Zahl 1–100. Code: 1–32 Zeichen A–Z, 0–9, _ oder -. Limit 0: unbegrenzt; Tage 0: kein Ablauf.",
+  "admin_promo_category_invalid": "❌ Kategorie nicht gefunden. Siehe /listcategories.",
+  "admin_promo_exists": "❌ Code existiert bereits. Wählen Sie einen anderen Code.",
+  "admin_promo_empty": "Keine aktiven Rabattcodes.",
+  "admin_promo_unlimited": "unbegrenzt",
+  "admin_promo_no_expiry": "kein Ablauf",
+  "admin_promo_all_categories": "alle",
+  "admin_promo_details": "Verwendet: %d / %s; Ablauf: %s; Kategorie: %s\n\n",
+  "admin_promo_delete_usage": "Verwendung: /deletepromo ID — IDs über /listpromos anzeigen.",
+  "admin_promo_missing": "❌ Kein aktiver Code mit dieser ID gefunden.",
+  "webapp_promo_checking": "Rabattcode wird geprüft…",
+  "webapp_promo_applied": "Code %s angewendet",
+  "webapp_promo_original": "Vor Rabatt"
 }

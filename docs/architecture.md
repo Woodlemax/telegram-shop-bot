@@ -190,7 +190,8 @@ User taps the bot's menu button (web_app, set when WEBAPP_URL is configured)
     → webapi.Authenticator validates HMAC (secret = HMAC_SHA256("WebAppData", bot_token),
       auth_date TTL 1h)
     → GET /api/me | /api/catalog | /api/products | /api/cart …
-    → POST /api/checkout {method: stars|crypto, promo?}
+    → POST /api/cart/promo {promo?}  authenticated, read-only scoped discount preview
+    → POST /api/checkout {method: stars|crypto|free, promo?}
         → shop.OrderService.CreateFromCart()   (same service as the bot)
         → Stars: raw createInvoiceLink (+subscription_period)  → {invoice_link}
         → crypto: CryptoBot pay URL

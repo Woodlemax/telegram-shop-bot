@@ -12,6 +12,9 @@
   var checkoutPending = false;
   var navigationPending = false;
   var cartMutation = Promise.resolve();
+  var promoDraft = '';
+  var cancelPromoPreview = null;
+  var promoEditor = null;
 
   // Serialize cart writes so an older input cannot win over a newer amount.
   function mutateCart(method, path, body) {
@@ -106,6 +109,8 @@
   }
 
   function clearScreen() {
+    promoEditor = null;
+    if (cancelPromoPreview) { cancelPromoPreview(); cancelPromoPreview = null; }
     priceEditors.forEach(function (input) { input.cancelPriceTimer(); });
     priceEditors = [];
     while (screenEl.firstChild) { screenEl.removeChild(screenEl.firstChild); }
@@ -422,6 +427,7 @@
       updateCartBadge(countItems(cart));
 
       if (!cart.items.length) {
+        promoDraft = '';
         screenEl.appendChild(el('div', 'empty', t('webapp_cart_empty')));
         return;
       }
@@ -469,7 +475,51 @@
       var promo = el('input', 'input');
       promo.type = 'text';
       promo.placeholder = t('webapp_promo_placeholder');
+      promo.value = promoDraft; promoEditor = promo;
+      promo.autocomplete = 'off'; promo.spellcheck = false;
       screenEl.appendChild(promo);
+      var originalLine = el('div', 'cart-original hidden'); screenEl.appendChild(originalLine);
+      var promoStatus = el('div', 'promo-status'); promoStatus.setAttribute('aria-live', 'polite'); screenEl.appendChild(promoStatus);
+      var promoTimer = null, promoVersion = 0, promoClosed = false, promoReady = false, validatedPromo = null;
+      cancelPromoPreview = function () { promoClosed = true; promoVersion++; if (promoTimer !== null) { clearTimeout(promoTimer); } };
+      function stopPreview() {
+        promoReady = false;
+        promoVersion++;
+        if (promoTimer !== null) { clearTimeout(promoTimer); promoTimer = null; }
+      }
+      function requestPreview(immediate) {
+        stopPreview();
+        var version = promoVersion, code = promo.value;
+        promoStatus.textContent = t('webapp_promo_checking');
+        promoTimer = setTimeout(function () {
+          promoTimer = null;
+          flushPriceEditors().then(function () { return cartMutation; }).then(function () {
+            if (promoClosed || version !== promoVersion) { return null; }
+            return api('POST', '/api/cart/promo', {promo: code});
+          }).then(function (preview) {
+            if (!preview || promoClosed || version !== promoVersion) { return; }
+            promoReady = true; validatedPromo = code;
+            totalLine.textContent = t('webapp_total') + ': ' + rub(preview.total_rub) + ' / ' + stars(preview.total_stars);
+            originalLine.className = 'cart-original';
+            originalLine.textContent = t('webapp_promo_original') + ': ' + rub(preview.original_total_rub) + ' / ' + stars(preview.original_total_stars);
+            promoStatus.textContent = preview.promo ? tf('webapp_promo_applied', preview.promo.code) + ' (−' + preview.promo.discount + '%)' : '';
+            while (paymentBox.firstChild) { paymentBox.removeChild(paymentBox.firstChild); }
+            renderPayments(preview.free_checkout);
+          }).catch(function (err) {
+            if (promoClosed || version !== promoVersion) { return; }
+            promoStatus.textContent = t(err.message || 'webapp_err_internal');
+          });
+        }, immediate ? 0 : 300);
+      }
+      promo.oninput = function () { promoDraft = promo.value; updateCartView(); };
+      promo.onchange = promo.onblur = function () {
+        promoDraft = promo.value;
+        if (promoReady && validatedPromo === promo.value) { return; }
+        if (promo.value.trim()) {
+          while (paymentBox.firstChild) { paymentBox.removeChild(paymentBox.firstChild); }
+          requestPreview(true);
+        } else { updateCartView(); }
+      };
 
       var paymentBox = el('div', 'cart-payments'); screenEl.appendChild(paymentBox);
       function updateCartView() {
@@ -491,7 +541,13 @@
         }
         totalLine.textContent = valid ? t('webapp_total') + ': ' + rub(totalRUB) + ' / ' + stars(totalStars) : t('open_price_invalid');
         while (paymentBox.firstChild) { paymentBox.removeChild(paymentBox.firstChild); }
-        if (valid) { renderPayments(totalRUB === 0 && totalStars === 0 && (cart.free_checkout || cart.items.some(function (item) { return item.open_price; }))); }
+        originalLine.className = 'cart-original hidden';
+        if (promo.value.trim()) {
+          if (valid) { requestPreview(false); } else { stopPreview(); promoStatus.textContent = t('open_price_invalid'); }
+        } else {
+          stopPreview(); promoStatus.textContent = '';
+          if (valid) { renderPayments(totalRUB === 0 && totalStars === 0 && (cart.free_checkout || cart.items.some(function (item) { return item.open_price; }))); }
+        }
       }
       function renderPayments(previewFree) {
         if (previewFree) {
@@ -563,9 +619,11 @@
   function checkout(method, promo, btn) {
     if (checkoutPending) { return; }
     checkoutPending = true;
+    if (promoEditor) { promoEditor.disabled = true; }
     priceEditors.forEach(function (input) { input.disabled = true; });
     function enableCheckout() {
       checkoutPending = false;
+      if (promoEditor) { promoEditor.disabled = false; }
       priceEditors.forEach(function (input) { input.disabled = false; });
       btn.disabled = false;
       var buttons = screenEl.querySelectorAll ? screenEl.querySelectorAll('.cart-payments button') : [];
@@ -575,6 +633,7 @@
     var body = { method: method };
     if (promo) { body.promo = promo; }
     flushPriceEditors().then(function () { return mutateCart('POST', '/api/checkout', body); }).then(function (data) {
+      promoDraft = '';
       enableCheckout();
       if (data.free) {
         var message = tf('free_order_done', data.order_id);

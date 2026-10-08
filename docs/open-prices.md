@@ -117,8 +117,11 @@ to replacement archives also apply to free orders.
 
 A mixed cart with any positive-price item must be paid. A free request for a
 positive, foreign, canceled, reviewed or subscription order is denied.
-An authorized 100% promotion can also create a zero-total order; it consumes
-the promotion's usage.
+An authorized promotion can also create a zero-total order; it consumes
+the promotion's usage. Category discounts cover only matching items: a
+100% code cannot grant unrelated paid items. The Mini App checks a code as
+it is entered and updates RUB/Stars totals before checkout. See
+[promo code administration and buyer behavior](promocodes.md).
 
 Tests use real SQLite storage for ruble snapshots, whole-number validation,
 free and paid bot/Mini App checkout, archive delivery, updates, ownership,

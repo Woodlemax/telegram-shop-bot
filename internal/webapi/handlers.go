@@ -212,6 +212,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/cart", s.withAuth(s.handleCartGet))
 	mux.HandleFunc("POST /api/cart", s.withAuth(s.handleCartPost))
 	mux.HandleFunc("DELETE /api/cart", s.withAuth(s.handleCartDelete))
+	mux.HandleFunc("POST /api/cart/promo", s.withAuth(s.handlePromoPreview))
 	mux.HandleFunc("POST /api/checkout", s.withAuth(s.handleCheckout))
 	mux.HandleFunc("GET /api/orders", s.withAuth(s.handleOrders))
 	mux.HandleFunc("GET /api/orders/{id}", s.withAuth(s.handleOrder))
@@ -666,11 +667,22 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request, auth *Au
 		s.writeError(w, http.StatusBadRequest, errKey)
 		return
 	}
+	discounted, err := shop.DiscountCart(view, promo)
+	if err != nil {
+		s.writeError(w, http.StatusBadRequest, "promo_not_found")
+		return
+	}
+	zero := discounted.TotalUSD == 0 && discounted.TotalStars == 0 && discounted.TotalRUB == 0 && discounted.TotalTONNano == 0
+	// Older clients may still ask for Stars after applying a full discount.
+	// Grant free access instead of creating an invalid zero-Star invoice.
+	if zero && subPeriod == 0 && req.Method == storage.PaymentMethodStars {
+		req.Method = storage.PaymentMethodFree
+	}
+	if req.Method == storage.PaymentMethodStars && discounted.TotalStars <= 0 {
+		s.writeError(w, http.StatusBadRequest, "free_order_error")
+		return
+	}
 	if req.Method == storage.PaymentMethodFree {
-		zero := view.TotalUSD == 0 && view.TotalStars == 0 && view.TotalRUB == 0 && view.TotalTONNano == 0
-		if promo != nil && promo.Discount == 100 {
-			zero = true
-		}
 		if !zero || subPeriod > 0 {
 			s.writeError(w, http.StatusBadRequest, "free_order_error")
 			return
@@ -813,6 +825,9 @@ func (s *Server) resolvePromo(ctx context.Context, userID int64, code string, vi
 		}
 		s.logger.Error("webapi: get promo", "code", code, "error", err)
 		return nil, "webapp_err_internal"
+	}
+	if err := storage.ValidatePromo(promo); err != nil {
+		return nil, "promo_not_found"
 	}
 	// Personal promos are invisible to anyone but their owner.
 	if promo.BoundUserID != nil && *promo.BoundUserID != userID {

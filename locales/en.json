@@ -483,5 +483,18 @@
   "admin_telegram_edit": "✏️ Group / channel link",
   "admin_telegram_remove": "Remove Telegram link",
   "admin_telegram_prompt": "Send a Telegram group or channel link for product #%d: https://t.me/name, @name or an invite link. Optional: send - to remove it. Cancel: /cancel. Expires in 15 minutes.",
-  "admin_telegram_invalid": "Enter https://t.me/name, @name or a Telegram invite link. Send - to remove it."
+  "admin_telegram_invalid": "Enter https://t.me/name, @name or a Telegram invite link. Send - to remove it.",
+  "admin_promo_usage": "Usage: /addpromo CODE discount [limit] [days] [category ID]. Discount: integer 1–100. Code: 1–32 characters A–Z, 0–9, _ or -. Limit 0: unlimited; days 0: no expiry.",
+  "admin_promo_category_invalid": "❌ Category not found. See /listcategories.",
+  "admin_promo_exists": "❌ Promo code already exists. Choose another code.",
+  "admin_promo_empty": "No active promo codes.",
+  "admin_promo_unlimited": "unlimited",
+  "admin_promo_no_expiry": "no expiry",
+  "admin_promo_all_categories": "all",
+  "admin_promo_details": "Used: %d / %s; expires: %s; category: %s\n\n",
+  "admin_promo_delete_usage": "Usage: /deletepromo ID — see /listpromos for IDs.",
+  "admin_promo_missing": "❌ No active promo found with this ID.",
+  "webapp_promo_checking": "Checking promo code…",
+  "webapp_promo_applied": "Promo %s applied",
+  "webapp_promo_original": "Before discount"
 }
