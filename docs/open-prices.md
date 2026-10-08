@@ -101,7 +101,7 @@ URL; Contacts edits the message to show the supplied contact text with **Back**
 to the same welcome. These read-only information callbacks are available to
 buyers and admins even in admin-only bot mode. Buyer purchasing callbacks
 remain disabled, and information views do not change the cart, orders or rates.
-The owner's supplied Russian offer, edition 01.10.2026, is bundled at
+The owner's supplied Russian offer, edition 09.10.2026, is bundled at
 `/app/offer.html`, with its source in `docs/public-offer.ru.md`. The local shop
 links to that public page and displays the seller contacts from section 7.
 

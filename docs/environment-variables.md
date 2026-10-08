@@ -146,7 +146,7 @@ Each button stays hidden while its value is blank. Do not use the repository's
 generic purchase terms as the owner's offer. The contacts screen has a Back
 button and requires a private chat; purchasing remains in the Mini App.
 
-The owner's supplied Russian offer (edition 01.10.2026) is bundled at
+The owner's supplied Russian offer (edition 09.10.2026) is bundled at
 `/app/offer.html`; its editable source is `docs/public-offer.ru.md`.
 For the local shop, point SHOP_OFFER_URL at the public HTTPS address for that
 page and set SHOP_CONTACTS_TEXT to its seller name, email and Telegram contact.
