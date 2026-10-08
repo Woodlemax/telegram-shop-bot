@@ -64,8 +64,10 @@ focus preservation, navigation, quantity/removal, save failures and checkout.
 ## Buyers use the Mini App
 
 `BOT_ADMIN_ONLY=true` keeps bot commands and callbacks for private
-administration. `/start` and `/help` show the administrator panel to admins;
-other buyers receive a short message and an **Open shop** Mini App button.
+administration. In private chats, `/start` sends the WoodleWing welcome and an
+**Open shop** Mini App button to both buyers and admins. `/admin` (or `/help`)
+opens the administrator panel for admins. Other buyer messages receive a short
+Mini App entry message with the same launch button.
 Buyer catalog, cart, order, payment, file, profile, referral and review commands
 and old callbacks are stubbed, including for admins acting as buyers. Inline
 catalog search returns no results. The public command list only advertises

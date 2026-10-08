@@ -37,6 +37,7 @@
   "webapp_open_price_hint": "Precio libre: desde 0 RUB.",
   "webapp_price_saving": "Guardando…",
   "webapp_price_save_failed": "No se pudo guardar el precio. Cámbialo o reintenta la acción.",
+  "bot_start_welcome": "✈️ ¡Bienvenido a WoodleWing!\n\nModelos de aviones para impresión 3D.\nExplora modelos, realiza pedidos y descarga tus archivos en la Mini App.\n\nPulsa el botón de abajo para abrir la tienda.",
   "bot_miniapp_only": "Las compras, pedidos y descargas están en la Mini App. Abre la tienda con el botón de abajo o Shop.",
   "bot_open_shop": "Abrir tienda",
   "open_price_hint": "Precio libre: desde 0 RUB. Elige un importe en rublos enteros.",

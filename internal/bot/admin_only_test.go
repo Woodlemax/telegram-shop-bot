@@ -57,8 +57,8 @@ func TestAdminOnlyRoutesBuyersToMiniApp(t *testing.T) {
 
 func TestAdminOnlyPreservesPrivateAdministration(t *testing.T) {
 	e := newE2EEnvWithConfig(t, func(c *config.Config) { c.BotAdminOnly = true; c.USDToRUBRate = 100 })
-	if !buyerHasAction(t, e.cmd(e2eAdminID, "/start", "ru"), "admin:rubrate") {
-		t.Fatal("admin start missing panel")
+	if !buyerHasAction(t, e.cmd(e2eAdminID, "/admin", "ru"), "admin:rubrate") {
+		t.Fatal("admin command missing panel")
 	}
 	e.cb(e2eAdminID, "admin:rubrate:edit", "ru")
 	e.text(e2eAdminID, "200", "ru")
@@ -136,5 +136,53 @@ func TestAdminOnlyMiniAppPaymentAndArchive(t *testing.T) {
 	e.bot.registerCommands()
 	if err := json.Unmarshal([]byte(requireCall(t, e.tg.since(0), "setMyCommands", "").Params.Get("commands")), &commands); err != nil || len(commands) != 2 {
 		t.Fatal("invalid command menu", err)
+	}
+}
+
+func TestMiniAppStartWelcomeForBuyerAndAdmin(t *testing.T) {
+	e := newE2EEnvWithConfig(t, func(c *config.Config) { c.BotAdminOnly = true; c.WebAppURL = "https://shop.example/app/" })
+	for _, user := range []int64{1914, e2eAdminID} {
+		for _, lang := range []string{"ru", "en"} {
+			for _, command := range []string{"/start", "/start ref_unused"} {
+				calls := e.cmd(user, command, lang)
+				if len(calls) != 1 {
+					t.Fatal("welcome also sent old menu/admin panel", calls)
+				}
+				message := requireCall(t, calls, "sendMessage", "")
+				if message.Params.Get("text") != e.bot.t(lang, "bot_start_welcome") || !strings.Contains(message.Params.Get("text"), "WoodleWing") {
+					t.Fatal("welcome missing", calls)
+				}
+				var markup struct {
+					Rows [][]struct {
+						Text   string `json:"text"`
+						WebApp struct {
+							URL string `json:"url"`
+						} `json:"web_app"`
+						Callback string `json:"callback_data"`
+					} `json:"inline_keyboard"`
+				}
+				if err := json.Unmarshal([]byte(message.markup()), &markup); err != nil || len(markup.Rows) != 1 || len(markup.Rows[0]) != 1 {
+					t.Fatal("launch button missing", err)
+				}
+				button := markup.Rows[0][0]
+				if button.Text != e.bot.t(lang, "bot_open_shop") || button.WebApp.URL != e.bot.cfg.WebAppURL || button.Callback != "" {
+					t.Fatal("button does not open Mini App", button)
+				}
+			}
+		}
+	}
+	if !buyerHasAction(t, e.cmd(e2eAdminID, "/admin", "ru"), "admin:rubrate") {
+		t.Fatal("admin access lost")
+	}
+	if !buyerHasAction(t, e.cmd(e2eAdminID, "/help", "ru"), "admin:rubrate") {
+		t.Fatal("admin help lost")
+	}
+	if e.qInt(`SELECT COUNT(*) FROM orders`) != 0 || e.qInt(`SELECT COUNT(*) FROM cart_items`) != 0 {
+		t.Fatal("start mutated buyer purchases")
+	}
+	// Telegram permits web_app buttons in private chats only.
+	group := e.do(tgbotapi.Update{Message: &tgbotapi.Message{Chat: &tgbotapi.Chat{ID: -201, Type: "group"}, From: &tgbotapi.User{ID: 1914, LanguageCode: "ru"}, Text: "/start", Entities: []tgbotapi.MessageEntity{{Offset: 0, Length: 6, Type: "bot_command"}}}})
+	if requireCall(t, group, "sendMessage", "").markup() != "" {
+		t.Fatal("group received unsupported launch button")
 	}
 }

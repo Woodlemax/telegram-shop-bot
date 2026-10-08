@@ -14,9 +14,17 @@ func (b *Bot) routeAdminOnlyMessage(msg *tgbotapi.Message) bool {
 	if msg.From == nil || msg.Chat == nil {
 		return true
 	}
+	if msg.Command() == "start" {
+		if msg.Chat.ID == msg.From.ID {
+			b.sendMiniAppMessage(msg, "bot_start_welcome")
+		} else {
+			b.sendMiniAppEntry(msg)
+		}
+		return true
+	}
 	if b.isAdmin(msg.From.ID) && msg.Chat.ID == msg.From.ID {
 		switch msg.Command() {
-		case "start", "help":
+		case "help":
 			b.handleAdmin(msg)
 			return true
 		case "", "skip", "done", "cancel", "admin", "rubrate", "setarchive",
@@ -36,7 +44,11 @@ func adminCallback(data string) bool {
 }
 
 func (b *Bot) sendMiniAppEntry(msg *tgbotapi.Message) {
-	params := tgbotapi.Params{"chat_id": strconv.FormatInt(msg.Chat.ID, 10), "text": b.t(msg.From.LanguageCode, "bot_miniapp_only")}
+	b.sendMiniAppMessage(msg, "bot_miniapp_only")
+}
+
+func (b *Bot) sendMiniAppMessage(msg *tgbotapi.Message, textKey string) {
+	params := tgbotapi.Params{"chat_id": strconv.FormatInt(msg.Chat.ID, 10), "text": b.t(msg.From.LanguageCode, textKey)}
 	if msg.Chat.ID == msg.From.ID && b.cfg.WebAppURL != "" {
 		markup, err := json.Marshal(map[string]any{"inline_keyboard": [][]any{{map[string]any{
 			"text": b.t(msg.From.LanguageCode, "bot_open_shop"), "web_app": map[string]string{"url": b.cfg.WebAppURL},

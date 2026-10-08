@@ -37,6 +37,7 @@
   "webapp_open_price_hint": "自由定价：从 0 卢布起。",
   "webapp_price_saving": "保存中…",
   "webapp_price_save_failed": "无法保存价格。请更改价格或重试操作。",
+  "bot_start_welcome": "✈️ 欢迎来到 WoodleWing！\n\n适用于 3D 打印的飞机模型。\n在 Mini App 中浏览模型、下单并下载您的文件。\n\n点击下方按钮打开商店。",
   "bot_miniapp_only": "购买、订单和下载可在 Mini App 中使用。请通过下方按钮或 Shop 按钮打开商店。",
   "bot_open_shop": "打开商店",
   "open_price_hint": "自由定价：从 0 卢布起。可输入整数卢布金额。",
