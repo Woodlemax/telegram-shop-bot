@@ -123,6 +123,8 @@ func (b *Bot) routeMessage(ctx context.Context, msg *tgbotapi.Message) {
 		b.handleRUBRate(ctx, msg)
 	case "admin":
 		b.handleAdmin(msg)
+	case "listproduct":
+		b.handleListProduct(ctx, msg)
 	case "addproduct":
 		b.handleAddProduct(ctx, msg)
 	case "editproduct":

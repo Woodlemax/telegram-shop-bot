@@ -28,7 +28,7 @@ func (b *Bot) routeAdminOnlyMessage(msg *tgbotapi.Message) bool {
 			b.handleAdmin(msg)
 			return true
 		case "", "skip", "done", "cancel", "admin", "rubrate", "setarchive",
-			"addproduct", "editproduct", "deleteproduct", "orders_all", "order", "setdelivered",
+			"addproduct", "editproduct", "deleteproduct", "listproduct", "orders_all", "order", "setdelivered",
 			"reviews", "addcategory", "editcategory", "deletecategory", "listcategories",
 			"addpromo", "listpromos", "deletepromo", "analytics", "payreview", "refund",
 			"paystatus", "setbalance", "export_orders", "btnstyle":

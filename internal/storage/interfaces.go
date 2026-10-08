@@ -10,6 +10,11 @@ type UserStore interface {
 	GetByTelegramID(ctx context.Context, telegramID int64) (*User, error)
 }
 
+// AdminProductLister lists inventory without the public catalog filters.
+type AdminProductLister interface {
+	ListProductsAdmin(ctx context.Context, limit, offset int) ([]Product, int, error)
+}
+
 type ProductStore interface {
 	GetCategories(ctx context.Context) ([]Category, error)
 	GetProductsByCategory(ctx context.Context, categoryID int64) ([]Product, error)

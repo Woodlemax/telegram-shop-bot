@@ -251,7 +251,7 @@
   "admin_export_bad_date": "❗ Ungültiges Datum: „%s“. Format: YYYY-MM-DD, z. B.: /export_orders 2026-01-01 2026-02-01",
   "admin_export_failed": "❌ Bestellungen konnten nicht exportiert werden.",
   "admin_export_caption": "Bestellexport: %d Zeilen",
-  "admin_panel": "🔧 Admin-Panel\n\nProdukte:\n/addproduct — Produkt hinzufügen\n/editproduct <id> — Produkt bearbeiten\n/deleteproduct <id> — Produkt löschen\n\nKategorien:\n/addcategory <emoji> <Name> — Kategorie erstellen\n/editcategory <id> name|emoji <Wert> — Feld ändern\n/deletecategory <id> — Kategorie löschen\n/listcategories — Kategorienliste mit IDs\n\nBestellungen:\n/orders_all [Status] — Alle Bestellungen\n/order <id> — Bestellkarte\n/setdelivered <id> — Bestellung als geliefert markieren\n/reviews — Neueste Bewertungen (Moderation)\n/export_orders — Bestellungen als CSV exportieren\n/payreview — Zahlungsprüfungswarteschlange\n/paystatus — Status der Zahlungsanbieter\n/refund <bestell_id> [betrag] — Bezahlte Bestellung erstatten (Doppelbestätigung)\n/setbalance <user_id> <±betrag> [grund] — Nutzerguthaben anpassen\n\nPromo-Codes:\n/addpromo <Code> <Rabatt%> [max_Nutzungen] [Tage] [category_id | products=ID,ID] — Promo-Code erstellen\n/listpromos — Aktive Promo-Codes\n/deletepromo <id> — Promo-Code deaktivieren\n\nDesign:\n/btnstyle — Buttonfarben anpassen\n\nAnalytik:\n/analytics — Verkaufsstatistik\n\n/rubrate [RUB pro USD] — Rubelkurs",
+  "admin_panel": "🔧 Admin-Panel\n\nProdukte:\n/listproduct [Seite] — Produkte mit IDs auflisten\n/addproduct — Produkt hinzufügen\n/editproduct <id> — Produkt bearbeiten\n/deleteproduct <id> — Produkt löschen\n\nKategorien:\n/addcategory <emoji> <Name> — Kategorie erstellen\n/editcategory <id> name|emoji <Wert> — Feld ändern\n/deletecategory <id> — Kategorie löschen\n/listcategories — Kategorienliste mit IDs\n\nBestellungen:\n/orders_all [Status] — Alle Bestellungen\n/order <id> — Bestellkarte\n/setdelivered <id> — Bestellung als geliefert markieren\n/reviews — Neueste Bewertungen (Moderation)\n/export_orders — Bestellungen als CSV exportieren\n/payreview — Zahlungsprüfungswarteschlange\n/paystatus — Status der Zahlungsanbieter\n/refund <bestell_id> [betrag] — Bezahlte Bestellung erstatten (Doppelbestätigung)\n/setbalance <user_id> <±betrag> [grund] — Nutzerguthaben anpassen\n\nPromo-Codes:\n/addpromo <Code> <Rabatt%> [max_Nutzungen] [Tage] [category_id | products=ID,ID] — Promo-Code erstellen\n/listpromos — Aktive Promo-Codes\n/deletepromo <id> — Promo-Code deaktivieren\n\nDesign:\n/btnstyle — Buttonfarben anpassen\n\nAnalytik:\n/analytics — Verkaufsstatistik\n\n/rubrate [RUB pro USD] — Rubelkurs",
   "admin_delivered_ok": "✅ Bestellung #%d als geliefert markiert.",
   "admin_product_create_failed": "❌ Produkt konnte nicht erstellt werden.",
   "admin_add_product_name": "📝 Gib den Produktnamen ein:",
@@ -499,5 +499,10 @@
   "webapp_promo_original": "Vor Rabatt",
   "admin_promo_product_invalid": "❌ Produkt nicht gefunden. Prüfe die IDs in der Produktkarte für Administratoren.",
   "admin_promo_product_details": "Verwendet: %d / %s; Ablauf: %s; Produkt-IDs: %s\n\n",
-  "promo_product_mismatch": "❌ Dein Warenkorb enthält keine für diesen Promo-Code gültigen Produkte."
+  "promo_product_mismatch": "❌ Dein Warenkorb enthält keine für diesen Promo-Code gültigen Produkte.",
+  "admin_product_list_title": "📦 Produkte: %d; Seite %d / %d\nBearbeiten: /editproduct ID\nWeitere Seiten: /listproduct NUMMER\n\n",
+  "admin_product_list_empty": "Noch keine Produkte.",
+  "admin_product_list_usage": "Verwendung: /listproduct [Seitennummer].",
+  "admin_product_list_page_missing": "Seite nicht gefunden. Beginne mit /listproduct.",
+  "admin_product_list_inactive": "(inaktiv)"
 }

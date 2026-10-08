@@ -251,7 +251,7 @@
   "admin_export_bad_date": "❗ Неверная дата: «%s». Формат: YYYY-MM-DD, например: /export_orders 2026-01-01 2026-02-01",
   "admin_export_failed": "❌ Не удалось выгрузить заказы.",
   "admin_export_caption": "Экспорт заказов: %d строк",
-  "admin_panel": "🔧 Панель администратора\n\nТовары:\n/addproduct — Добавить товар\n/editproduct <id> — Редактировать товар\n/deleteproduct <id> — Удалить товар\n\nКатегории:\n/addcategory <emoji> <название> — Создать категорию\n/editcategory <id> name|emoji <значение> — Изменить поле\n/deletecategory <id> — Удалить категорию\n/listcategories — Список категорий с ID\n\nЗаказы:\n/orders_all [статус] — Все заказы\n/order <id> — Карточка заказа\n/setdelivered <id> — Отметить заказ доставленным\n/reviews — Последние отзывы (модерация)\n/export_orders — Экспорт заказов в CSV\n/payreview — Очередь проверки платежей\n/paystatus — Статус платёжных провайдеров\n/refund <id_заказа> [сумма] — Возврат оплаченного заказа (двойное подтверждение)\n/setbalance <user_id> <±сумма> [причина] — Изменить баланс пользователя\n\nПромокоды:\n/addpromo <код> <скидка%> [макс_использований] [дней] [category_id | products=ID,ID] — Создать промокод\n/listpromos — Активные промокоды\n/deletepromo <id> — Деактивировать промокод\n\nДизайн:\n/btnstyle — Настроить цвета кнопок\n\nАналитика:\n/analytics — Статистика продаж\n\n/rubrate [рублей за USD] — Курс рубля",
+  "admin_panel": "🔧 Панель администратора\n\nТовары:\n/listproduct [страница] — Список товаров с ID\n/addproduct — Добавить товар\n/editproduct <id> — Редактировать товар\n/deleteproduct <id> — Удалить товар\n\nКатегории:\n/addcategory <emoji> <название> — Создать категорию\n/editcategory <id> name|emoji <значение> — Изменить поле\n/deletecategory <id> — Удалить категорию\n/listcategories — Список категорий с ID\n\nЗаказы:\n/orders_all [статус] — Все заказы\n/order <id> — Карточка заказа\n/setdelivered <id> — Отметить заказ доставленным\n/reviews — Последние отзывы (модерация)\n/export_orders — Экспорт заказов в CSV\n/payreview — Очередь проверки платежей\n/paystatus — Статус платёжных провайдеров\n/refund <id_заказа> [сумма] — Возврат оплаченного заказа (двойное подтверждение)\n/setbalance <user_id> <±сумма> [причина] — Изменить баланс пользователя\n\nПромокоды:\n/addpromo <код> <скидка%> [макс_использований] [дней] [category_id | products=ID,ID] — Создать промокод\n/listpromos — Активные промокоды\n/deletepromo <id> — Деактивировать промокод\n\nДизайн:\n/btnstyle — Настроить цвета кнопок\n\nАналитика:\n/analytics — Статистика продаж\n\n/rubrate [рублей за USD] — Курс рубля",
   "admin_delivered_ok": "✅ Заказ #%d отмечен как доставленный.",
   "admin_product_create_failed": "❌ Не удалось создать товар.",
   "admin_add_product_name": "📝 Введите название товара:",
@@ -499,5 +499,10 @@
   "webapp_promo_original": "Без скидки",
   "admin_promo_product_invalid": "❌ Товар не найден. Проверьте ID в админской карточке товара.",
   "admin_promo_product_details": "Использовано: %d / %s; срок: %s; товары (ID): %s\n\n",
-  "promo_product_mismatch": "❌ В корзине нет товаров, на которые действует этот промокод."
+  "promo_product_mismatch": "❌ В корзине нет товаров, на которые действует этот промокод.",
+  "admin_product_list_title": "📦 Товары: %d; страница %d / %d\nРедактирование: /editproduct ID\nДругие страницы: /listproduct НОМЕР\n\n",
+  "admin_product_list_empty": "Товаров пока нет.",
+  "admin_product_list_usage": "Использование: /listproduct [номер страницы].",
+  "admin_product_list_page_missing": "Страница не найдена. Начните с /listproduct.",
+  "admin_product_list_inactive": "(неактивен)"
 }

@@ -251,7 +251,7 @@
   "admin_export_bad_date": "❗ Fecha no válida: «%s». Formato: YYYY-MM-DD, p. ej.: /export_orders 2026-01-01 2026-02-01",
   "admin_export_failed": "❌ No se pudieron exportar los pedidos.",
   "admin_export_caption": "Exportación de pedidos: %d filas",
-  "admin_panel": "🔧 Panel de administración\n\nProductos:\n/addproduct — Añadir producto\n/editproduct <id> — Editar producto\n/deleteproduct <id> — Eliminar producto\n\nCategorías:\n/addcategory <emoji> <nombre> — Crear categoría\n/editcategory <id> name|emoji <valor> — Cambiar campo\n/deletecategory <id> — Eliminar categoría\n/listcategories — Lista de categorías con ID\n\nPedidos:\n/orders_all [estado] — Todos los pedidos\n/order <id> — Ficha del pedido\n/setdelivered <id> — Marcar pedido como entregado\n/reviews — Últimas reseñas (moderación)\n/export_orders — Exportar pedidos a CSV\n/payreview — Cola de revisión de pagos\n/paystatus — Estado de los proveedores de pago\n/refund <id_pedido> [importe] — Reembolsar un pedido pagado (confirmación doble)\n/setbalance <user_id> <±cantidad> [motivo] — Ajustar saldo del usuario\n\nCódigos promocionales:\n/addpromo <código> <descuento%> [usos_máx] [días] [category_id | products=ID,ID] — Crear código promocional\n/listpromos — Códigos promocionales activos\n/deletepromo <id> — Desactivar código promocional\n\nDiseño:\n/btnstyle — Configurar colores de botones\n\nAnalítica:\n/analytics — Estadísticas de ventas\n\n/rubrate [RUB por USD] — Tipo de cambio RUB",
+  "admin_panel": "🔧 Panel de administración\n\nProductos:\n/listproduct [página] — Lista de productos con ID\n/addproduct — Añadir producto\n/editproduct <id> — Editar producto\n/deleteproduct <id> — Eliminar producto\n\nCategorías:\n/addcategory <emoji> <nombre> — Crear categoría\n/editcategory <id> name|emoji <valor> — Cambiar campo\n/deletecategory <id> — Eliminar categoría\n/listcategories — Lista de categorías con ID\n\nPedidos:\n/orders_all [estado] — Todos los pedidos\n/order <id> — Ficha del pedido\n/setdelivered <id> — Marcar pedido como entregado\n/reviews — Últimas reseñas (moderación)\n/export_orders — Exportar pedidos a CSV\n/payreview — Cola de revisión de pagos\n/paystatus — Estado de los proveedores de pago\n/refund <id_pedido> [importe] — Reembolsar un pedido pagado (confirmación doble)\n/setbalance <user_id> <±cantidad> [motivo] — Ajustar saldo del usuario\n\nCódigos promocionales:\n/addpromo <código> <descuento%> [usos_máx] [días] [category_id | products=ID,ID] — Crear código promocional\n/listpromos — Códigos promocionales activos\n/deletepromo <id> — Desactivar código promocional\n\nDiseño:\n/btnstyle — Configurar colores de botones\n\nAnalítica:\n/analytics — Estadísticas de ventas\n\n/rubrate [RUB por USD] — Tipo de cambio RUB",
   "admin_delivered_ok": "✅ Pedido #%d marcado como entregado.",
   "admin_product_create_failed": "❌ No se pudo crear el producto.",
   "admin_add_product_name": "📝 Introduce el nombre del producto:",
@@ -499,5 +499,10 @@
   "webapp_promo_original": "Antes del descuento",
   "admin_promo_product_invalid": "❌ Producto no encontrado. Comprueba los ID en la ficha de administración del producto.",
   "admin_promo_product_details": "Usos: %d / %s; vence: %s; ID de productos: %s\n\n",
-  "promo_product_mismatch": "❌ El carrito no contiene productos válidos para este código promocional."
+  "promo_product_mismatch": "❌ El carrito no contiene productos válidos para este código promocional.",
+  "admin_product_list_title": "📦 Productos: %d; página %d / %d\nEditar: /editproduct ID\nOtras páginas: /listproduct NÚMERO\n\n",
+  "admin_product_list_empty": "Todavía no hay productos.",
+  "admin_product_list_usage": "Uso: /listproduct [número de página].",
+  "admin_product_list_page_missing": "Página no encontrada. Empieza con /listproduct.",
+  "admin_product_list_inactive": "(inactivo)"
 }

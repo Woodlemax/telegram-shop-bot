@@ -260,3 +260,29 @@ func (s *SQLProductStore) GetCategory(ctx context.Context, id int64) (*Category,
 	}
 	return &c, nil
 }
+
+// ListProductsAdmin includes inactive and sold-out products, even in hidden categories.
+// Only inventory labels are read; archive file identifiers are not exposed.
+func (s *SQLProductStore) ListProductsAdmin(ctx context.Context, limit, offset int) ([]Product, int, error) {
+	if limit < 1 || limit > 100 || offset < 0 {
+		return nil, 0, fmt.Errorf("product store: invalid inventory page")
+	}
+	var total int
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM products`).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("product store: count inventory: %w", err)
+	}
+	rows, err := s.db.QueryContext(ctx, `SELECT id,name,is_active FROM products ORDER BY id LIMIT ? OFFSET ?`, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("product store: list inventory: %w", err)
+	}
+	defer rows.Close()
+	var products []Product
+	for rows.Next() {
+		var p Product
+		if err := rows.Scan(&p.ID, &p.Name, &p.IsActive); err != nil {
+			return nil, 0, fmt.Errorf("product store: scan inventory: %w", err)
+		}
+		products = append(products, p)
+	}
+	return products, total, rows.Err()
+}

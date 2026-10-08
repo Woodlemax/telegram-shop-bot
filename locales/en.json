@@ -251,7 +251,7 @@
   "admin_export_bad_date": "❗ Invalid date: \"%s\". Format: YYYY-MM-DD, e.g.: /export_orders 2026-01-01 2026-02-01",
   "admin_export_failed": "❌ Failed to export orders.",
   "admin_export_caption": "Order export: %d rows",
-  "admin_panel": "🔧 Admin panel\n\nProducts:\n/addproduct — Add product\n/editproduct <id> — Edit product\n/deleteproduct <id> — Delete product\n\nCategories:\n/addcategory <emoji> <name> — Create category\n/editcategory <id> name|emoji <value> — Change field\n/deletecategory <id> — Delete category\n/listcategories — Category list with IDs\n\nOrders:\n/orders_all [status] — All orders\n/order <id> — Order card\n/setdelivered <id> — Mark order as delivered\n/reviews — Latest reviews (moderation)\n/export_orders — Export orders to CSV\n/payreview — Payment review queue\n/paystatus — Payment provider status\n/refund <order_id> [amount] — Refund a paid order (two-tap confirm)\n/setbalance <user_id> <±amount> [reason] — Adjust user balance\n\nPromo codes:\n/addpromo <code> <discount%> [max_uses] [days] [category_id | products=ID,ID] — Create promo code\n/listpromos — Active promo codes\n/deletepromo <id> — Deactivate promo code\n\nDesign:\n/btnstyle — Configure button colors\n\nAnalytics:\n/analytics — Sales statistics\n\n/rubrate [RUB per USD] — RUB exchange rate",
+  "admin_panel": "🔧 Admin panel\n\nProducts:\n/listproduct [page] — List products with IDs\n/addproduct — Add product\n/editproduct <id> — Edit product\n/deleteproduct <id> — Delete product\n\nCategories:\n/addcategory <emoji> <name> — Create category\n/editcategory <id> name|emoji <value> — Change field\n/deletecategory <id> — Delete category\n/listcategories — Category list with IDs\n\nOrders:\n/orders_all [status] — All orders\n/order <id> — Order card\n/setdelivered <id> — Mark order as delivered\n/reviews — Latest reviews (moderation)\n/export_orders — Export orders to CSV\n/payreview — Payment review queue\n/paystatus — Payment provider status\n/refund <order_id> [amount] — Refund a paid order (two-tap confirm)\n/setbalance <user_id> <±amount> [reason] — Adjust user balance\n\nPromo codes:\n/addpromo <code> <discount%> [max_uses] [days] [category_id | products=ID,ID] — Create promo code\n/listpromos — Active promo codes\n/deletepromo <id> — Deactivate promo code\n\nDesign:\n/btnstyle — Configure button colors\n\nAnalytics:\n/analytics — Sales statistics\n\n/rubrate [RUB per USD] — RUB exchange rate",
   "admin_delivered_ok": "✅ Order #%d marked as delivered.",
   "admin_product_create_failed": "❌ Failed to create product.",
   "admin_add_product_name": "📝 Enter the product name:",
@@ -499,5 +499,10 @@
   "webapp_promo_original": "Before discount",
   "admin_promo_product_invalid": "❌ Product not found. Check IDs in the administrator product card.",
   "admin_promo_product_details": "Used: %d / %s; expires: %s; product IDs: %s\n\n",
-  "promo_product_mismatch": "❌ Your cart has no products eligible for this promo code."
+  "promo_product_mismatch": "❌ Your cart has no products eligible for this promo code.",
+  "admin_product_list_title": "📦 Products: %d; page %d / %d\nEdit: /editproduct ID\nOther pages: /listproduct NUMBER\n\n",
+  "admin_product_list_empty": "No products yet.",
+  "admin_product_list_usage": "Usage: /listproduct [page number].",
+  "admin_product_list_page_missing": "Page not found. Start with /listproduct.",
+  "admin_product_list_inactive": "(inactive)"
 }

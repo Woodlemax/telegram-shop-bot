@@ -227,6 +227,7 @@ docker compose logs -f bot
 | Command | Description |
 |---|---|
 | `/admin` | Admin panel |
+| `/listproduct [page]` | List all products with IDs (private administrator chat; includes inactive and sold-out items) |
 | `/addproduct` | Add a product (step-by-step wizard, photos & subscriptions supported) |
 | `/editproduct <id> <field> <value>` | Edit a product |
 | `/deleteproduct <id>` | Delete a product |

@@ -76,6 +76,7 @@ type Bot struct {
 	order           *shop.OrderService
 	users           storage.UserStore
 	products        storage.ProductStore
+	adminProducts   storage.AdminProductLister
 	promos          storage.PromoStore
 	analytics       storage.AnalyticsStore
 	photos          storage.ProductPhotoStore
@@ -211,6 +212,7 @@ func NewWithAPI(cfg *config.Config, api *tgbotapi.BotAPI, db *storage.DB, metric
 		order:           shop.NewOrderService(os, cs, cachedPS, paymentDeps, logger, exchangeSvc),
 		users:           us,
 		products:        cachedPS,
+		adminProducts:   ps,
 		promos:          promoStore,
 		analytics:       analyticsStore,
 		referrals:       referralStore,
