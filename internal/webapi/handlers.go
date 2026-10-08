@@ -538,6 +538,8 @@ func (s *Server) handleCartPost(w http.ResponseWriter, r *http.Request, auth *Au
 
 	if err := s.deps.Cart.ChangeQuantity(r.Context(), auth.User.ID, req.ProductID, delta); err != nil {
 		switch {
+		case errors.Is(err, storage.ErrNotFound):
+			s.writeError(w, http.StatusConflict, "webapp_err_not_found")
 		case errors.Is(err, storage.ErrSingleItemLimit):
 			s.writeError(w, http.StatusConflict, "product_single_in_cart")
 		case errors.Is(err, storage.ErrProductOutOfStock):
@@ -699,6 +701,8 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request, auth *Au
 	if err != nil {
 		var stockErr *shop.ErrInsufficientStock
 		switch {
+		case errors.Is(err, storage.ErrNotFound):
+			s.writeError(w, http.StatusConflict, "webapp_err_not_found")
 		case errors.Is(err, storage.ErrSingleItemLimit):
 			s.writeError(w, http.StatusConflict, "product_single_in_cart")
 		case errors.As(err, &stockErr):

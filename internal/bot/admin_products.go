@@ -305,13 +305,21 @@ func (b *Bot) handleEditProductField(ctx context.Context, msg *tgbotapi.Message,
 }
 
 func (b *Bot) handleDeleteProduct(ctx context.Context, msg *tgbotapi.Message) {
-	if !b.isAdmin(msg.From.ID) {
+	if !b.isAdmin(msg.From.ID) || msg.Chat.ID != msg.From.ID {
 		return
 	}
 	lang := msg.From.LanguageCode
 	id, err := strconv.ParseInt(strings.TrimSpace(msg.CommandArguments()), 10, 64)
-	if err != nil {
+	if err != nil || id <= 0 {
 		b.send(tgbotapi.NewMessage(msg.Chat.ID, b.t(lang, "admin_usage_deleteproduct")))
+		return
+	}
+	if _, err := b.products.GetProduct(ctx, id); err != nil {
+		if err == storage.ErrNotFound {
+			b.send(tgbotapi.NewMessage(msg.Chat.ID, b.t(lang, "admin_product_not_found")))
+		} else {
+			b.send(tgbotapi.NewMessage(msg.Chat.ID, b.t(lang, "admin_product_delete_failed")))
+		}
 		return
 	}
 	if err := b.products.DeleteProduct(ctx, id); err != nil {

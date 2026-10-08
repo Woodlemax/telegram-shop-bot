@@ -50,7 +50,7 @@ func (s *DigitalArchiveStore) Add(ctx context.Context, productID int64, fileID, 
         single_in_cart=CASE WHEN is_digital=0 THEN 1 ELSE single_in_cart END,
         stock=CASE WHEN is_digital=0 THEN MAX(stock,1) ELSE stock END,
         is_digital=1, digital_content=''
-        WHERE id=? AND COALESCE(sub_period_days,0)=0`, productID)
+        WHERE id=? AND deleted_at IS NULL AND COALESCE(sub_period_days,0)=0`, productID)
 	if err != nil {
 		return 0, err
 	}
@@ -83,12 +83,21 @@ func (s *DigitalArchiveStore) Add(ctx context.Context, productID int64, fileID, 
 
 func (s *DigitalArchiveStore) BeginUpload(ctx context.Context, adminID, chatID, productID int64) error {
 	var id int64
-	if err := s.db.QueryRowContext(ctx, `SELECT id FROM products WHERE id=? AND COALESCE(sub_period_days,0)=0`, productID).Scan(&id); err != nil {
+	if err := s.db.QueryRowContext(ctx, `SELECT id FROM products WHERE id=? AND deleted_at IS NULL AND COALESCE(sub_period_days,0)=0`, productID).Scan(&id); err != nil {
 		return ErrNotFound
 	}
-	_, err := s.db.ExecContext(ctx, `INSERT INTO digital_uploads(admin_id,chat_id,product_id,expires_at) VALUES(?,?,?,?)
-        ON CONFLICT(admin_id) DO UPDATE SET chat_id=excluded.chat_id,product_id=excluded.product_id,expires_at=excluded.expires_at`, adminID, chatID, productID, time.Now().Add(15*time.Minute).Unix())
-	return err
+	res, err := s.db.ExecContext(ctx, `INSERT INTO digital_uploads(admin_id,chat_id,product_id,expires_at)
+ SELECT ?,?,id,? FROM products WHERE id=? AND deleted_at IS NULL AND COALESCE(sub_period_days,0)=0
+ ON CONFLICT(admin_id) DO UPDATE SET chat_id=excluded.chat_id,product_id=excluded.product_id,expires_at=excluded.expires_at`, adminID, chatID, time.Now().Add(15*time.Minute).Unix(), productID)
+	if err != nil {
+		return err
+	}
+	if n, err := res.RowsAffected(); err != nil {
+		return err
+	} else if n == 0 {
+		return ErrNotFound
+	}
+	return nil
 }
 
 func (s *DigitalArchiveStore) PendingUpload(ctx context.Context, adminID, chatID int64) (int64, error) {
@@ -109,12 +118,16 @@ func (s *DigitalArchiveStore) CancelUpload(ctx context.Context, adminID int64) e
 // Replacing the product archive also updates these rows for existing purchases.
 func snapshotDigitalArchive(ctx context.Context, tx *sql.Tx, orderID int64, item OrderItem) error {
 	var digital, single bool
-	err := tx.QueryRowContext(ctx, `SELECT is_digital,single_in_cart FROM products WHERE id=?`, item.ProductID).Scan(&digital, &single)
+	var deletedAt sql.NullString
+	err := tx.QueryRowContext(ctx, `SELECT is_digital,single_in_cart,deleted_at FROM products WHERE id=?`, item.ProductID).Scan(&digital, &single, &deletedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil
 	}
 	if err != nil {
 		return err
+	}
+	if deletedAt.Valid {
+		return ErrNotFound
 	}
 	if item.Quantity <= 0 || (single && item.Quantity > 1) {
 		return ErrSingleItemLimit

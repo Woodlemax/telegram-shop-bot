@@ -2,6 +2,7 @@ package shop
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"shop_bot/internal/service"
@@ -81,6 +82,9 @@ func (s *CartService) Get(ctx context.Context, userID int64) (*CartView, error) 
 
 	for _, ci := range items {
 		p, err := s.products.GetProduct(ctx, ci.ProductID)
+		if errors.Is(err, storage.ErrNotFound) {
+			continue
+		}
 		if err != nil {
 			return nil, fmt.Errorf("cart service: get product %d: %w", ci.ProductID, err)
 		}

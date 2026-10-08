@@ -200,7 +200,7 @@ docker compose logs -f bot
 | `/admin` | Панель администратора |
 | `/addproduct` | Добавить товар (пошаговый мастер, фото и подписки поддерживаются) |
 | `/editproduct <id> <поле> <значение>` | Редактировать товар |
-| `/deleteproduct <id>` | Удалить товар |
+| `/deleteproduct <id>` | Удалить товар из каталога и всех корзин. Старые заказы и скачивание купленных файлов сохраняются |
 | `/addcategory <название>` | Добавить категорию |
 | `/editcategory` / `/deletecategory` / `/listcategories` | Управление категориями |
 | `/addpromo` / `/listpromos` / `/deletepromo` | Управление промокодами |

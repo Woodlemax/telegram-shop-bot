@@ -13,7 +13,7 @@ func (s *SQLCartStore) SetPrice(ctx context.Context, userID, productID int64, am
 		return ErrInvalidMoney
 	}
 	res, err := s.db.ExecContext(ctx, `INSERT INTO cart_items(user_id,product_id,quantity,custom_price)
- SELECT ?,id,1,? FROM products WHERE id=? AND open_price=1 AND is_active=1 AND sub_period_days=0 AND (infinite_stock=1 OR stock>0)
+ SELECT ?,id,1,? FROM products WHERE id=? AND deleted_at IS NULL AND open_price=1 AND is_active=1 AND sub_period_days=0 AND (infinite_stock=1 OR stock>0)
  ON CONFLICT(user_id,product_id) DO UPDATE SET custom_price=excluded.custom_price, quantity=CASE WHEN EXISTS(SELECT 1 FROM products WHERE id=excluded.product_id AND single_in_cart=1) THEN 1 ELSE cart_items.quantity END`, userID, amount, productID)
 	if err != nil {
 		return err
@@ -29,9 +29,18 @@ func (s *SQLCartStore) SetPrice(ctx context.Context, userID, productID int64, am
 }
 
 func (s *SQLCartStore) BeginPriceInput(ctx context.Context, userID, chatID, productID int64) error {
-	_, err := s.db.ExecContext(ctx, `INSERT INTO open_price_inputs(user_id,chat_id,product_id,expires_at) VALUES(?,?,?,?)
- ON CONFLICT(user_id) DO UPDATE SET chat_id=excluded.chat_id,product_id=excluded.product_id,expires_at=excluded.expires_at`, userID, chatID, productID, time.Now().Add(15*time.Minute).Unix())
-	return err
+	res, err := s.db.ExecContext(ctx, `INSERT INTO open_price_inputs(user_id,chat_id,product_id,expires_at)
+ SELECT ?,?,id,? FROM products WHERE id=? AND deleted_at IS NULL
+ ON CONFLICT(user_id) DO UPDATE SET chat_id=excluded.chat_id,product_id=excluded.product_id,expires_at=excluded.expires_at`, userID, chatID, time.Now().Add(15*time.Minute).Unix(), productID)
+	if err != nil {
+		return err
+	}
+	if n, err := res.RowsAffected(); err != nil {
+		return err
+	} else if n == 0 {
+		return ErrNotFound
+	}
+	return nil
 }
 func (s *SQLCartStore) PendingPriceInput(ctx context.Context, userID, chatID int64) (int64, error) {
 	var id int64

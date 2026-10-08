@@ -14,8 +14,8 @@ func NewWishlistStore(db *sql.DB) *WishlistStore {
 }
 
 func (s *WishlistStore) Add(ctx context.Context, userID, productID int64, price float64, stock int) error {
-	query := `INSERT OR IGNORE INTO wishlist (user_id, product_id, price_at_added, stock_at_added) VALUES (?, ?, ?, ?)`
-	_, err := s.db.ExecContext(ctx, query, userID, productID, price, stock)
+	query := `INSERT OR IGNORE INTO wishlist (user_id, product_id, price_at_added, stock_at_added) SELECT ?,id,?,? FROM products WHERE id=? AND deleted_at IS NULL`
+	_, err := s.db.ExecContext(ctx, query, userID, price, stock, productID)
 	return err
 }
 
@@ -58,7 +58,7 @@ func (s *WishlistStore) GetAllWithProducts(ctx context.Context) ([]WishlistEntry
 		FROM wishlist w
 		JOIN products p ON w.product_id = p.id
 		LEFT JOIN users u ON w.user_id = u.telegram_id
-		WHERE p.is_active = 1
+		WHERE p.is_active = 1 AND p.deleted_at IS NULL
 	`
 	rows, err := s.db.QueryContext(ctx, query)
 	if err != nil {
@@ -143,7 +143,7 @@ func (s *WishlistStore) GetUserWishlist(ctx context.Context, userID int64) ([]Pr
 		SELECT p.id, p.category_id, p.name, p.description, p.photo_url, p.price_usd, p.stock, p.infinite_stock, p.single_in_cart, p.is_digital, p.is_active, p.telegram_url, p.created_at
 		FROM wishlist w
 		JOIN products p ON w.product_id = p.id
-		WHERE w.user_id = ? AND p.is_active = 1
+		WHERE w.user_id = ? AND p.is_active = 1 AND p.deleted_at IS NULL
 	`
 	rows, err := s.db.QueryContext(ctx, query, userID)
 	if err != nil {
