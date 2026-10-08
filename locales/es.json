@@ -465,7 +465,7 @@
   "webapp_err_sub_active": "Esta suscripción ya está activa o pendiente de pago.",
   "btn_menu": "🏠 Menú principal",
   "admin_rub_rate_button": "💱 Tipo de cambio RUB",
-  "admin_rub_rate_current": "💱 Tipo RUB: 1 USD = %s ₽.\n1 USD = %d ⭐.\n\nSe aplica a compras nuevas en el bot y la Mini App. Los importes de pedidos existentes se conservan.",
+  "admin_rub_rate_current": "💱 Tipo RUB: 1 USD = %s ₽.\n1 USD = %d ⭐.\n\nSe aplica a compras nuevas en el bot y la Mini App. Los importes de pedidos existentes se conservan.\n\nTipo actual: /rubrate\nEstablecer el tipo: /rubrate 110",
   "admin_rub_rate_edit": "Cambiar tipo",
   "admin_rub_rate_prompt": "Introduce rublos por 1 USD, por ejemplo 100 o 92,5. Cancelar: /cancel. Caduca en 15 minutos.",
   "admin_rub_rate_invalid": "Introduce un número entre 1 y 1000000 con hasta 4 decimales (punto o coma).",

@@ -70,7 +70,6 @@ type Bot struct {
 	api             *tgbotapi.BotAPI
 	cfg             *config.Config
 	exchange        *service.ExchangeService
-	rubRateInput    sync.Map
 	telegramInput   sync.Map
 	catalog         *shop.CatalogService
 	cart            *shop.CartService

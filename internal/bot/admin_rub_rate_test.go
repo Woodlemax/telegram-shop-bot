@@ -58,16 +58,7 @@ func TestAdminRUBRateBotMiniAppAndOldOrder(t *testing.T) {
 	if data := rateAPIRequest(t, api, buyer, "GET", "/api/cart", ""); data["total_stars"] != float64(50) {
 		t.Fatal(data)
 	}
-	admin := e.cmd(e2eAdminID, "/admin", "ru")
-	if !buyerHasAction(t, admin, "admin:rubrate") {
-		t.Fatal("rate not in admin panel")
-	}
-	e.cb(e2eAdminID, "admin:rubrate", "ru")
-	calls := e.cb(e2eAdminID, "admin:rubrate:edit", "ru")
-	if !buyerHasAction(t, calls, "admin:rubrate") {
-		t.Fatal("cancel button missing")
-	}
-	e.text(e2eAdminID, "200", "ru")
+	e.cmd(e2eAdminID, "/rubrate 200", "ru")
 	if e.bot.exchange.GetUSDToRUBRate() != 200 {
 		t.Fatal("admin change not applied")
 	}
@@ -108,7 +99,7 @@ func TestAdminRUBRateBotMiniAppAndOldOrder(t *testing.T) {
 		t.Fatalf("restart lost rate: %v", err)
 	}
 }
-func TestAdminRUBRateValidationPermissionsAndCancellation(t *testing.T) {
+func TestAdminRUBRateCommandsAndPermissions(t *testing.T) {
 	e := newE2EEnvWithConfig(t, func(c *config.Config) { c.USDToRUBRate = 100 })
 	e.cmd(1702, "/rubrate 200", "ru")
 	e.cb(1702, "admin:rubrate:edit", "ru")
@@ -127,42 +118,27 @@ func TestAdminRUBRateValidationPermissionsAndCancellation(t *testing.T) {
 			t.Fatalf("invalid value changed rate: %q", text)
 		}
 	}
-	e.cb(e2eAdminID, "admin:rubrate:edit", "ru")
-	e.text(e2eAdminID, "no", "ru")
-	e.text(e2eAdminID, "92,5", "ru")
+	e.cmd(e2eAdminID, "/rubrate 92,5", "ru")
 	if e.bot.exchange.GetUSDToRUBRate() != 92.5 {
-		t.Fatal("comma or retry failed")
+		t.Fatal("comma rate failed")
 	}
-	e.cb(e2eAdminID, "admin:rubrate:edit", "ru")
-	e.cmd(e2eAdminID, "/cancel", "ru")
-	e.text(e2eAdminID, "200", "ru")
-	if e.bot.exchange.GetUSDToRUBRate() != 92.5 {
-		t.Fatal("cancelled input saved")
+	// Old buttons cannot start a bare-number input flow.
+	for _, callback := range []string{"admin:rubrate", "admin:rubrate:edit"} {
+		calls := e.cb(e2eAdminID, callback, "ru")
+		message := requireCall(t, calls, "editMessageText", "")
+		if strings.Contains(message.markup(), "admin:rubrate") || !strings.Contains(message.Params.Get("text"), "/rubrate 110") {
+			t.Fatal("old rate button still opens a dialog", calls)
+		}
+		e.text(e2eAdminID, "200", "ru")
+		if e.bot.exchange.GetUSDToRUBRate() != 92.5 {
+			t.Fatal("bare number changed rate")
+		}
 	}
-	e.cb(e2eAdminID, "admin:rubrate:edit", "ru")
-	e.cb(e2eAdminID, "admin:rubrate", "ru")
-	e.text(e2eAdminID, "200", "ru")
-	if e.bot.exchange.GetUSDToRUBRate() != 92.5 {
-		t.Fatal("cancel button failed")
-	}
-	e.cb(e2eAdminID, "admin:rubrate:edit", "ru")
-	e.bot.rubRateInput.Store(e2eAdminID, time.Now().Add(-time.Second))
-	e.text(e2eAdminID, "200", "ru")
-	if e.bot.exchange.GetUSDToRUBRate() != 92.5 {
-		t.Fatal("expired input saved")
-	}
-	e.cb(e2eAdminID, "admin:rubrate:edit", "ru")
-	e.cmd(e2eAdminID, "/catalog", "ru")
-	e.text(e2eAdminID, "200", "ru")
-	if e.bot.exchange.GetUSDToRUBRate() != 92.5 {
-		t.Fatal("other command did not end dialog")
-	}
-	// Beginning rate input cancels a pending archive upload.
+	// A command works while an unrelated archive dialog is active.
 	e.cmd(e2eAdminID, fmt.Sprintf("/setarchive %d", e.prodReg), "ru")
-	e.cb(e2eAdminID, "admin:rubrate:edit", "ru")
-	e.text(e2eAdminID, "100", "ru")
+	e.cmd(e2eAdminID, "/rubrate 100", "ru")
 	if e.bot.exchange.GetUSDToRUBRate() != 100 {
-		t.Fatal("archive dialog intercepted number")
+		t.Fatal("archive dialog blocked rate command")
 	}
 	if _, err := e.db.Conn().Exec(`DROP TABLE shop_exchange_rate`); err != nil {
 		t.Fatal(err)
@@ -170,5 +146,31 @@ func TestAdminRUBRateValidationPermissionsAndCancellation(t *testing.T) {
 	calls := e.cmd(e2eAdminID, "/rubrate 200", "ru")
 	if e.bot.exchange.GetUSDToRUBRate() != 100 || !strings.Contains(fmt.Sprint(calls), e.bot.t("ru", "admin_rub_rate_failed")) {
 		t.Fatal("failed persistence changed rate or no error")
+	}
+}
+
+func TestRUBRateCommandsHaveNoButtons(t *testing.T) {
+	e := newE2EEnvWithConfig(t, func(c *config.Config) { c.BotAdminOnly = true; c.USDToRUBRate = 100 })
+	for _, command := range []string{"/admin", "/help", "/rubrate", "/rubrate 110"} {
+		calls := e.cmd(e2eAdminID, command, "ru")
+		for _, call := range calls {
+			if call.Method != "sendMessage" {
+				continue
+			}
+			var markup struct {
+				Rows [][]json.RawMessage `json:"inline_keyboard"`
+			}
+			if err := json.Unmarshal([]byte(call.markup()), &markup); call.markup() != "" && (err != nil || len(markup.Rows) != 0) {
+				t.Fatal("rate command/panel still has buttons", command, call)
+			}
+		}
+	}
+	if e.bot.exchange.GetUSDToRUBRate() != 110 || e.qInt(`SELECT rub_per_usd FROM shop_exchange_rate WHERE id=1`) != 110 {
+		t.Fatal("set command did not persist rate")
+	}
+	before := e.qInt(`SELECT rub_per_usd FROM shop_exchange_rate WHERE id=1`)
+	calls := e.cmd(e2eAdminID, "/rubrate", "ru")
+	if !strings.Contains(tgText(calls), "110") || !strings.Contains(tgText(calls), "/rubrate 110") || e.qInt(`SELECT rub_per_usd FROM shop_exchange_rate WHERE id=1`) != before {
+		t.Fatal("query not read-only or current rate missing", calls)
 	}
 }

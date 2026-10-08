@@ -465,7 +465,7 @@
   "webapp_err_sub_active": "Dieses Abo ist bereits aktiv oder wartet auf Zahlung.",
   "btn_menu": "🏠 Hauptmenü",
   "admin_rub_rate_button": "💱 Rubelkurs",
-  "admin_rub_rate_current": "💱 Rubelkurs: 1 USD = %s ₽.\n1 USD = %d ⭐.\n\nGilt für neue Käufe im Bot und in der Mini App. Bestehende Bestellsummen bleiben erhalten.",
+  "admin_rub_rate_current": "💱 Rubelkurs: 1 USD = %s ₽.\n1 USD = %d ⭐.\n\nGilt für neue Käufe im Bot und in der Mini App. Bestehende Bestellsummen bleiben erhalten.\n\nAktueller Kurs: /rubrate\nKurs setzen: /rubrate 110",
   "admin_rub_rate_edit": "Kurs ändern",
   "admin_rub_rate_prompt": "Rubel pro 1 USD eingeben, z. B. 100 oder 92,5. Abbrechen: /cancel. Gültig für 15 Minuten.",
   "admin_rub_rate_invalid": "Eine Zahl von 1 bis 1000000 mit bis zu 4 Nachkommastellen (Punkt oder Komma) eingeben.",

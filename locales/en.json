@@ -465,7 +465,7 @@
   "webapp_err_sub_active": "This subscription is already active or awaiting payment.",
   "btn_menu": "🏠 Main Menu",
   "admin_rub_rate_button": "💱 RUB exchange rate",
-  "admin_rub_rate_current": "💱 RUB rate: 1 USD = %s ₽.\n1 USD = %d ⭐.\n\nApplies to new purchases in the bot and Mini App. Existing order amounts stay unchanged.",
+  "admin_rub_rate_current": "💱 RUB rate: 1 USD = %s ₽.\n1 USD = %d ⭐.\n\nApplies to new purchases in the bot and Mini App. Existing order amounts stay unchanged.\n\nCurrent rate: /rubrate\nSet the rate: /rubrate 110",
   "admin_rub_rate_edit": "Change rate",
   "admin_rub_rate_prompt": "Enter rubles per 1 USD, e.g. 100 or 92.5. Cancel: /cancel. Expires in 15 minutes.",
   "admin_rub_rate_invalid": "Enter a number from 1 to 1000000, with up to 4 decimal places (dot or comma).",

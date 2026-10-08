@@ -36,7 +36,6 @@ func (b *Bot) onAdminProductTelegram(ctx context.Context, chatID, userID int64, 
 	case "cancel":
 		b.sendAdminProductDetails(chatID, p, lang)
 	case "edit":
-		b.rubRateInput.Delete(userID)
 		_ = b.archives.CancelUpload(ctx, userID)
 		b.cart.CancelPriceInput(ctx, userID)
 		_ = b.fsm.DelAddProductState(ctx, userID)

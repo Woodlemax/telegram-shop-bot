@@ -12,12 +12,13 @@ in `price_rub`; changing a conversion quote does not change these ruble prices.
 
 ## Change the RUB exchange rate
 
-In the bot's private administrator chat, open `/admin` → **RUB exchange rate**
-→ **Change rate**, then send the number of rubles per 1 USD. For example `100`
-or `92,5`. `/rubrate` shows the current rate; `/rubrate 100` saves directly.
-Values must be between 1 and 1,000,000 with at most four decimal places. A dot
-or comma is accepted. `/cancel`, the cancel button or another command ends the
-15-minute input dialog. Only configured administrators can use it in private.
+In the bot's private administrator chat, `/rubrate` shows the current rate;
+`/rubrate 110` sets 110 rubles per 1 USD. A decimal such as `/rubrate 92,5`
+is also accepted. Values must be between 1 and 1,000,000 with at most four
+decimal places, using a dot or comma. Only configured administrators can use
+these commands in private. The admin/help panel and current-rate replies have
+no rate buttons. Old rate buttons show the command instructions and cannot
+start a bare-number input dialog.
 
 The rate is persisted in SQLite and restored at startup before services run.
 It overrides `USD_TO_RUB_RATE`; the environment value is the default until the

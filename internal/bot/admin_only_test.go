@@ -57,11 +57,10 @@ func TestAdminOnlyRoutesBuyersToMiniApp(t *testing.T) {
 
 func TestAdminOnlyPreservesPrivateAdministration(t *testing.T) {
 	e := newE2EEnvWithConfig(t, func(c *config.Config) { c.BotAdminOnly = true; c.USDToRUBRate = 100 })
-	if !buyerHasAction(t, e.cmd(e2eAdminID, "/admin", "ru"), "admin:rubrate") {
+	if tgText(e.cmd(e2eAdminID, "/admin", "ru")) != e.bot.t("ru", "admin_panel") {
 		t.Fatal("admin command missing panel")
 	}
-	e.cb(e2eAdminID, "admin:rubrate:edit", "ru")
-	e.text(e2eAdminID, "200", "ru")
+	e.cmd(e2eAdminID, "/rubrate 200", "ru")
 	if e.bot.exchange.GetUSDToRUBRate() != 200 {
 		t.Fatal("rate dialog blocked")
 	}
@@ -171,10 +170,10 @@ func TestMiniAppStartWelcomeForBuyerAndAdmin(t *testing.T) {
 			}
 		}
 	}
-	if !buyerHasAction(t, e.cmd(e2eAdminID, "/admin", "ru"), "admin:rubrate") {
+	if tgText(e.cmd(e2eAdminID, "/admin", "ru")) != e.bot.t("ru", "admin_panel") {
 		t.Fatal("admin access lost")
 	}
-	if !buyerHasAction(t, e.cmd(e2eAdminID, "/help", "ru"), "admin:rubrate") {
+	if tgText(e.cmd(e2eAdminID, "/help", "ru")) != e.bot.t("ru", "admin_panel") {
 		t.Fatal("admin help lost")
 	}
 	if e.qInt(`SELECT COUNT(*) FROM orders`) != 0 || e.qInt(`SELECT COUNT(*) FROM cart_items`) != 0 {

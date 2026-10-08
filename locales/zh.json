@@ -465,7 +465,7 @@
   "webapp_err_sub_active": "此订阅已激活或正在等待付款。",
   "btn_menu": "🏠 主菜单",
   "admin_rub_rate_button": "💱 卢布汇率",
-  "admin_rub_rate_current": "💱 卢布汇率：1 USD = %s ₽。\n1 USD = %d ⭐。\n\n用于机器人和 Mini App 中的新购买。已有订单金额保持不变。",
+  "admin_rub_rate_current": "💱 卢布汇率：1 USD = %s ₽。\n1 USD = %d ⭐。\n\n用于机器人和 Mini App 中的新购买。已有订单金额保持不变。\n\n当前汇率：/rubrate\n设置汇率：/rubrate 110",
   "admin_rub_rate_edit": "修改汇率",
   "admin_rub_rate_prompt": "输入每 1 USD 的卢布金额，例如 100 或 92.5。取消：/cancel。15 分钟后过期。",
   "admin_rub_rate_invalid": "请输入 1 到 1000000 之间的数字，最多 4 位小数（点或逗号）。",

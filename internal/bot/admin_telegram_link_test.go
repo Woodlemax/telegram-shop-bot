@@ -86,8 +86,8 @@ func TestAdminProductTelegramOptionalButtonEditing(t *testing.T) {
 	if link() != "" {
 		t.Fatal("command did not clear link")
 	}
-	// Starting a link dialog replaces a pending RUB-rate input.
-	e.cb(e2eAdminID, "admin:rubrate:edit", "ru")
+	// A rate query does not interfere with a subsequent link dialog.
+	e.cmd(e2eAdminID, "/rubrate", "ru")
 	e.cb(e2eAdminID, fmt.Sprintf("admin:telegram:edit:%d", id), "ru")
 	e.text(e2eAdminID, "@PlaneModels", "ru")
 	if link() != "https://t.me/PlaneModels" {
