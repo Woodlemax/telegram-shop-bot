@@ -24,6 +24,7 @@ type Config struct {
 	TelegramWebhookSecret string
 	USDToStarsRate        int
 	StarsOnlyPayments     bool
+	BotAdminOnly          bool
 	LocalesDir            string
 	OutboundWebhookURL    string
 	OutboundWebhookSecret string
@@ -95,6 +96,14 @@ func load(lookup lookupFunc) (*Config, error) {
 		starsOnly, err = strconv.ParseBool(raw)
 		if err != nil {
 			return nil, fmt.Errorf("STARS_ONLY_PAYMENTS: %w", err)
+		}
+	}
+
+	botAdminOnly := false
+	if raw := strings.TrimSpace(value(lookup, "BOT_ADMIN_ONLY")); raw != "" {
+		botAdminOnly, err = strconv.ParseBool(raw)
+		if err != nil {
+			return nil, fmt.Errorf("BOT_ADMIN_ONLY: %w", err)
 		}
 	}
 
@@ -190,6 +199,7 @@ func load(lookup lookupFunc) (*Config, error) {
 		TelegramWebhookSecret: webhookSecret,
 		USDToStarsRate:        usdToStars,
 		StarsOnlyPayments:     starsOnly,
+		BotAdminOnly:          botAdminOnly,
 		LocalesDir:            getEnv(lookup, "LOCALES_DIR", "locales"),
 		OutboundWebhookURL:    value(lookup, "OUTBOUND_WEBHOOK_URL"),
 		OutboundWebhookSecret: value(lookup, "OUTBOUND_WEBHOOK_SECRET"),

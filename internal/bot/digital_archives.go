@@ -99,9 +99,11 @@ func (b *Bot) sendDigitalDocument(ctx context.Context, d *storage.DigitalDeliver
 		name = name[:300]
 	}
 	doc.Caption = fmt.Sprintf(b.t(lang, "digital_delivery_caption"), string(name), d.ArchiveID, d.OrderID)
-	doc.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData(b.t(lang, "digital_download_again"), fmt.Sprintf("digital:download:%d", d.ID)),
-	))
+	if !b.adminOnly() {
+		doc.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData(b.t(lang, "digital_download_again"), fmt.Sprintf("digital:download:%d", d.ID)),
+		))
+	}
 	msg, err := api.Send(doc)
 	return msg.MessageID, err
 }

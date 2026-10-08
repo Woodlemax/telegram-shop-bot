@@ -8,6 +8,26 @@
   var initData = tg ? tg.initData : '';
   var dict = {};
   var cartCount = 0;
+  var priceEditors = [];
+  var checkoutPending = false;
+  var navigationPending = false;
+  var cartMutation = Promise.resolve();
+
+  // Serialize cart writes so an older input cannot win over a newer amount.
+  function mutateCart(method, path, body) {
+    var request = cartMutation.then(function () { return api(method, path, body); });
+    cartMutation = request.catch(function () {});
+    return request;
+  }
+
+  function flushPriceEditors() {
+    return Promise.all(priceEditors.map(function (input) { return input.flushPrice(); }));
+  }
+
+  function priceError(err) {
+    if (!err.priceReported) { err.priceReported = true; showError(err); }
+  }
+
   // Navigation stack of {render: fn} so the back button always works.
   var navStack = [];
 
@@ -86,6 +106,8 @@
   }
 
   function clearScreen() {
+    priceEditors.forEach(function (input) { input.cancelPriceTimer(); });
+    priceEditors = [];
     while (screenEl.firstChild) { screenEl.removeChild(screenEl.firstChild); }
   }
 
@@ -94,16 +116,26 @@
   }
 
   function push(render) {
-    navStack.push(render);
-    backBtn.className = navStack.length > 1 ? 'icon-btn' : 'icon-btn hidden';
-    render();
+    if (navigationPending || checkoutPending) { return; }
+    navigationPending = true;
+    return flushPriceEditors().then(function () {
+      navigationPending = false;
+      navStack.push(render);
+      backBtn.className = navStack.length > 1 ? 'icon-btn' : 'icon-btn hidden';
+      render();
+    }).catch(function (err) { navigationPending = false; priceError(err); });
   }
 
   function pop() {
+    if (navigationPending || checkoutPending) { return; }
     if (navStack.length <= 1) { return; }
-    navStack.pop();
-    backBtn.className = navStack.length > 1 ? 'icon-btn' : 'icon-btn hidden';
-    navStack[navStack.length - 1]();
+    navigationPending = true;
+    return flushPriceEditors().then(function () {
+      navigationPending = false;
+      navStack.pop();
+      backBtn.className = navStack.length > 1 ? 'icon-btn' : 'icon-btn hidden';
+      navStack[navStack.length - 1]();
+    }).catch(function (err) { navigationPending = false; priceError(err); });
   }
 
   function updateCartBadge(count) {
@@ -128,32 +160,77 @@
 
   function rub(n) { return Number(n).toFixed(2) + ' ₽'; }
   function productPrice(p) { return p.price_rub == null ? usd(p.price_usd) : rub(p.price_rub); }
-  function savePrice(id, input, done) {
-    if (input.disabled) { return Promise.resolve(null); }
-    var value = input.value.trim();
-    if (!/^\d+$/.test(value) || Number(value) > 1000000) { showError(new Error('open_price_invalid')); return Promise.resolve(null); }
-    input.disabled = true;
-    if (input.priceSaveButton) { input.priceSaveButton.disabled = true; }
-    return api('POST', '/api/cart', { product_id: id, price: Number(value) }).then(function (cart) {
-      updateCartBadge(countItems(cart)); done(cart); return cart;
-    }).catch(function (err) { showError(err); return null; }).then(function (cart) {
-      input.disabled = false;
-      if (input.priceSaveButton) { input.priceSaveButton.disabled = false; }
-      return cart;
-    });
+  function openPriceValue(raw) {
+    var value = String(raw).trim();
+    return /^\d+$/.test(value) && Number(value) <= 1000000 ? Number(value) : null;
   }
-  function priceEditor(parent, id, current, done, changed) {
+
+  function previewStars(amount, rates) {
+    if (amount === 0) { return 0; }
+    if (!rates || !(rates.rub_per_usd > 0) || !(rates.stars_per_usd > 0)) { return null; }
+    return Math.max(1, Math.floor((amount / rates.rub_per_usd) * rates.stars_per_usd));
+  }
+
+  function savePrice(input) {
+    return input.flushPrice(true).catch(function (err) { priceError(err); return null; });
+  }
+
+  function priceEditor(parent, id, current, done, changed, enabled) {
     var group = el('div', 'open-price');
-    var label = el('label', 'product-desc', t('open_price_hint'));
+    var label = el('label', 'product-desc', t('webapp_open_price_hint'));
     var input = el('input', 'input');
     input.type = 'number'; input.min = '0'; input.max = '1000000'; input.step = '1'; input.inputMode = 'numeric';
     input.value = String(current || 0);
-    if (changed) { input.oninput = function () { changed(input.value); }; }
     label.appendChild(input); group.appendChild(label);
-    var save = el('button', 'btn secondary', t('open_price_apply'));
-    input.priceSaveButton = save;
-    save.type = 'button'; save.onclick = function () { savePrice(id, input, done); };
-    group.appendChild(save); parent.appendChild(group); return input;
+    var status = el('div', 'price-save-status');
+    status.setAttribute('aria-live', 'polite'); group.appendChild(status);
+    parent.appendChild(group);
+    var saved = enabled && !enabled() ? null : Number(current || 0);
+    var timer = null;
+    var pending = null;
+    input.cancelPriceTimer = function () { if (timer !== null) { clearTimeout(timer); timer = null; } };
+    input.flushPrice = function (force) {
+      input.cancelPriceTimer();
+      if (!force && enabled && !enabled()) { return Promise.resolve(null); }
+      if (pending) { return pending.then(function () { return input.flushPrice(force); }); }
+      var amount = openPriceValue(input.value);
+      if (amount === null) { return Promise.reject(new Error('open_price_invalid')); }
+      if (amount === saved) { return Promise.resolve(null); }
+      function write() {
+        var sent = openPriceValue(input.value);
+        if (sent === null || sent === saved) { return Promise.resolve(null); }
+        status.textContent = t('webapp_price_saving');
+        return mutateCart('POST', '/api/cart', { product_id: id, price: sent }).then(function (cart) {
+          saved = sent;
+          updateCartBadge(countItems(cart));
+          done(cart);
+          if (changed) { changed(input.value); }
+          // Keep typing enabled and save the newest value after the current request.
+          if (openPriceValue(input.value) !== null && openPriceValue(input.value) !== saved) { return write(); }
+          return cart;
+        });
+      }
+      pending = write().then(function (cart) {
+        pending = null; status.textContent = ''; return cart;
+      }, function (err) {
+        pending = null; status.textContent = t('webapp_price_save_failed'); throw err;
+      });
+      return pending;
+    };
+    input.oninput = function () {
+      input.cancelPriceTimer();
+      var amount = openPriceValue(input.value);
+      status.textContent = amount === null ? t('open_price_invalid') : '';
+      if (changed) { changed(input.value); }
+      if (amount !== null && (!enabled || enabled())) {
+        timer = setTimeout(function () { timer = null; input.flushPrice().catch(priceError); }, 300);
+      }
+    };
+    input.onchange = input.onblur = function () {
+      if (openPriceValue(input.value) !== null) { input.flushPrice().catch(priceError); }
+    };
+    priceEditors.push(input);
+    return input;
   }
 
   function loading() {
@@ -206,7 +283,7 @@
           var info = el('div', 'card-info');
           info.appendChild(el('div', 'card-name', p.name));
           info.appendChild(el('div', 'card-price', productPrice(p) + ' / ' + stars(p.price_stars)));
-          if (p.open_price) { info.appendChild(el('div', 'product-desc', t('open_price_hint'))); }
+          if (p.open_price) { info.appendChild(el('div', 'product-desc', t('webapp_open_price_hint'))); }
           card.appendChild(info);
           card.onclick = function () { push(function () { renderProduct(p.id); }); };
           list.appendChild(card);
@@ -269,15 +346,12 @@
       priceLine.setAttribute('aria-live', 'polite');
       screenEl.appendChild(priceLine);
       var priceRates = data.open_price_rates || cart.open_price_rates;
-      var customPrice = p.open_price ? priceEditor(screenEl, p.id, cartItem ? cartItem.price_rub : 0, added, previewPrice) : null;
+      var customPrice = p.open_price ? priceEditor(screenEl, p.id, cartItem ? cartItem.price_rub : 0, added, previewPrice, function () { return inCart; }) : null;
       function previewPrice(raw) {
-        var value = raw.trim();
-        if (!/^\d+$/.test(value) || Number(value) > 1000000) { priceLine.textContent = t('open_price_invalid'); return; }
-        var amount = Number(value);
-        if (amount === 0) { priceLine.textContent = rub(0) + ' / ' + stars(0); return; }
-        if (!priceRates || !(priceRates.rub_per_usd > 0) || !(priceRates.stars_per_usd > 0)) { return; }
-        var starAmount = Math.max(1, Math.floor((amount / priceRates.rub_per_usd) * priceRates.stars_per_usd));
-        priceLine.textContent = rub(amount) + ' / ' + stars(starAmount);
+        var amount = openPriceValue(raw);
+        if (amount === null) { priceLine.textContent = t('open_price_invalid'); return; }
+        var starAmount = previewStars(amount, priceRates);
+        if (starAmount !== null) { priceLine.textContent = rub(amount) + ' / ' + stars(starAmount); }
       }
       if (data.rating_count > 0) {
         screenEl.appendChild(el('div', 'product-rating',
@@ -306,6 +380,7 @@
       var add = el('button', 'btn primary', t(inCart ? 'product_go_to_cart' : 'webapp_add_to_cart'));
       add.type = 'button';
       function added(cart) {
+        var firstAdd = !inCart;
         updateCartBadge(countItems(cart));
         if (p.open_price) {
           priceRates = cart.open_price_rates || priceRates;
@@ -313,7 +388,6 @@
             if (cart.items[j].product_id === p.id) {
               var saved = cart.items[j];
               priceLine.textContent = productPrice(saved) + ' / ' + stars(saved.price_stars);
-              customPrice.value = String(saved.price_rub);
               break;
             }
           }
@@ -321,15 +395,15 @@
         inCart = true;
         add.textContent = t('product_go_to_cart');
         add.disabled = false;
-        if (tg && tg.HapticFeedback) { tg.HapticFeedback.notificationOccurred('success'); }
+        if (firstAdd && tg && tg.HapticFeedback) { tg.HapticFeedback.notificationOccurred('success'); }
       }
       add.onclick = function () {
         if (inCart) { push(renderCart); return; }
         add.disabled = true;
         if (customPrice) {
-          savePrice(p.id, customPrice, added).then(function () { add.disabled = false; }); return;
+          savePrice(customPrice).then(function () { add.disabled = false; }); return;
         }
-        api('POST', '/api/cart', { product_id: p.id, delta: 1 }).then(added).catch(function (err) {
+        mutateCart('POST', '/api/cart', { product_id: p.id, delta: 1 }).then(added).catch(function (err) {
           add.disabled = false;
           showError(err);
         });
@@ -352,14 +426,19 @@
         return;
       }
 
+      var rows = [];
       var list = el('div', 'list');
       for (var i = 0; i < cart.items.length; i++) {
         (function (item) {
           var row = el('div', 'cart-row');
           var info = el('div', 'card-info');
           info.appendChild(el('div', 'card-name', item.name));
-          info.appendChild(el('div', 'card-price', productPrice(item) + ' / ' + stars(item.price_stars) + ' \u00d7 ' + item.quantity));
-          if (item.open_price) { priceEditor(info, item.product_id, item.price_rub, renderCart); }
+          var priceLine = el('div', 'card-price');
+          priceLine.setAttribute('aria-live', 'polite'); info.appendChild(priceLine);
+          var input = item.open_price ? priceEditor(info, item.product_id, item.price_rub, function (updated) {
+            cart = updated; updateCartView();
+          }, updateCartView) : null;
+          rows.push({id: item.product_id, price: priceLine, input: input});
           row.appendChild(info);
 
           var controls = el('div', 'qty-controls');
@@ -384,83 +463,119 @@
       }
       screenEl.appendChild(list);
 
-      screenEl.appendChild(el('div', 'cart-total',
-        t('webapp_total') + ': ' + rub(cart.total_rub) + ' / ' + stars(cart.total_stars)));
+      var totalLine = el('div', 'cart-total');
+      totalLine.setAttribute('aria-live', 'polite'); screenEl.appendChild(totalLine);
 
       var promo = el('input', 'input');
       promo.type = 'text';
       promo.placeholder = t('webapp_promo_placeholder');
       screenEl.appendChild(promo);
 
-      if (cart.free_checkout) {
-        var getFree = el('button', 'btn primary', t('free_order_button'));
-        getFree.type = 'button'; getFree.onclick = function () { checkout('free', promo.value, getFree); };
-        screenEl.appendChild(getFree); return;
+      var paymentBox = el('div', 'cart-payments'); screenEl.appendChild(paymentBox);
+      function updateCartView() {
+        var totalRUB = 0, totalStars = 0, valid = true;
+        for (var j = 0; j < cart.items.length; j++) {
+          var item = cart.items[j];
+          for (var k = 0; k < rows.length; k++) {
+            var row = rows[k];
+            if (row.id !== item.product_id) { continue; }
+            var amount = row.input ? openPriceValue(row.input.value) : item.price_rub;
+            var starAmount = row.input && amount !== null ? previewStars(amount, cart.open_price_rates) : item.price_stars;
+            if (amount === null || starAmount === null) { row.price.textContent = t('open_price_invalid'); valid = false; }
+            else {
+              row.price.textContent = rub(amount) + ' / ' + stars(starAmount) + ' \u00d7 ' + item.quantity;
+              totalRUB += amount * item.quantity; totalStars += starAmount * item.quantity;
+            }
+            break;
+          }
+        }
+        totalLine.textContent = valid ? t('webapp_total') + ': ' + rub(totalRUB) + ' / ' + stars(totalStars) : t('open_price_invalid');
+        while (paymentBox.firstChild) { paymentBox.removeChild(paymentBox.firstChild); }
+        if (valid) { renderPayments(totalRUB === 0 && totalStars === 0 && (cart.free_checkout || cart.items.some(function (item) { return item.open_price; }))); }
       }
+      function renderPayments(previewFree) {
+        if (previewFree) {
+          var getFree = el('button', 'btn primary', t('free_order_button'));
+          getFree.type = 'button'; getFree.disabled = checkoutPending; getFree.onclick = function () { checkout('free', promo.value, getFree); };
+          paymentBox.appendChild(getFree); return;
+        }
 
-      var payStars = el('button', 'btn primary', t('webapp_pay_stars'));
-      payStars.type = 'button';
-      payStars.onclick = function () { checkout('stars', promo.value, payStars); };
-      screenEl.appendChild(payStars);
+        var payStars = el('button', 'btn primary', t('webapp_pay_stars'));
+        payStars.type = 'button';
+        payStars.onclick = function () { checkout('stars', promo.value, payStars); };
+        paymentBox.appendChild(payStars);
 
-      if (!cart.stars_only) {
-      var payCrypto = el('button', 'btn secondary', t('webapp_pay_crypto'));
-      payCrypto.type = 'button';
-      payCrypto.onclick = function () { checkout('crypto', promo.value, payCrypto); };
-      screenEl.appendChild(payCrypto);
+        if (!cart.stars_only) {
+        var payCrypto = el('button', 'btn secondary', t('webapp_pay_crypto'));
+        payCrypto.type = 'button';
+        payCrypto.onclick = function () { checkout('crypto', promo.value, payCrypto); };
+        paymentBox.appendChild(payCrypto);
+        }
+
+        // The four newer rails render only when the cart payload marks them
+        // enabled (rail available, non-subscription cart, positive converted
+        // total) — same visibility rules as the bot's payment keyboard.
+        if (cart.yookassa_enabled) {
+          var payRub = el('button', 'btn secondary', t('webapp_pay_rub'));
+          payRub.type = 'button';
+          payRub.onclick = function () { checkout('yookassa', promo.value, payRub); };
+          paymentBox.appendChild(payRub);
+        }
+
+        if (cart.stripe_enabled) {
+          var payStripe = el('button', 'btn secondary', t('webapp_pay_stripe'));
+          payStripe.type = 'button';
+          payStripe.onclick = function () { checkout('stripe', promo.value, payStripe); };
+          paymentBox.appendChild(payStripe);
+        }
+
+        if (cart.ton_enabled) {
+          var payTon = el('button', 'btn secondary', t('webapp_pay_ton'));
+          payTon.type = 'button';
+          payTon.onclick = function () { checkout('ton', promo.value, payTon); };
+          paymentBox.appendChild(payTon);
+        }
+
+        if (cart.nowpayments_enabled) {
+          var payNowp = el('button', 'btn secondary', t('webapp_pay_nowpayments'));
+          payNowp.type = 'button';
+          payNowp.onclick = function () { checkout('nowpayments', promo.value, payNowp); };
+          paymentBox.appendChild(payNowp);
+        }
+        for (var b = 0; b < paymentBox.children.length; b++) { paymentBox.children[b].disabled = checkoutPending; }
       }
-
-      // The four newer rails render only when the cart payload marks them
-      // enabled (rail available, non-subscription cart, positive converted
-      // total) — same visibility rules as the bot's payment keyboard.
-      if (cart.yookassa_enabled) {
-        var payRub = el('button', 'btn secondary', t('webapp_pay_rub'));
-        payRub.type = 'button';
-        payRub.onclick = function () { checkout('yookassa', promo.value, payRub); };
-        screenEl.appendChild(payRub);
-      }
-
-      if (cart.stripe_enabled) {
-        var payStripe = el('button', 'btn secondary', t('webapp_pay_stripe'));
-        payStripe.type = 'button';
-        payStripe.onclick = function () { checkout('stripe', promo.value, payStripe); };
-        screenEl.appendChild(payStripe);
-      }
-
-      if (cart.ton_enabled) {
-        var payTon = el('button', 'btn secondary', t('webapp_pay_ton'));
-        payTon.type = 'button';
-        payTon.onclick = function () { checkout('ton', promo.value, payTon); };
-        screenEl.appendChild(payTon);
-      }
-
-      if (cart.nowpayments_enabled) {
-        var payNowp = el('button', 'btn secondary', t('webapp_pay_nowpayments'));
-        payNowp.type = 'button';
-        payNowp.onclick = function () { checkout('nowpayments', promo.value, payNowp); };
-        screenEl.appendChild(payNowp);
-      }
+      updateCartView();
     }).catch(showError);
   }
 
   function changeQty(productID, delta) {
-    api('POST', '/api/cart', { product_id: productID, delta: delta })
+    flushPriceEditors().then(function () { return mutateCart('POST', '/api/cart', { product_id: productID, delta: delta }); })
       .then(function () { renderCart(); })
-      .catch(showError);
+      .catch(priceError);
   }
 
   function removeItem(productID) {
-    api('DELETE', '/api/cart?product_id=' + productID)
+    flushPriceEditors().then(function () { return mutateCart('DELETE', '/api/cart?product_id=' + productID); })
       .then(function () { renderCart(); })
-      .catch(showError);
+      .catch(priceError);
   }
 
   function checkout(method, promo, btn) {
+    if (checkoutPending) { return; }
+    checkoutPending = true;
+    priceEditors.forEach(function (input) { input.disabled = true; });
+    function enableCheckout() {
+      checkoutPending = false;
+      priceEditors.forEach(function (input) { input.disabled = false; });
+      btn.disabled = false;
+      var buttons = screenEl.querySelectorAll ? screenEl.querySelectorAll('.cart-payments button') : [];
+      for (var i = 0; i < buttons.length; i++) { buttons[i].disabled = false; }
+    }
     btn.disabled = true;
     var body = { method: method };
     if (promo) { body.promo = promo; }
-    api('POST', '/api/checkout', body).then(function (data) {
-      btn.disabled = false;
+    flushPriceEditors().then(function () { return mutateCart('POST', '/api/checkout', body); }).then(function (data) {
+      enableCheckout();
       if (data.free) {
         var message = tf('free_order_done', data.order_id);
         if (tg && tg.showAlert) { tg.showAlert(message); } else { alert(message); }
@@ -476,8 +591,8 @@
         window.open(data.invoice_link, '_blank');
       }
     }).catch(function (err) {
-      btn.disabled = false;
-      showError(err);
+      enableCheckout();
+      priceError(err);
     });
   }
 

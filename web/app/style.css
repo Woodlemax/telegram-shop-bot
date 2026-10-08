@@ -204,3 +204,5 @@ body {
   .cart-row { flex-wrap: wrap; }
   .cart-row .qty-controls { margin-left: auto; }
 }
+
+.price-save-status { min-height: 1em; font-size: 0.85em; color: var(--hint); }

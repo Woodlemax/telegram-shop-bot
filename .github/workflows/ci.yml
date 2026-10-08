@@ -22,6 +22,9 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Mini App input and cart tests
+        run: node tests/miniapp-open-price.cjs
+
       - name: Build
         run: go build ./...
 

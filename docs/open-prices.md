@@ -40,16 +40,44 @@ The initial price becomes 0 RUB. A buyer can enter a whole amount from 0 to
 bot. The chosen amount belongs to that buyer's cart and is frozen on the order;
 it does not change the catalog price or another buyer's choice.
 
-The Mini App product card previews RUB / Stars immediately while the buyer
-enters a valid amount, using the current rate snapshot returned by the product
-or cart API. At 100 RUB per USD and 50 Stars per USD, entering 100 shows
+The Mini App product card and cart preview RUB / Stars immediately while the
+buyer enters a valid amount, using the current rate snapshot returned by the
+product or cart API. At 100 RUB per USD and 50 Stars per USD, entering 100 shows
 100 RUB / 50 Stars; zero remains 0 RUB / 0 Stars. Positive amounts use the same
-integer conversion and one-Star minimum as checkout. Typing alone does not
-save a choice. **Apply price** or adding the item saves it, then refreshes the
-headline from the server-confirmed cart amount and rate. Duplicate saves are
-blocked while the request is pending; a failure leaves retry available.
-Reopening the product shows that buyer's saved cart amount in both the bot and
-Mini App, while another buyer still sees the catalog's initial zero price.
+integer conversion and one-Star minimum as checkout. The short Mini App hint
+is **Open price: from 0 RUB**; there is no **Apply price** button.
+
+For a product outside the cart, typing changes the preview; **Add to cart**
+saves that amount. Once added, editing the product or cart amount saves
+automatically after a 300 ms input pause, or immediately on change/blur.
+Cart item prices, RUB / Stars totals and free/paid checkout controls update
+without remounting the input or losing focus. Writes are serialized and newer
+drafts survive older responses. Navigation, quantity changes, removal and
+checkout wait for the latest valid price. Invalid input and failed saves cannot
+reach checkout; the buyer can correct the amount or retry the action. Checkout
+blocks duplicate clicks and input until its request finishes.
+
+Reopening a product shows its saved buyer-specific cart amount. The Node check
+`node tests/miniapp-open-price.cjs` covers previews, autosaves, racing edits,
+focus preservation, navigation, quantity/removal, save failures and checkout.
+
+## Buyers use the Mini App
+
+`BOT_ADMIN_ONLY=true` keeps bot commands and callbacks for private
+administration. `/start` and `/help` show the administrator panel to admins;
+other buyers receive a short message and an **Open shop** Mini App button.
+Buyer catalog, cart, order, payment, file, profile, referral and review commands
+and old callbacks are stubbed, including for admins acting as buyers. Inline
+catalog search returns no results. The public command list only advertises
+start/help, and the Shop menu button remains available. Admin product/category,
+archive, RUB rate, order/refund, promotion and analytics commands/dialogs stay
+available only to configured administrators in their private chat.
+
+Mini App REST APIs, Stars pre-checkout/settlement, payment reconciliation,
+notifications and automatic/repeat ZIP delivery remain active. Disabled bot
+review invites and repeat-download buttons are omitted; buyers request downloads
+from Mini App orders. The example environment enables this mode. Omitting the
+flag or setting it to false retains the earlier buyer bot interface.
 
 To return to a fixed price, use `/editproduct ID price <rubles>`.
 Disabling open price alone leaves the current catalog price at 0. Subscriptions

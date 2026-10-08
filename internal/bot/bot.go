@@ -333,6 +333,12 @@ func (b *Bot) registerCommands() {
 		tgbotapi.BotCommand{Command: "help", Description: "All commands"},
 		tgbotapi.BotCommand{Command: "cancel", Description: "Cancel current action"},
 	)
+	if b.adminOnly() {
+		cmds = tgbotapi.NewSetMyCommands(
+			tgbotapi.BotCommand{Command: "start", Description: "Open shop"},
+			tgbotapi.BotCommand{Command: "help", Description: "Open shop"},
+		)
+	}
 	if _, err := b.api.Request(cmds); err != nil {
 		b.logger.Warn("setMyCommands failed", "error", err)
 	}

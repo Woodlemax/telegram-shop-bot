@@ -15,6 +15,10 @@ func (b *Bot) route(ctx context.Context, update tgbotapi.Update) {
 		b.handlePreCheckout(ctx, update.PreCheckoutQuery)
 
 	case update.InlineQuery != nil:
+		if b.adminOnly() {
+			_, _ = b.api.Request(tgbotapi.InlineConfig{InlineQueryID: update.InlineQuery.ID, Results: []interface{}{}, IsPersonal: true, CacheTime: 1})
+			return
+		}
 		b.handleInlineQuery(ctx, update.InlineQuery)
 
 	case update.Message != nil:
@@ -31,6 +35,9 @@ func (b *Bot) routeMessage(ctx context.Context, msg *tgbotapi.Message) {
 		b.handleSuccessfulPayment(ctx, msg)
 		return
 	}
+	if b.adminOnly() && b.routeAdminOnlyMessage(msg) {
+		return
+	}
 	if b.handleProductTelegramInput(ctx, msg) {
 		return
 	}
@@ -40,12 +47,12 @@ func (b *Bot) routeMessage(ctx context.Context, msg *tgbotapi.Message) {
 	if b.handleArchiveUpload(ctx, msg) {
 		return
 	}
-	if b.handlePriceInput(ctx, msg) {
+	if !b.adminOnly() && b.handlePriceInput(ctx, msg) {
 		return
 	}
 
 	// Check if user is entering a promo code.
-	if msg.Command() == "" {
+	if !b.adminOnly() && msg.Command() == "" {
 		promoAt, _ := b.fsm.GetPromoState(ctx, msg.From.ID)
 		if !promoAt.IsZero() {
 			b.handlePromoInput(ctx, msg)
@@ -54,7 +61,7 @@ func (b *Bot) routeMessage(ctx context.Context, msg *tgbotapi.Message) {
 	}
 
 	// Check if user is writing a review text (post-rating FSM step).
-	if msg.Command() == "" {
+	if !b.adminOnly() && msg.Command() == "" {
 		reviewState, _ := b.fsm.GetReviewState(ctx, msg.From.ID)
 		if reviewState != nil {
 			b.handleReviewTextInput(ctx, msg, reviewState)
@@ -214,6 +221,10 @@ func (b *Bot) handleCallback(ctx context.Context, cb *tgbotapi.CallbackQuery) {
 	userID := cb.From.ID
 	lang := cb.From.LanguageCode
 
+	if b.adminOnly() && !(b.isAdmin(userID) && chatID == userID && adminCallback(data)) {
+		b.toast(cb.ID, b.t(lang, "bot_miniapp_only"))
+		return
+	}
 	if data != "admin:rubrate:edit" {
 		b.rubRateInput.Delete(userID)
 	}
