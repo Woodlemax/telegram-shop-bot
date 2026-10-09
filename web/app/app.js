@@ -38,6 +38,7 @@
   var titleEl = document.getElementById('title');
   var backBtn = document.getElementById('back-btn');
   var homeBtn = document.getElementById('home-btn');
+  var ordersBtn = document.getElementById('orders-btn');
   var cartBtn = document.getElementById('cart-btn');
   var cartBadge = document.getElementById('cart-badge');
 
@@ -591,16 +592,7 @@
         payStars.onclick = function () { checkout('stars', promo.value, payStars); };
         paymentBox.appendChild(payStars);
 
-        if (!cart.stars_only) {
-        var payCrypto = el('button', 'btn secondary', t('webapp_pay_crypto'));
-        payCrypto.type = 'button';
-        payCrypto.onclick = function () { checkout('crypto', promo.value, payCrypto); };
-        paymentBox.appendChild(payCrypto);
-        }
-
-        // The four newer rails render only when the cart payload marks them
-        // enabled (rail available, non-subscription cart, positive converted
-        // total) — same visibility rules as the bot's payment keyboard.
+        // Card providers render when enabled by the cart payload.
         if (cart.yookassa_enabled) {
           var payRub = el('button', 'btn secondary', t('webapp_pay_rub'));
           payRub.type = 'button';
@@ -615,19 +607,6 @@
           paymentBox.appendChild(payStripe);
         }
 
-        if (cart.ton_enabled) {
-          var payTon = el('button', 'btn secondary', t('webapp_pay_ton'));
-          payTon.type = 'button';
-          payTon.onclick = function () { checkout('ton', promo.value, payTon); };
-          paymentBox.appendChild(payTon);
-        }
-
-        if (cart.nowpayments_enabled) {
-          var payNowp = el('button', 'btn secondary', t('webapp_pay_nowpayments'));
-          payNowp.type = 'button';
-          payNowp.onclick = function () { checkout('nowpayments', promo.value, payNowp); };
-          paymentBox.appendChild(payNowp);
-        }
         for (var b = 0; b < paymentBox.children.length; b++) { paymentBox.children[b].disabled = checkoutPending; }
       }
       updateCartView();
@@ -835,7 +814,7 @@
       clearScreen();
       screenEl.appendChild(el('h2', 'product-name', t('webapp_order_pay_continue')));
       screenEl.appendChild(el('div', 'cart-total', t('webapp_total') + ': ' + orderTotal(order)));
-      var labels = {stars: 'webapp_pay_stars', crypto: 'webapp_pay_crypto', yookassa: 'webapp_pay_rub', stripe: 'webapp_pay_stripe', ton: 'webapp_pay_ton', nowpayments: 'webapp_pay_nowpayments', free: 'free_order_button'};
+      var labels = {stars: 'webapp_pay_stars', yookassa: 'webapp_pay_rub', stripe: 'webapp_pay_stripe', free: 'free_order_button'};
       if (order.checkout_provider && labels[order.checkout_provider]) {
         screenEl.appendChild(el('p', 'product-desc', t('payment_method_selected') + ': ' + t(labels[order.checkout_provider])));
       }
@@ -930,6 +909,7 @@
 
     backBtn.onclick = pop;
     homeBtn.onclick = goHome;
+    if (ordersBtn) { ordersBtn.onclick = function () { push(renderOrders); }; }
     cartBtn.onclick = function () { push(renderCart); };
 
     var lang = '';
@@ -946,6 +926,10 @@
     }).then(function () {
       homeBtn.title = t('webapp_home');
       homeBtn.setAttribute('aria-label', t('webapp_home'));
+      if (ordersBtn) {
+        ordersBtn.title = t('btn_orders');
+        ordersBtn.setAttribute('aria-label', t('btn_orders'));
+      }
       setTitle(t('webapp_title'));
       push(renderCatalog);
       // Prime the cart badge in the background.
