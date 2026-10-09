@@ -19,7 +19,7 @@ type ProductGroupRow struct {
 }
 
 func catalogVisible(alias string) string {
-	return alias + `.is_active=1 AND ` + alias + `.deleted_at IS NULL AND (` + alias + `.stock>0 OR ` + alias + `.infinite_stock=1 OR ` + alias + `.coming_soon=1)`
+	return alias + `.is_active=1 AND ` + alias + `.deleted_at IS NULL AND (` + alias + `.stock>0 OR ` + alias + `.infinite_stock=1 OR ` + alias + `.coming_soon=1 OR ` + alias + `.author_telegram_url<>'')`
 }
 
 func (s *ProductGroupStore) SetParent(ctx context.Context, productID, parentID int64) error {

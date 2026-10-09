@@ -63,7 +63,7 @@ func (b *Bot) onAdminOpenPrice(ctx context.Context, chatID int64, data, lang str
 		return
 	}
 	p, err := b.products.GetProduct(ctx, id)
-	if err != nil || p.SubPeriodDays > 0 {
+	if err != nil || p.SubPeriodDays > 0 || p.IsAuthorSale() {
 		b.send(tgbotapi.NewMessage(chatID, b.t(lang, "open_price_sub_error")))
 		return
 	}

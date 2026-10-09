@@ -24,7 +24,7 @@ func (s *Server) handleGroupedProducts(w http.ResponseWriter, r *http.Request, c
 			s.writeError(w, 500, "webapp_err_internal")
 			return
 		}
-		if !p.IsActive || !(p.InfiniteStock || p.Stock > 0 || p.ComingSoon) {
+		if !p.IsActive || !(p.InfiniteStock || p.Stock > 0 || p.ComingSoon || p.IsAuthorSale()) {
 			continue
 		}
 		item := s.displayProductJSON(p)
@@ -53,7 +53,7 @@ func (s *Server) handleModifications(w http.ResponseWriter, r *http.Request, _ *
 		}
 	}
 	main, err := s.deps.Catalog.GetProduct(r.Context(), id)
-	if errors.Is(err, storage.ErrNotFound) || (err == nil && (!main.IsActive || !(main.InfiniteStock || main.Stock > 0 || main.ComingSoon))) {
+	if errors.Is(err, storage.ErrNotFound) || (err == nil && (!main.IsActive || !(main.InfiniteStock || main.Stock > 0 || main.ComingSoon || main.IsAuthorSale()))) {
 		s.writeError(w, 404, "webapp_err_not_found")
 		return
 	}
@@ -77,7 +77,7 @@ func (s *Server) handleModifications(w http.ResponseWriter, r *http.Request, _ *
 			s.writeError(w, 500, "webapp_err_internal")
 			return
 		}
-		if p.CategoryID != main.CategoryID || !p.IsActive || !(p.InfiniteStock || p.Stock > 0 || p.ComingSoon) {
+		if p.CategoryID != main.CategoryID || !p.IsActive || !(p.InfiniteStock || p.Stock > 0 || p.ComingSoon || p.IsAuthorSale()) {
 			continue
 		}
 		out = append(out, s.displayProductJSON(p))

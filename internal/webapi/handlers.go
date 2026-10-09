@@ -304,6 +304,8 @@ func (s *Server) handleCatalog(w http.ResponseWriter, r *http.Request, _ *AuthRe
 
 // productJSON is the wire form of a product in lists and cards.
 type productJSON struct {
+	BuyFromAuthor     bool     `json:"buy_from_author"`
+	AuthorTelegramURL string   `json:"author_telegram_url,omitempty"`
 	ModificationCount int      `json:"modification_count,omitempty"`
 	ID                int64    `json:"id"`
 	CategoryID        int64    `json:"category_id"`
@@ -325,23 +327,26 @@ type productJSON struct {
 
 func toProductJSON(p *storage.Product) productJSON {
 	link, _ := storage.NormalizeTelegramURL(p.TelegramURL)
+	author, _ := storage.NormalizeAuthorTelegramURL(p.AuthorTelegramURL)
 	return productJSON{
-		ID:            p.ID,
-		CategoryID:    p.CategoryID,
-		Name:          p.Name,
-		Description:   p.Description,
-		TelegramURL:   link,
-		Photo:         photoRef(p.PhotoURL),
-		PriceUSD:      p.PriceUSD,
-		PriceStars:    p.PriceStars,
-		PriceRUB:      p.PriceRUB,
-		OpenPrice:     p.OpenPrice,
-		Stock:         p.Stock,
-		ComingSoon:    p.IsComingSoon(),
-		InfiniteStock: p.InfiniteStock,
-		SingleInCart:  p.SingleInCart,
-		IsDigital:     p.IsDigital,
-		SubPeriodDays: p.SubPeriodDays,
+		ID:                p.ID,
+		CategoryID:        p.CategoryID,
+		Name:              p.Name,
+		Description:       p.Description,
+		TelegramURL:       link,
+		BuyFromAuthor:     p.IsAuthorSale(),
+		AuthorTelegramURL: author,
+		Photo:             photoRef(p.PhotoURL),
+		PriceUSD:          p.PriceUSD,
+		PriceStars:        p.PriceStars,
+		PriceRUB:          p.PriceRUB,
+		OpenPrice:         p.OpenPrice,
+		Stock:             p.Stock,
+		ComingSoon:        p.IsComingSoon(),
+		InfiniteStock:     p.InfiniteStock,
+		SingleInCart:      p.SingleInCart,
+		IsDigital:         p.IsDigital,
+		SubPeriodDays:     p.SubPeriodDays,
 	}
 }
 

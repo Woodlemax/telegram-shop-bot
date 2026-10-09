@@ -94,6 +94,9 @@ func (s *CartService) Get(ctx context.Context, userID int64) (*CartView, error) 
 		if p.PriceRUB == nil && !p.OpenPrice {
 			view.BaseRUB = false
 		}
+		if p.IsAuthorSale() {
+			continue
+		}
 		applyProductPrice(p, exchange)
 		if p.OpenPrice {
 			rub := float64(ci.CustomPrice)

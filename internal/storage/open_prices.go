@@ -13,7 +13,7 @@ func (s *SQLCartStore) SetPrice(ctx context.Context, userID, productID int64, am
 		return ErrInvalidMoney
 	}
 	res, err := s.db.ExecContext(ctx, `INSERT INTO cart_items(user_id,product_id,quantity,custom_price)
- SELECT ?,id,1,? FROM products WHERE id=? AND deleted_at IS NULL AND open_price=1 AND is_active=1 AND sub_period_days=0 AND NOT(coming_soon=1 AND stock<=0) AND (infinite_stock=1 OR stock>0)
+ SELECT ?,id,1,? FROM products WHERE id=? AND deleted_at IS NULL AND author_telegram_url='' AND open_price=1 AND is_active=1 AND sub_period_days=0 AND NOT(coming_soon=1 AND stock<=0) AND (infinite_stock=1 OR stock>0)
  ON CONFLICT(user_id,product_id) DO UPDATE SET custom_price=excluded.custom_price, quantity=CASE WHEN EXISTS(SELECT 1 FROM products WHERE id=excluded.product_id AND single_in_cart=1) THEN 1 ELSE cart_items.quantity END`, userID, amount, productID)
 	if err != nil {
 		return err
@@ -30,7 +30,7 @@ func (s *SQLCartStore) SetPrice(ctx context.Context, userID, productID int64, am
 
 func (s *SQLCartStore) BeginPriceInput(ctx context.Context, userID, chatID, productID int64) error {
 	res, err := s.db.ExecContext(ctx, `INSERT INTO open_price_inputs(user_id,chat_id,product_id,expires_at)
- SELECT ?,?,id,? FROM products WHERE id=? AND deleted_at IS NULL
+ SELECT ?,?,id,? FROM products WHERE id=? AND deleted_at IS NULL AND author_telegram_url=''
  ON CONFLICT(user_id) DO UPDATE SET chat_id=excluded.chat_id,product_id=excluded.product_id,expires_at=excluded.expires_at`, userID, chatID, time.Now().Add(15*time.Minute).Unix(), productID)
 	if err != nil {
 		return err

@@ -119,25 +119,26 @@ type Category struct {
 }
 
 type Product struct {
-	ID             int64     `db:"id"`
-	CategoryID     int64     `db:"category_id"`
-	Name           string    `db:"name"`
-	Description    string    `db:"description"`
-	PhotoURL       string    `db:"photo_url"`
-	TelegramURL    string    `db:"telegram_url"`
-	PriceUSD       float64   `db:"price_usd"`
-	PriceStars     int       `db:"price_stars"`
-	OpenPrice      bool      `db:"open_price"`
-	PriceRUB       *float64  `db:"price_rub"`
-	Stock          int       `db:"stock"`
-	ComingSoon     bool      `db:"coming_soon"`
-	InfiniteStock  bool      `db:"infinite_stock"`
-	SingleInCart   bool      `db:"single_in_cart"`
-	IsDigital      bool      `db:"is_digital"`
-	DigitalContent string    `db:"digital_content"`
-	IsActive       bool      `db:"is_active"`
-	SubPeriodDays  int       `db:"sub_period_days"`
-	CreatedAt      time.Time `db:"created_at"`
+	ID                int64  `db:"id"`
+	CategoryID        int64  `db:"category_id"`
+	Name              string `db:"name"`
+	Description       string `db:"description"`
+	PhotoURL          string `db:"photo_url"`
+	TelegramURL       string `db:"telegram_url"`
+	AuthorTelegramURL string
+	PriceUSD          float64   `db:"price_usd"`
+	PriceStars        int       `db:"price_stars"`
+	OpenPrice         bool      `db:"open_price"`
+	PriceRUB          *float64  `db:"price_rub"`
+	Stock             int       `db:"stock"`
+	ComingSoon        bool      `db:"coming_soon"`
+	InfiniteStock     bool      `db:"infinite_stock"`
+	SingleInCart      bool      `db:"single_in_cart"`
+	IsDigital         bool      `db:"is_digital"`
+	DigitalContent    string    `db:"digital_content"`
+	IsActive          bool      `db:"is_active"`
+	SubPeriodDays     int       `db:"sub_period_days"`
+	CreatedAt         time.Time `db:"created_at"`
 }
 
 type CartItem struct {
@@ -359,7 +360,10 @@ var StatusDisplay = map[string]string{
 
 // IsComingSoon keeps previews visible at zero stock without treating an
 // unlimited digital product as already released.
-func (p *Product) IsComingSoon() bool { return p.ComingSoon && p.Stock <= 0 }
+func (p *Product) IsComingSoon() bool { return !p.IsAuthorSale() && p.ComingSoon && p.Stock <= 0 }
 func (p *Product) CanPurchase() bool {
-	return p.IsActive && !p.IsComingSoon() && (p.InfiniteStock || p.Stock > 0)
+	return p.IsActive && !p.IsAuthorSale() && !p.IsComingSoon() && (p.InfiniteStock || p.Stock > 0)
 }
+
+// IsAuthorSale indicates a purchase in the author's private Telegram chat.
+func (p *Product) IsAuthorSale() bool { return p.AuthorTelegramURL != "" }

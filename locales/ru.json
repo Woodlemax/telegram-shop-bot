@@ -272,7 +272,7 @@
   "admin_invalid_stock": "❌ Некорректное количество.",
   "admin_invalid_category_id": "❌ Некорректный ID категории.",
   "admin_invalid_bool": "❌ Используйте true или false.",
-  "admin_supported_fields": "❌ Поддерживаются поля: name, description, price, stock, category, active, openprice, infinitestock, singleincart, telegram., comingsoon, parent",
+  "admin_supported_fields": "❌ Поддерживаются поля: name, description, price, stock, category, active, openprice, infinitestock, singleincart, telegram., comingsoon, parent, author",
   "admin_product_update_failed": "❌ Не удалось обновить товар.",
   "admin_product_updated": "✅ Товар обновлён.",
   "admin_usage_deleteproduct": "Использование: /deleteproduct <id>",
@@ -536,5 +536,9 @@
   "admin_product_parent": "Основной товар (ID): %d; 0 — самостоятельный товар",
   "admin_product_parent_usage": "/editproduct %d parent ID_самолёта — привязать модификацию\n/editproduct %d parent 0 — убрать привязку",
   "admin_product_parent_invalid": "Не удалось привязать модификацию: нужны разные товары в одной категории. Основной товар не должен быть модификацией; товар с модификациями нельзя вложить в другой.",
-  "admin_product_parent_list": " → основной #%d"
+  "admin_product_parent_list": " → основной #%d",
+  "product_buy_from_author": "Купить у автора",
+  "admin_author_current": "Покупка у автора: %s",
+  "admin_author_usage": "/editproduct %d author @username — включить покупку у автора\n/editproduct %d author - — выключить",
+  "admin_author_invalid": "Укажите личный @username автора или https://t.me/username. Сначала задайте цену в рублях командой price. Подписки не поддерживаются. Для отключения: author -."
 }

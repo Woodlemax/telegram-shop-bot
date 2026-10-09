@@ -158,6 +158,12 @@ func (b *Bot) sendAdminProductDetails(ctx context.Context, chatID int64, product
 		text += "\n" + b.t(lang, "open_price_hint")
 	}
 
+	authorText := product.AuthorTelegramURL
+	if authorText == "" {
+		authorText = b.t(lang, "admin_telegram_empty")
+	}
+	text += "\n" + fmt.Sprintf(b.t(lang, "admin_author_current"), authorText)
+	text += "\n" + fmt.Sprintf(b.t(lang, "admin_author_usage"), product.ID, product.ID)
 	linkText := product.TelegramURL
 	if linkText == "" {
 		linkText = b.t(lang, "admin_telegram_empty")
@@ -182,6 +188,16 @@ func (b *Bot) sendAdminProductDetails(ctx context.Context, chatID int64, product
 		keyboard.InlineKeyboard = append(keyboard.InlineKeyboard[:3], keyboard.InlineKeyboard[4:]...)
 	}
 
+	if product.IsAuthorSale() {
+		rows := keyboard.InlineKeyboard[:0]
+		for _, row := range keyboard.InlineKeyboard {
+			if len(row) == 1 && row[0].CallbackData != nil && strings.HasPrefix(*row[0].CallbackData, "admin:openprice:") {
+				continue
+			}
+			rows = append(rows, row)
+		}
+		keyboard.InlineKeyboard = rows
+	}
 	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(soonLabel, fmt.Sprintf("admin:comingsoon:%d", product.ID))))
 	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(b.t(lang, "admin_telegram_edit"), fmt.Sprintf("admin:telegram:edit:%d", product.ID))))
 	if product.TelegramURL != "" {
@@ -248,6 +264,20 @@ func (b *Bot) handleEditProductField(ctx context.Context, msg *tgbotapi.Message,
 		}
 		b.send(tgbotapi.NewMessage(msg.Chat.ID, b.t(lang, "admin_product_updated")))
 		return
+	case "author":
+		raw := strings.TrimSpace(value)
+		if raw == "-" {
+			raw = ""
+		}
+		link, err := storage.NormalizeAuthorTelegramURL(raw)
+		if err != nil || (link != "" && (product.PriceRUB == nil || product.SubPeriodDays > 0)) {
+			b.send(tgbotapi.NewMessage(msg.Chat.ID, b.t(lang, "admin_author_invalid")))
+			return
+		}
+		product.AuthorTelegramURL = link
+		if link != "" {
+			product.OpenPrice = false
+		}
 	case "telegram", "telegramlink":
 		raw := value
 		if strings.TrimSpace(raw) == "-" {
@@ -278,7 +308,7 @@ func (b *Bot) handleEditProductField(ctx context.Context, msg *tgbotapi.Message,
 		product.OpenPrice = false
 	case "openprice":
 		on, err := strconv.ParseBool(value)
-		if err != nil || product.SubPeriodDays > 0 {
+		if err != nil || product.SubPeriodDays > 0 || product.IsAuthorSale() {
 			b.send(tgbotapi.NewMessage(msg.Chat.ID, b.t(lang, "open_price_sub_error")))
 			return
 		}

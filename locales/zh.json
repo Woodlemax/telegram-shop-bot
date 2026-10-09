@@ -272,7 +272,7 @@
   "admin_invalid_stock": "❌ 数量无效。",
   "admin_invalid_category_id": "❌ 分类 ID 无效。",
   "admin_invalid_bool": "❌ 请使用 true 或 false。",
-  "admin_supported_fields": "❌ 支持的字段：name、description、price、stock、category、active, openprice。, infinitestock, singleincart, telegram., comingsoon, parent",
+  "admin_supported_fields": "❌ 支持的字段：name、description、price、stock、category、active, openprice。, infinitestock, singleincart, telegram., comingsoon, parent, author",
   "admin_product_update_failed": "❌ 更新商品失败。",
   "admin_product_updated": "✅ 商品已更新。",
   "admin_usage_deleteproduct": "用法：/deleteproduct <id>",
@@ -536,5 +536,9 @@
   "admin_product_parent": "Main product ID: %d; 0 means standalone",
   "admin_product_parent_usage": "/editproduct %d parent MAIN_ID — attach modification\n/editproduct %d parent 0 — detach",
   "admin_product_parent_invalid": "Invalid group: use different products in the same category. The main product cannot be a modification; a product with modifications cannot be nested.",
-  "admin_product_parent_list": " → main #%d"
+  "admin_product_parent_list": " → main #%d",
+  "product_buy_from_author": "向作者购买",
+  "admin_author_current": "向作者购买：%s",
+  "admin_author_usage": "/editproduct %d author @username — 启用向作者购买\n/editproduct %d author - — 关闭",
+  "admin_author_invalid": "请输入作者的个人 @username 或 https://t.me/username。先用 price 设置固定卢布价格。不支持订阅。关闭：author -."
 }

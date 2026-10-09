@@ -272,7 +272,7 @@
   "admin_invalid_stock": "❌ Invalid quantity.",
   "admin_invalid_category_id": "❌ Invalid category ID.",
   "admin_invalid_bool": "❌ Use true or false.",
-  "admin_supported_fields": "❌ Supported fields: name, description, price, stock, category, active, openprice, infinitestock, singleincart, telegram., comingsoon, parent",
+  "admin_supported_fields": "❌ Supported fields: name, description, price, stock, category, active, openprice, infinitestock, singleincart, telegram., comingsoon, parent, author",
   "admin_product_update_failed": "❌ Failed to update product.",
   "admin_product_updated": "✅ Product updated.",
   "admin_usage_deleteproduct": "Usage: /deleteproduct <id>",
@@ -536,5 +536,9 @@
   "admin_product_parent": "Main product ID: %d; 0 means standalone",
   "admin_product_parent_usage": "/editproduct %d parent MAIN_ID — attach modification\n/editproduct %d parent 0 — detach",
   "admin_product_parent_invalid": "Invalid group: use different products in the same category. The main product cannot be a modification; a product with modifications cannot be nested.",
-  "admin_product_parent_list": " → main #%d"
+  "admin_product_parent_list": " → main #%d",
+  "product_buy_from_author": "Buy from author",
+  "admin_author_current": "Purchase from author: %s",
+  "admin_author_usage": "/editproduct %d author @username — enable author purchase\n/editproduct %d author - — disable",
+  "admin_author_invalid": "Use the author’s personal @username or https://t.me/username. First set the fixed RUB price with price. Subscriptions are not supported. To disable: author -."
 }

@@ -118,16 +118,17 @@ func (s *DigitalArchiveStore) CancelUpload(ctx context.Context, adminID int64) e
 // Replacing the product archive also updates these rows for existing purchases.
 func snapshotDigitalArchive(ctx context.Context, tx *sql.Tx, orderID int64, item OrderItem) error {
 	var digital, single, comingSoon bool
+	var authorURL string
 	var stock int
 	var deletedAt sql.NullString
-	err := tx.QueryRowContext(ctx, `SELECT is_digital,single_in_cart,deleted_at,coming_soon,stock FROM products WHERE id=?`, item.ProductID).Scan(&digital, &single, &deletedAt, &comingSoon, &stock)
+	err := tx.QueryRowContext(ctx, `SELECT is_digital,single_in_cart,deleted_at,coming_soon,stock,author_telegram_url FROM products WHERE id=?`, item.ProductID).Scan(&digital, &single, &deletedAt, &comingSoon, &stock, &authorURL)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil
 	}
 	if err != nil {
 		return err
 	}
-	if comingSoon && stock <= 0 {
+	if authorURL != "" || (comingSoon && stock <= 0) {
 		return ErrProductOutOfStock
 	}
 	if deletedAt.Valid {

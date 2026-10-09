@@ -47,10 +47,37 @@ func NormalizeTelegramURL(raw string) (string, error) {
 	}
 	return "https://t.me/" + path, nil
 }
+
+var ErrInvalidAuthorSale = errors.New("author sale requires a personal Telegram username, fixed RUB price and no subscription")
+
+// NormalizeAuthorTelegramURL accepts public usernames only, not channel invitations or posts.
+func NormalizeAuthorTelegramURL(raw string) (string, error) {
+	link, err := NormalizeTelegramURL(raw)
+	if err != nil {
+		return "", ErrInvalidAuthorSale
+	}
+	if link != "" && !telegramUsername.MatchString(strings.TrimPrefix(link, "https://t.me/")) {
+		return "", ErrInvalidAuthorSale
+	}
+	return link, nil
+}
+
 func validateProduct(p *Product) error {
 	link, err := NormalizeTelegramURL(p.TelegramURL)
 	if err != nil {
 		return err
+	}
+	author, err := NormalizeAuthorTelegramURL(p.AuthorTelegramURL)
+	if err != nil {
+		return err
+	}
+	p.AuthorTelegramURL = author
+	if p.IsAuthorSale() {
+		if p.PriceRUB == nil || p.OpenPrice || p.SubPeriodDays > 0 {
+			return ErrInvalidAuthorSale
+		}
+		p.PriceUSD = 0
+		p.PriceStars = 0
 	}
 	if err := validateRUBProduct(p); err != nil {
 		return err

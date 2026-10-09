@@ -285,12 +285,16 @@
 
   // ---- screen: product list --------------------------------------------------
 
+  function catalogPrice(p) {
+    return p.buy_from_author ? rub(p.price_rub) : productPrice(p) + ' / ' + stars(p.price_stars);
+  }
+
   function productListCard(p) {
     var card = el('button', 'card'); card.type = 'button';
     var img = el('img', 'thumb'); loadImage(img, p.photo); card.appendChild(img);
     var info = el('div', 'card-info');
     info.appendChild(el('div', 'card-name', p.name));
-    info.appendChild(el('div', 'card-price', productPrice(p) + ' / ' + stars(p.price_stars)));
+    info.appendChild(el('div', 'card-price', catalogPrice(p)));
     if (p.coming_soon) { info.appendChild(el('div', 'product-stock', t('product_coming_soon'))); }
     else if (p.open_price) { info.appendChild(el('div', 'product-desc', t('webapp_open_price_hint'))); }
     card.appendChild(info);
@@ -406,11 +410,11 @@
 
       screenEl.appendChild(el('h2', 'product-name', p.name));
       var selectedPrice = p.open_price && cartItem ? cartItem : p;
-      var priceLine = el('div', 'product-price', productPrice(selectedPrice) + ' / ' + stars(selectedPrice.price_stars));
+      var priceLine = el('div', 'product-price', catalogPrice(selectedPrice));
       priceLine.setAttribute('aria-live', 'polite');
       screenEl.appendChild(priceLine);
       var priceRates = data.open_price_rates || cart.open_price_rates;
-      var customPrice = p.open_price && !p.coming_soon ? priceEditor(screenEl, p.id, cartItem ? cartItem.price_rub : 0, added, previewPrice, function () { return inCart; }) : null;
+      var customPrice = !p.buy_from_author && p.open_price && !p.coming_soon ? priceEditor(screenEl, p.id, cartItem ? cartItem.price_rub : 0, added, previewPrice, function () { return inCart; }) : null;
       function previewPrice(raw) {
         var amount = openPriceValue(raw);
         if (amount === null) { priceLine.textContent = t('open_price_invalid'); return; }
@@ -436,6 +440,17 @@
           if (tg && tg.openTelegramLink) { event.preventDefault(); tg.openTelegramLink(p.telegram_url); }
         };
         screenEl.appendChild(community);
+      }
+      if (p.buy_from_author) {
+        if (/^https:\/\/t\.me\/[A-Za-z][A-Za-z0-9_]*$/.test(p.author_telegram_url || '')) {
+          var author = el('a', 'btn primary product-author', t('product_buy_from_author'));
+          author.href = p.author_telegram_url; author.target = '_blank'; author.rel = 'noopener noreferrer';
+          author.onclick = function (event) {
+            if (tg && tg.openTelegramLink) { event.preventDefault(); tg.openTelegramLink(p.author_telegram_url); }
+          };
+          screenEl.appendChild(author);
+        }
+        return;
       }
       if (p.coming_soon) { screenEl.appendChild(el('div', 'product-stock', t('product_coming_soon'))); }
       else if (!p.infinite_stock) { screenEl.appendChild(el('div', 'product-stock', tf('webapp_stock', p.stock))); }

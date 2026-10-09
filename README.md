@@ -421,3 +421,18 @@ MIT — do whatever you want. See [LICENSE](LICENSE).
 ## Railway
 
 Deploy the Go bot with persistent SQLite storage using the [Railway guide](docs/railway.md).
+
+### Purchase directly from the author
+
+Set the fixed price in rubles with `/editproduct ID price 1500`, then enable the
+external offer with `/editproduct ID author @personal_username` (a public
+`https://t.me/username` link also works). `/editproduct ID author -` disables it.
+The Mini App displays only the RUB price and a **Buy from author** button opening
+the author’s private Telegram chat. Supply a personal account username, not a
+channel username. Invitations and message links are rejected.
+
+Author offers remain visible regardless of shop inventory and cannot enter the
+shop cart or generate a new shop order. Enabling this mode removes the product
+from all current carts atomically; existing orders and purchased files are
+retained. A fixed RUB price is required; subscriptions are unsupported and
+open-price mode is disabled when configuring the author.

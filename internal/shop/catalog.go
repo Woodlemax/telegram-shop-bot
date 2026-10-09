@@ -41,7 +41,7 @@ func (s *CatalogService) ListProducts(ctx context.Context, categoryID int64) ([]
 
 	isActive := make([]storage.Product, 0, len(all))
 	for _, p := range all {
-		if p.IsActive && (p.InfiniteStock || p.Stock > 0 || p.ComingSoon) {
+		if p.IsActive && (p.InfiniteStock || p.Stock > 0 || p.ComingSoon || p.IsAuthorSale()) {
 			s.applyExchangeRate(&p)
 			isActive = append(isActive, p)
 		}
