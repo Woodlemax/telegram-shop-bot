@@ -26,6 +26,7 @@ jobs:
         run: |
           node tests/miniapp-open-price.cjs
           node tests/miniapp-promos.cjs
+          node tests/miniapp-checkout.cjs
 
       - name: Build
         run: go build ./...

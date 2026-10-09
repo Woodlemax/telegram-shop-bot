@@ -17,7 +17,7 @@ async function drain() { for (let i = 0; i < 12; i++) await new Promise(setImmed
 async function fixture(initial = [[1, 100, 1]], options = {}) {
   const nodes = Object.fromEntries(['screen', 'title', 'back-btn', 'cart-btn', 'cart-badge'].map(id => [id, new Element('div')]));
   const products = [1, 2].map(id => ({id, name: 'Plane ' + id, description: 'Model', price_rub: 0, price_stars: 0, stock: 0, infinite_stock: true, single_in_cart: true, open_price: true}));
-  const timers = new Map(), alerts = [], requests = [], invoices = [];
+  const timers = new Map(), alerts = [], requests = [], invoices = [], invoiceCallbacks = [], orders = new Map();
   let timerID = 0, rate = 100, held = false, release, fail = false, checkouts = 0;
   let previewHeld = false, previewFail = false; const previewReleases = [], unavailable = new Set();
   let items = initial.map(([id, amount, quantity]) => ({product_id: id, price_rub: amount, quantity, name: 'Plane ' + id, open_price: true, single_in_cart: true}));
@@ -79,12 +79,24 @@ async function fixture(initial = [[1, 100, 1]], options = {}) {
       if (result.error) { ok = false; data = result; }
       else {
         assert.equal(body.method, result.free_checkout ? 'free' : 'stars', 'Checkout used an obsolete free/paid action');
-        data = result.free_checkout ? {free: true, order_id: 1} : {invoice_link: 'test-invoice'};
+        const id = orders.size + 1;
+        orders.set(id, {id, status: result.free_checkout ? 'paid' : 'pending', payment_state: result.free_checkout ? 'confirmed' : 'pending', payment_method: result.free_checkout ? 'free' : '', total_rub: result.total_rub, total_usd: result.total_rub / rate, total_stars: result.total_stars, created_at: '2026-10-09T06:00:00Z', items: items.map(item => ({product_id: item.product_id, name: item.name, quantity: item.quantity})), payment_methods: ['stars']});
+        items = []; // Real CreateFromCart consumes the cart before invoice creation.
+        data = result.free_checkout ? {free: true, order_id: id} : {order_id: id, invoice_link: 'test-invoice-' + id};
       }
+    } else if (/^\/api\/orders\/\d+$/.test(url)) {
+      const id = Number(url.split('/').pop());
+      data = {order: {...orders.get(id)}};
+    } else if (/^\/api\/orders\/\d+\/pay$/.test(url)) {
+      const id = Number(url.split('/')[3]), order = orders.get(id);
+      const body = JSON.parse(opts.body); requests.push({pay: id, method: body.method});
+      if (order.status !== 'pending') { ok = false; data = {error: 'webapp_order_pay_unavailable'}; }
+      else data = {order_id: id, invoice_link: 'test-invoice-' + id};
     } else throw Error('Unexpected request ' + url);
     return {ok, json: async () => data};
   };
-  const tg = {initData: 'test', ready() {}, expand() {}, onEvent() {}, showAlert(text) { alerts.push(text); }, openInvoice(link) { invoices.push(link); }};
+  const tg = {initData: 'test', ready() {}, expand() {}, onEvent() {}, showAlert(text) { alerts.push(text); }, openInvoice(link, callback) { invoices.push(link); invoiceCallbacks.push(callback); }};
+  if (options.externalPayment) { delete tg.openInvoice; tg.openLink = link => invoices.push(link); }
   vm.runInNewContext(source, {window: {Telegram: {WebApp: tg}}, document: {getElementById: id => nodes[id], createElement: tag => new Element(tag), documentElement: {style: {setProperty() {}}}}, fetch, Promise, URL, alert: text => alerts.push(text), setTimeout: fn => {timers.set(++timerID, fn); return timerID;}, clearTimeout: id => timers.delete(id)});
   const all = () => flatten(nodes.screen);
   const button = text => {const node = all().find(n => n.tagName === 'button' && n.textContent === text); assert(node, 'Missing button ' + text); return node;};
@@ -93,7 +105,12 @@ async function fixture(initial = [[1, 100, 1]], options = {}) {
   const tick = async () => {const callbacks = [...timers.values()]; timers.clear(); callbacks.forEach(fn => fn()); await drain();};
   const product = async id => {button('Planes').click(); await drain(); all().filter(n => n.className === 'card')[id - 1].click(); await drain();};
   await drain();
-  return {nodes, all, button, input, type, tick, product, requests, alerts, invoices, cart, holdPreview: () => {previewHeld = true;}, releasePreview: index => {previewReleases[index]();}, unholdPreview: () => {previewHeld = false;}, failPreview: () => {previewFail = true;}, expirePromo: code => {unavailable.add(code);}, setRate: n => {rate = n;}, hold: () => {held = true;}, release: () => {held = false; release();}, fail: () => {fail = true;}, checkouts: () => checkouts};
+  return {nodes, all, button, input, type, tick, product, requests, alerts, invoices, cart, orders,
+    finishInvoice: (status, index = invoiceCallbacks.length - 1) => {
+      const id = Number(invoices[index].split('-').pop());
+      if (status === 'paid') { const order = orders.get(id); order.status = 'paid'; order.payment_state = 'confirmed'; order.payment_method = 'stars'; }
+      invoiceCallbacks[index](status);
+    }, holdPreview: () => {previewHeld = true;}, releasePreview: index => {previewReleases[index]();}, unholdPreview: () => {previewHeld = false;}, failPreview: () => {previewFail = true;}, expirePromo: code => {unavailable.add(code);}, setRate: n => {rate = n;}, hold: () => {held = true;}, release: () => {held = false; release();}, fail: () => {fail = true;}, checkouts: () => checkouts};
 }
 async function productAutosave() {
   const f = await fixture([]); await f.product(1);
@@ -127,16 +144,17 @@ async function cartAutosave() {
   f.type(1, '250'); f.hold(); const pay = f.button(dict.webapp_pay_stars); pay.click(); pay.click(); await drain();
   assert.equal(f.checkouts(), 0, 'Checkout raced a pending price save');
   f.release(); await drain(); assert.equal(f.checkouts(), 1); assert.equal(f.requests.at(-1).amounts[0], 250); assert.equal(f.invoices.length, 1);
-  f.type(1, '300'); const row = f.all().find(n => n.className === 'cart-row'); flatten(row).find(n => n.className === 'icon-btn danger').click(); await drain();
-  assert(!f.cart().items.some(item => item.product_id === 1)); assert.equal(f.requests.at(-1).delete, 1, 'An autosave re-added a removed product');
-  await f.tick(); assert(!f.cart().items.some(item => item.product_id === 1));
+  const removal = await fixture([[1, 250, 1]]); removal.nodes['cart-btn'].click(); await drain();
+  removal.type(1, '300'); const row = removal.all().find(n => n.className === 'cart-row'); flatten(row).find(n => n.className === 'icon-btn danger').click(); await drain();
+  assert(!removal.cart().items.some(item => item.product_id === 1)); assert.equal(removal.requests.at(-1).delete, 1, 'An autosave re-added a removed product');
+  await removal.tick(); assert(!removal.cart().items.some(item => item.product_id === 1));
 }
 async function checkoutFlushFailureAndFree() {
   const f = await fixture([[1, 0, 1]]); f.nodes['cart-btn'].click(); await drain();
   f.type(1, '100'); f.fail(); f.button(dict.webapp_pay_stars).click(); await drain();
   assert.equal(f.checkouts(), 0); assert.equal(f.cart().items[0].price_rub, 0); assert.equal(f.input(1).disabled, false);
   f.button(dict.webapp_pay_stars).click(); await drain(); assert.equal(f.checkouts(), 1); assert.equal(f.requests.at(-1).amounts[0], 100);
-  f.type(1, '0'); f.button(dict.free_order_button).click(); await drain(); assert.equal(f.checkouts(), 2); assert.equal(f.requests.findLast(r => r.checkout).checkout, 'free');
+  const free = await fixture([[1, 0, 1]]); free.nodes['cart-btn'].click(); await drain(); free.button(dict.free_order_button).click(); await drain(); assert.equal(free.checkouts(), 1); assert.equal(free.requests.findLast(r => r.checkout).checkout, 'free');
 }
 async function quantityAndInvalidNavigation() {
   const f = await fixture([[1, 100, 2]]); f.nodes['cart-btn'].click(); await drain();

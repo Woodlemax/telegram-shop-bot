@@ -654,15 +654,25 @@
         if (tg && tg.showAlert) { tg.showAlert(message); } else { alert(message); }
         renderCart(); return;
       }
-      if (method === 'stars' && tg && tg.openInvoice) {
-        tg.openInvoice(data.invoice_link, function (status) {
-          if (status === 'paid') { renderCart(); }
-        });
-      } else if (tg && tg.openLink) {
-        tg.openLink(data.invoice_link);
-      } else {
-        window.open(data.invoice_link, '_blank');
-      }
+      // Checkout has moved the cart into a committed order, even if the
+      // buyer closes the invoice. Resume that order instead of checking out
+      // the now-empty cart again.
+      clearScreen();
+      api('GET', '/api/cart').then(function (cart) {
+        updateCartBadge(countItems(cart));
+      }).catch(function () {});
+      var orderRender = function () { renderOrder(data.order_id); };
+      return push(orderRender).then(function () {
+        if (method === 'stars' && tg && tg.openInvoice) {
+          tg.openInvoice(data.invoice_link, function () {
+            if (navStack[navStack.length - 1] === orderRender) { orderRender(); }
+          });
+        } else if (tg && tg.openLink) {
+          tg.openLink(data.invoice_link);
+        } else {
+          window.open(data.invoice_link, '_blank');
+        }
+      });
     }).catch(function (err) {
       enableCheckout();
       priceError(err);
