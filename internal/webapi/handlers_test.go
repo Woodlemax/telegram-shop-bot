@@ -1280,3 +1280,15 @@ func (f testRoundTripper) RoundTrip(request *http.Request) (*http.Response, erro
 type staticFileResolver string
 
 func (s staticFileResolver) GetFileDirectURL(string) (string, error) { return string(s), nil }
+
+func (f *fakeOrders) ClaimCheckoutProvider(_ context.Context, id int64, provider string) error {
+	o, ok := f.orders[id]
+	if !ok {
+		return storage.ErrNotFound
+	}
+	if o.CheckoutProvider != "" && o.CheckoutProvider != provider {
+		return storage.ErrCheckoutProviderConflict
+	}
+	o.CheckoutProvider = provider
+	return nil
+}

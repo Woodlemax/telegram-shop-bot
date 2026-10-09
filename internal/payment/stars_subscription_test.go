@@ -31,7 +31,7 @@ func newInvoiceCaptureStars(t *testing.T) (*StarsPayment, *answerCapture) {
 
 	api := &tgbotapi.BotAPI{Token: "test-token", Client: srv.Client(), Buffer: 100}
 	api.SetAPIEndpoint(srv.URL + "/bot%s/%s")
-	return NewStarsPayment(api, nil, nil), capture
+	return NewStarsPayment(api, mockOrderGetter{}, nil), capture
 }
 
 func invoiceItems() []storage.OrderItem {

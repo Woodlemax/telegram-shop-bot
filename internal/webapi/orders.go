@@ -14,18 +14,19 @@ const ordersPerPage = 10
 // Only buyer-visible snapshots are returned: no provider identifiers, user IDs,
 // archive references or administrative payment records.
 type orderJSON struct {
-	ID              int64           `json:"id"`
-	Status          string          `json:"status"`
-	PaymentState    string          `json:"payment_state"`
-	PaymentMethod   string          `json:"payment_method"`
-	TotalRUB        float64         `json:"total_rub"`
-	TotalUSD        float64         `json:"total_usd"`
-	TotalStars      int             `json:"total_stars"`
-	CreatedAt       time.Time       `json:"created_at"`
-	UpdatedAt       time.Time       `json:"updated_at"`
-	Items           []orderItemJSON `json:"items"`
-	PaymentMethods  []string        `json:"payment_methods,omitempty"`
-	DisplayTotalRUB *float64        `json:"display_total_rub,omitempty"`
+	ID               int64           `json:"id"`
+	Status           string          `json:"status"`
+	PaymentState     string          `json:"payment_state"`
+	CheckoutProvider string          `json:"checkout_provider"`
+	PaymentMethod    string          `json:"payment_method"`
+	TotalRUB         float64         `json:"total_rub"`
+	TotalUSD         float64         `json:"total_usd"`
+	TotalStars       int             `json:"total_stars"`
+	CreatedAt        time.Time       `json:"created_at"`
+	UpdatedAt        time.Time       `json:"updated_at"`
+	Items            []orderItemJSON `json:"items"`
+	PaymentMethods   []string        `json:"payment_methods,omitempty"`
+	DisplayTotalRUB  *float64        `json:"display_total_rub,omitempty"`
 }
 type orderItemJSON struct {
 	ProductID         int64  `json:"product_id"`
@@ -40,7 +41,7 @@ func toOrderJSON(o *storage.Order) orderJSON {
 	for _, item := range o.Items {
 		items = append(items, orderItemJSON{ProductID: item.ProductID, Name: item.ProductName, Quantity: item.Quantity})
 	}
-	return orderJSON{ID: o.ID, Status: o.Status, PaymentState: o.PaymentState, PaymentMethod: o.PaymentMethod, TotalRUB: o.TotalRUB, TotalUSD: o.TotalUSD, TotalStars: o.TotalStars, CreatedAt: o.CreatedAt, UpdatedAt: o.UpdatedAt, Items: items}
+	return orderJSON{ID: o.ID, Status: o.Status, PaymentState: o.PaymentState, PaymentMethod: o.PaymentMethod, CheckoutProvider: o.CheckoutProvider, TotalRUB: o.TotalRUB, TotalUSD: o.TotalUSD, TotalStars: o.TotalStars, CreatedAt: o.CreatedAt, UpdatedAt: o.UpdatedAt, Items: items}
 }
 func (s *Server) handleOrders(w http.ResponseWriter, r *http.Request, auth *AuthResult) {
 	w.Header().Set("Cache-Control", "no-store")

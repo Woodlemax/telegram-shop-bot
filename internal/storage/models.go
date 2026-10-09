@@ -163,6 +163,7 @@ type Order struct {
 	TotalStars             int       `db:"total_stars"`
 	TotalRUB               float64   `db:"total_rub"`
 	TotalTonNano           int64     `db:"total_ton_nano"`
+	CheckoutProvider       string    `db:"checkout_provider"`
 	PaymentMethod          string    `db:"payment_method"`
 	PaymentID              string    `db:"payment_id"`
 	DiscountPct            int       `db:"discount_pct"`

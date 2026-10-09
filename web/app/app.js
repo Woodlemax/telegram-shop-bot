@@ -823,6 +823,9 @@
       screenEl.appendChild(el('h2', 'product-name', t('webapp_order_pay_continue')));
       screenEl.appendChild(el('div', 'cart-total', t('webapp_total') + ': ' + orderTotal(order)));
       var labels = {stars: 'webapp_pay_stars', crypto: 'webapp_pay_crypto', yookassa: 'webapp_pay_rub', stripe: 'webapp_pay_stripe', ton: 'webapp_pay_ton', nowpayments: 'webapp_pay_nowpayments', free: 'free_order_button'};
+      if (order.checkout_provider && labels[order.checkout_provider]) {
+        screenEl.appendChild(el('p', 'product-desc', t('payment_method_selected') + ': ' + t(labels[order.checkout_provider])));
+      }
       var methods = order.payment_methods || [];
       var buttons = [];
       for (var i = 0; i < methods.length; i++) {
@@ -856,11 +859,11 @@
       }
       if (method === 'stars' && tg && tg.openInvoice) {
         tg.openInvoice(data.invoice_link, refresh);
-      } else if (tg && tg.openLink) { tg.openLink(data.invoice_link); }
-      else { window.open(data.invoice_link, '_blank'); }
+      } else if (tg && tg.openLink) { tg.openLink(data.invoice_link); refresh(); }
+      else { window.open(data.invoice_link, '_blank'); refresh(); }
     }).catch(function (err) {
       enable(); showError(err);
-      if (err.message === 'webapp_order_pay_unavailable' || err.message === 'webapp_order_pay_method_unavailable') { refresh(); }
+      if (err.message === 'webapp_order_pay_unavailable' || err.message === 'webapp_order_pay_method_unavailable' || err.message === 'payment_method_locked') { refresh(); }
     });
   }
 

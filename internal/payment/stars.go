@@ -23,6 +23,7 @@ func SubscriptionPeriodSeconds(days int) int {
 // OrderGetter is the narrow order-lookup dependency HandlePreCheckout needs.
 type OrderGetter interface {
 	GetOrder(ctx context.Context, id int64) (*storage.Order, error)
+	ClaimCheckoutProvider(context.Context, int64, string) error
 }
 
 type subscriptionCheckoutGuard interface {
@@ -35,12 +36,13 @@ type Translator func(lang, key string) string
 
 // Pre-checkout rejection i18n keys, one per validation rule.
 const (
-	PreCheckoutKeyOrderNotFound    = "precheckout_order_not_found"
-	PreCheckoutKeyWrongUser        = "precheckout_wrong_user"
-	PreCheckoutKeyNotPending       = "precheckout_order_not_pending"
-	PreCheckoutKeyAmountMismatch   = "precheckout_amount_mismatch"
-	PreCheckoutKeyCurrencyMismatch = "precheckout_currency_mismatch"
-	PreCheckoutKeyValidationError  = "precheckout_validation_error"
+	PreCheckoutKeyOrderNotFound         = "precheckout_order_not_found"
+	PreCheckoutKeyWrongUser             = "precheckout_wrong_user"
+	PreCheckoutKeyNotPending            = "precheckout_order_not_pending"
+	PreCheckoutKeyAmountMismatch        = "precheckout_amount_mismatch"
+	PreCheckoutKeyCurrencyMismatch      = "precheckout_currency_mismatch"
+	PreCheckoutKeyPaymentMethodConflict = "payment_method_locked"
+	PreCheckoutKeyValidationError       = "precheckout_validation_error"
 )
 
 // StarsPayment handles Telegram Stars payments via the Bot Payments API.
@@ -67,6 +69,12 @@ func NewStarsPayment(bot *tgbotapi.BotAPI, orders OrderGetter, translate Transla
 // subscription (Bot API `subscription_period`). tgbotapi v5 does not know
 // that field, so the subscription variant goes through a raw MakeRequest.
 func (s *StarsPayment) SendInvoice(chatID int64, orderID int64, totalStars int, items []storage.OrderItem, subscriptionPeriodSeconds int) error {
+	if s.orders == nil {
+		return storage.ErrCheckoutProviderConflict
+	}
+	if err := s.orders.ClaimCheckoutProvider(context.Background(), orderID, storage.PaymentMethodStars); err != nil {
+		return err
+	}
 	if subscriptionPeriodSeconds > 0 {
 		return s.sendSubscriptionInvoice(chatID, orderID, totalStars, items, subscriptionPeriodSeconds)
 	}
@@ -177,6 +185,18 @@ func (s *StarsPayment) validatePreCheckout(ctx context.Context, query *tgbotapi.
 		return PreCheckoutKeyCurrencyMismatch
 	case order.TotalStars != query.TotalAmount:
 		return PreCheckoutKeyAmountMismatch
+	}
+	if err := s.orders.ClaimCheckoutProvider(ctx, orderID, storage.PaymentMethodStars); err != nil {
+		if errors.Is(err, storage.ErrCheckoutProviderConflict) {
+			return PreCheckoutKeyPaymentMethodConflict
+		}
+		if errors.Is(err, storage.ErrNotFound) {
+			return PreCheckoutKeyOrderNotFound
+		}
+		if errors.Is(err, storage.ErrOrderStatusConflict) {
+			return PreCheckoutKeyNotPending
+		}
+		return PreCheckoutKeyValidationError
 	}
 	return ""
 }

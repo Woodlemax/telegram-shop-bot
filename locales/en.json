@@ -505,5 +505,7 @@
   "admin_product_list_empty": "No products yet.",
   "admin_product_list_usage": "Usage: /listproduct [page number].",
   "admin_product_list_page_missing": "Page not found. Start with /listproduct.",
-  "admin_product_list_inactive": "(inactive)"
+  "admin_product_list_inactive": "(inactive)",
+  "payment_method_locked": "Another payment method is already selected for this order. Continue with the selected method.",
+  "payment_method_selected": "Selected payment method"
 }

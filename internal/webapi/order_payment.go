@@ -11,6 +11,21 @@ import (
 )
 
 func (s *Server) orderPaymentMethods(order *storage.Order) []string {
+	return onlySelectedPaymentMethods(order.CheckoutProvider, s.availableOrderPaymentMethods(order))
+}
+func onlySelectedPaymentMethods(chosen string, methods []string) []string {
+	if chosen == "" {
+		return methods
+	}
+	out := make([]string, 0, 1)
+	for _, m := range methods {
+		if m == chosen {
+			out = append(out, m)
+		}
+	}
+	return out
+}
+func (s *Server) availableOrderPaymentMethods(order *storage.Order) []string {
 	methods := make([]string, 0, 6)
 	if order.Status != storage.OrderStatusPending || order.PaymentState != storage.PaymentStatePending {
 		return methods
@@ -76,7 +91,7 @@ func (s *Server) handleOrderPay(w http.ResponseWriter, r *http.Request, auth *Au
 		return
 	}
 	allowed := false
-	for _, method := range s.orderPaymentMethods(order) {
+	for _, method := range s.availableOrderPaymentMethods(order) {
 		if req.Method == method {
 			allowed = true
 			break
@@ -84,6 +99,10 @@ func (s *Server) handleOrderPay(w http.ResponseWriter, r *http.Request, auth *Au
 	}
 	if !allowed {
 		s.writeError(w, http.StatusBadRequest, "webapp_order_pay_method_unavailable")
+		return
+	}
+	if order.CheckoutProvider != "" && order.CheckoutProvider != req.Method {
+		s.writeError(w, http.StatusConflict, "payment_method_locked")
 		return
 	}
 	subPeriod := 0

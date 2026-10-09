@@ -217,3 +217,5 @@ func TestHandlePreCheckout_RejectsMalformedPayload(t *testing.T) {
 	}
 	assertPreCheckoutAnswer(t, capture, false, PreCheckoutKeyOrderNotFound)
 }
+
+func (m mockOrderGetter) ClaimCheckoutProvider(context.Context, int64, string) error { return nil }

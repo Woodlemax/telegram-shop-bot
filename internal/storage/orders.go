@@ -121,14 +121,14 @@ func (s *SQLOrderStore) GetOrder(ctx context.Context, id int64) (*Order, error) 
 		        COALESCE(status, 'pending'), order_state, payment_state, fulfillment_state,
 		        COALESCE(discount_pct, 0), COALESCE(promo_code, ''),
 		        COALESCE(subscription_product_id, 0), subscription_period_days,
-		        created_at, updated_at
+		        created_at, updated_at, checkout_provider
 		 FROM orders WHERE id = ?`, id).
 		Scan(&o.ID, &o.UserID, &o.TotalUSD, &o.TotalStars, &o.TotalRUB, &o.TotalTonNano,
 			&o.PaymentMethod, &o.PaymentID, &o.Status,
 			&o.OrderState, &o.PaymentState, &o.FulfillmentState,
 			&o.DiscountPct, &o.PromoCode,
 			&o.SubscriptionProductID, &o.SubscriptionPeriodDays,
-			&o.CreatedAt, &o.UpdatedAt)
+			&o.CreatedAt, &o.UpdatedAt, &o.CheckoutProvider)
 	if err == sql.ErrNoRows {
 		return nil, ErrNotFound
 	}
@@ -176,7 +176,7 @@ func (s *SQLOrderStore) GetUserOrders(ctx context.Context, userID int64) ([]Orde
 		        COALESCE(status, 'pending'), order_state, payment_state, fulfillment_state,
 		        COALESCE(discount_pct, 0), COALESCE(promo_code, ''),
 		        COALESCE(subscription_product_id, 0), subscription_period_days,
-		        created_at, updated_at
+		        created_at, updated_at, checkout_provider
 		 FROM orders WHERE user_id = ?
 		 ORDER BY created_at DESC`, userID)
 	if err != nil {
@@ -192,7 +192,7 @@ func (s *SQLOrderStore) GetUserOrders(ctx context.Context, userID int64) ([]Orde
 			&o.OrderState, &o.PaymentState, &o.FulfillmentState,
 			&o.DiscountPct, &o.PromoCode,
 			&o.SubscriptionProductID, &o.SubscriptionPeriodDays,
-			&o.CreatedAt, &o.UpdatedAt); err != nil {
+			&o.CreatedAt, &o.UpdatedAt, &o.CheckoutProvider); err != nil {
 			return nil, fmt.Errorf("order store: scan order: %w", err)
 		}
 		orders = append(orders, o)
@@ -268,7 +268,7 @@ func (s *SQLOrderStore) GetAllOrders(ctx context.Context, statusFilter string) (
 			        COALESCE(status, 'pending'), order_state, payment_state, fulfillment_state,
 			        COALESCE(discount_pct, 0), COALESCE(promo_code, ''),
 			        COALESCE(subscription_product_id, 0), subscription_period_days,
-			        created_at, updated_at
+			        created_at, updated_at, checkout_provider
 			 FROM orders WHERE status = ?
 			 ORDER BY created_at DESC`, statusFilter)
 	} else {
@@ -279,7 +279,7 @@ func (s *SQLOrderStore) GetAllOrders(ctx context.Context, statusFilter string) (
 			        COALESCE(status, 'pending'), order_state, payment_state, fulfillment_state,
 			        COALESCE(discount_pct, 0), COALESCE(promo_code, ''),
 			        COALESCE(subscription_product_id, 0), subscription_period_days,
-			        created_at, updated_at
+			        created_at, updated_at, checkout_provider
 			 FROM orders ORDER BY created_at DESC`)
 	}
 	if err != nil {
@@ -295,7 +295,7 @@ func (s *SQLOrderStore) GetAllOrders(ctx context.Context, statusFilter string) (
 			&o.OrderState, &o.PaymentState, &o.FulfillmentState,
 			&o.DiscountPct, &o.PromoCode,
 			&o.SubscriptionProductID, &o.SubscriptionPeriodDays,
-			&o.CreatedAt, &o.UpdatedAt); err != nil {
+			&o.CreatedAt, &o.UpdatedAt, &o.CheckoutProvider); err != nil {
 			return nil, fmt.Errorf("order store: scan order: %w", err)
 		}
 		orders = append(orders, o)

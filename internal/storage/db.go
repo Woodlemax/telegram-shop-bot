@@ -17,6 +17,7 @@ import (
 var migrationsFS embed.FS
 
 var (
+	ErrCheckoutProviderConflict  = errors.New("storage: another payment method already selected")
 	ErrNotFound                  = errors.New("storage: resource not found")
 	ErrOrderStatusConflict       = errors.New("storage: order status conflict")
 	ErrPaymentIdentityConflict   = errors.New("storage: payment identity belongs to another order")

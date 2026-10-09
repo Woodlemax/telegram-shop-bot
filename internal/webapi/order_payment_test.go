@@ -34,6 +34,11 @@ func (failedResumeInvoice) MakeRequest(string, tgbotapi.Params) (*tgbotapi.APIRe
 }
 
 func TestResumeOrderPaymentUsesExistingSnapshotForEveryMethod(t *testing.T) {
+	for _, method := range []string{"stars", "crypto", "yookassa", "stripe", "ton", "nowpayments"} {
+		t.Run(method, func(t *testing.T) { testResumeOrderPaymentSnapshot(t, method) })
+	}
+}
+func testResumeOrderPaymentSnapshot(t *testing.T, method string) {
 	f, db, digitalID, physicalID := realOpenPriceFixture(t)
 	ctx := context.Background()
 	store := storage.NewSQLOrderStore(db)
@@ -63,8 +68,8 @@ func TestResumeOrderPaymentUsesExistingSnapshotForEveryMethod(t *testing.T) {
 	if len(got) != len(methods) {
 		t.Fatalf("available methods: %v", got)
 	}
-	for _, method := range methods {
-		t.Run(method, func(t *testing.T) {
+	{
+		{
 			for i := 0; i < 2; i++ {
 				r := f.request(t, http.MethodPost, fmt.Sprintf("/api/orders/%d/pay", id), fmt.Sprintf(`{"method":%q,"total_rub":1,"promo":"NEW","user_id":43}`, method), true)
 				if r.Code != http.StatusOK {
@@ -105,12 +110,13 @@ func TestResumeOrderPaymentUsesExistingSnapshotForEveryMethod(t *testing.T) {
 					t.Fatalf("NOWPayments snapshot: %+v", f.nowpayments)
 				}
 			}
-		})
+		}
 	}
 	after, err := store.GetOrder(ctx, id)
 	if err != nil {
 		t.Fatal(err)
 	}
+	before.CheckoutProvider = method
 	if !reflect.DeepEqual(before, after) {
 		t.Fatal("resuming payment changed committed order")
 	}

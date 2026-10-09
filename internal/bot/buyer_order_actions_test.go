@@ -94,6 +94,7 @@ func TestBuyerOrderHistoryResumeCancelAndPaymentGuards(t *testing.T) {
 		t.Fatalf("lost discount: %v", prices)
 	}
 	after, err := e.bot.order.GetOrder(ctx, id)
+	before.CheckoutProvider = "stars"
 	if err != nil || !reflect.DeepEqual(before, after) {
 		t.Fatal("resume changed order")
 	}

@@ -58,6 +58,7 @@ type OrderService interface {
 	GetUserOrders(ctx context.Context, userID int64) ([]storage.Order, error)
 	GetUserOrdersPaged(ctx context.Context, userID int64, limit, offset int) ([]storage.Order, int, error)
 	CancelOrder(ctx context.Context, orderID, userID int64) error
+	ClaimCheckoutProvider(context.Context, int64, string) error
 }
 
 // PromoStore is the slice of storage.PromoStore the API consumes.
@@ -746,6 +747,16 @@ func (s *Server) issueOrderPayment(w http.ResponseWriter, r *http.Request, auth 
 		s.writeJSON(w, http.StatusOK, map[string]any{"order_id": orderID, "free": true})
 		return
 	}
+	if err := s.deps.Orders.ClaimCheckoutProvider(ctx, orderID, method); err != nil {
+		if errors.Is(err, storage.ErrCheckoutProviderConflict) {
+			s.writeError(w, http.StatusConflict, "payment_method_locked")
+		} else if errors.Is(err, storage.ErrOrderStatusConflict) || errors.Is(err, storage.ErrNotFound) {
+			s.writeError(w, http.StatusConflict, "webapp_order_pay_unavailable")
+		} else {
+			s.writeError(w, http.StatusInternalServerError, "webapp_err_internal")
+		}
+		return
+	}
 	var link string
 	var err error
 	switch method {
@@ -801,6 +812,10 @@ func (s *Server) issueOrderPayment(w http.ResponseWriter, r *http.Request, auth 
 		if err == nil {
 			link = inv.PayURL
 		}
+	}
+	if errors.Is(err, storage.ErrCheckoutProviderConflict) {
+		s.writeError(w, http.StatusConflict, "payment_method_locked")
+		return
 	}
 	if errors.Is(err, storage.ErrOrderStatusConflict) || errors.Is(err, payment.ErrYooKassaAwaitingConfirmation) {
 		s.writeError(w, http.StatusConflict, "webapp_order_pay_unavailable")

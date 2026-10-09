@@ -84,6 +84,7 @@ func TestYooKassaMiniAppResumeAfterProviderError(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	before.CheckoutProvider = "yookassa"
 	if !reflect.DeepEqual(before, after) {
 		t.Fatal("provider failure/retry changed order or marked it paid")
 	}

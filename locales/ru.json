@@ -505,5 +505,7 @@
   "admin_product_list_empty": "Товаров пока нет.",
   "admin_product_list_usage": "Использование: /listproduct [номер страницы].",
   "admin_product_list_page_missing": "Страница не найдена. Начните с /listproduct.",
-  "admin_product_list_inactive": "(неактивен)"
+  "admin_product_list_inactive": "(неактивен)",
+  "payment_method_locked": "Для этого заказа уже выбран другой способ оплаты. Продолжите оплату выбранным способом.",
+  "payment_method_selected": "Выбранный способ оплаты"
 }

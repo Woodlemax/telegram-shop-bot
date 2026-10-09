@@ -505,5 +505,7 @@
   "admin_product_list_empty": "暂无商品。",
   "admin_product_list_usage": "用法：/listproduct [页码]。",
   "admin_product_list_page_missing": "未找到该页。请从 /listproduct 开始。",
-  "admin_product_list_inactive": "（未启用）"
+  "admin_product_list_inactive": "（未启用）",
+  "payment_method_locked": "此订单已选择其他支付方式。请使用已选择的方式继续付款。",
+  "payment_method_selected": "已选择的支付方式"
 }

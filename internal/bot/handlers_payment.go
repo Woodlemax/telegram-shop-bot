@@ -50,6 +50,10 @@ func (b *Bot) onPayStars(ctx context.Context, cbID string, chatID, userID int64,
 
 	b.ack(cbID)
 	if err := b.stars.SendInvoice(chatID, orderID, target.TotalStars, target.Items, payment.SubscriptionPeriodSeconds(subDays)); err != nil {
+		if errors.Is(err, storage.ErrCheckoutProviderConflict) {
+			b.send(tgbotapi.NewMessage(chatID, b.t(lang, "payment_method_locked")))
+			return
+		}
 		b.loggerFor(ctx).Error("send stars invoice", "error", err)
 		b.send(tgbotapi.NewMessage(chatID, b.t(lang, "payment_error")))
 		return
@@ -234,6 +238,10 @@ func (b *Bot) onPayYooKassa(ctx context.Context, cbID string, chatID, userID int
 
 	desc := fmt.Sprintf(b.t(lang, "yookassa_invoice_desc"), orderID)
 	invoice, err := b.yookassa.CreatePayment(ctx, orderID, amountMinor, desc)
+	if errors.Is(err, storage.ErrCheckoutProviderConflict) {
+		b.send(tgbotapi.NewMessage(chatID, b.t(lang, "payment_method_locked")))
+		return
+	}
 	if errors.Is(err, storage.ErrOrderStatusConflict) || errors.Is(err, payment.ErrYooKassaAwaitingConfirmation) {
 		b.send(tgbotapi.NewMessage(chatID, b.t(lang, "order_already_paid")))
 		return

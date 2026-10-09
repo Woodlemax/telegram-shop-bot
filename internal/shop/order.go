@@ -708,3 +708,12 @@ func (s *OrderService) GetAllOrders(ctx context.Context, statusFilter string) ([
 func (s *OrderService) CancelOrder(ctx context.Context, orderID, userID int64) error {
 	return s.orders.CancelOrder(ctx, orderID, userID)
 }
+
+// ClaimCheckoutProvider forwards to the durable reservation used by every transport.
+func (s *OrderService) ClaimCheckoutProvider(ctx context.Context, id int64, provider string) error {
+	guard, ok := s.orders.(storage.CheckoutProviderClaimer)
+	if !ok {
+		return storage.ErrCheckoutProviderConflict
+	}
+	return guard.ClaimCheckoutProvider(ctx, id, provider)
+}
