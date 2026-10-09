@@ -417,3 +417,7 @@ MIT — do whatever you want. See [LICENSE](LICENSE).
 ---
 
 Русская версия: [README.ru.md](docs/readme/README.ru.md).
+
+## Railway
+
+Deploy the Go bot with persistent SQLite storage using the [Railway guide](docs/railway.md).

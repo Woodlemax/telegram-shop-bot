@@ -22,10 +22,15 @@ type BackupWorker struct {
 }
 
 func NewBackupWorker(db *sql.DB, interval time.Duration) *BackupWorker {
+	return NewBackupWorkerAt(db, interval, "backups")
+}
+
+// NewBackupWorkerAt keeps snapshots in the configured persistent directory.
+func NewBackupWorkerAt(db *sql.DB, interval time.Duration, backupDir string) *BackupWorker {
 	return &BackupWorker{
 		db:        db,
 		interval:  interval,
-		backupDir: "backups",
+		backupDir: backupDir,
 		keep:      backupKeep,
 	}
 }

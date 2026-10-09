@@ -396,3 +396,7 @@ make payment-review  # Список спорных Stars-фактов (PROVIDER=
 ### 📄 Лицензия
 
 MIT — делай что хочешь. Смотри [LICENSE](../../LICENSE).
+
+## Railway
+
+Развёртывание Go-бота с постоянной SQLite-базой: [инструкция Railway](../railway.md).

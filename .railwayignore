@@ -1,7 +1,6 @@
-.git
+.git/
 .env
 .env.*
-!.env.example
 data/
 backups/
 node_modules/
@@ -9,6 +8,3 @@ bot.exe
 bin/
 dist/
 .railway/
-docs/
-*.md
-!README.md

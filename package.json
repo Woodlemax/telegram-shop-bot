@@ -1,0 +1,7 @@
+{
+  "devDependencies": {
+    "railway": "^3.13.1"
+  },
+  "name": "telegram-shop-bot-deployment",
+  "private": true
+}

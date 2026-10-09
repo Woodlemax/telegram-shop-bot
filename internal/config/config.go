@@ -19,6 +19,8 @@ type Config struct {
 	AdminIDs              []int64
 	WebhookURL            string
 	DBPath                string
+	BackupDir             string
+	Port                  int
 	LogLevel              string
 	AppEnv                string
 	RedisAddr             string
@@ -87,6 +89,15 @@ func load(lookup lookupFunc) (*Config, error) {
 	adminIDs, err := parseAdminIDs(value(lookup, "ADMIN_IDS"))
 	if err != nil {
 		return nil, fmt.Errorf("ADMIN_IDS: %w", err)
+	}
+
+	port, err := parsePositiveInt(strings.TrimSpace(value(lookup, "PORT")), 8080)
+	if err != nil || port > 65535 {
+		return nil, fmt.Errorf("PORT must be an integer between 1 and 65535")
+	}
+	backupDir := strings.TrimSpace(value(lookup, "BACKUP_DIR"))
+	if backupDir == "" {
+		backupDir = "backups"
 	}
 
 	usdToStars, err := parsePositiveInt(value(lookup, "USD_TO_STARS_RATE"), defaultUSDToStarsRate)
@@ -208,6 +219,8 @@ func load(lookup lookupFunc) (*Config, error) {
 		TopicOrdersDelivered:  topicOrdersDelivered,
 		WebhookURL:            webhookURL,
 		DBPath:                getEnv(lookup, "DB_PATH", "data/shop.db"),
+		BackupDir:             backupDir,
+		Port:                  port,
 		LogLevel:              getEnv(lookup, "LOG_LEVEL", "info"),
 		AppEnv:                getEnv(lookup, "APP_ENV", "development"),
 		RedisAddr:             getEnv(lookup, "REDIS_ADDR", "localhost:6379"),

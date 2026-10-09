@@ -204,7 +204,7 @@ func runBot() {
 	workers := newWorkerGroup()
 	workers.Start(ctx, "digital_delivery", b.RunDigitalDeliveries)
 
-	backupW := worker.NewBackupWorker(db.Conn(), 24*time.Hour)
+	backupW := worker.NewBackupWorkerAt(db.Conn(), 24*time.Hour, cfg.BackupDir)
 	workers.Start(ctx, "backup", backupW.Start)
 
 	// We need the stores for the worker
@@ -378,9 +378,9 @@ func runBot() {
 			slog.Warn("WEBAPP_URL is not set — Mini App and REST API are disabled")
 		}
 
-		slog.Info("Health & Metrics API starting", "port", 8080)
+		slog.Info("Health & Metrics API starting", "port", cfg.Port)
 		server := &http.Server{
-			Addr:         ":8080",
+			Addr:         fmt.Sprintf(":%d", cfg.Port),
 			Handler:      mux,
 			ReadTimeout:  10 * time.Second,
 			WriteTimeout: 10 * time.Second,

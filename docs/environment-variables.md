@@ -40,6 +40,7 @@ Copy `.env.example` to `.env` and fill in the values.
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `DB_PATH` | `data/shop.db` | Path to the SQLite database file. Created automatically on first run. |
+| `BACKUP_DIR` | `backups` | Directory for daily SQLite snapshots; keep it on a persistent volume. |
 
 ---
 
@@ -134,6 +135,7 @@ Events: `order.paid`, `order.delivered`
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `APP_ENV` | `development` | `development` → text logs; `production` → JSON logs + webhook secret enforced. |
+| `PORT` | `8080` | HTTP listening port for health checks, Mini App and webhooks; integer from 1 to 65535. |
 | `LOG_LEVEL` | `info` | Log verbosity: `debug`, `info`, `warn`, `error`. |
 | `LOCALES_DIR` | `locales` | Path to directory with translation files. Ships with 5 locales: `ru.json`, `en.json`, `es.json`, `de.json`, `zh.json`. Unknown/empty user language falls back to `en`. |
 
