@@ -15,7 +15,7 @@ class Element {
 function flatten(node) { return [node, ...node.children.flatMap(flatten)]; }
 async function drain() { for (let i = 0; i < 12; i++) await new Promise(setImmediate); }
 async function fixture(initial = [[1, 100, 1]], options = {}) {
-  const nodes = Object.fromEntries(['screen', 'title', 'back-btn', 'cart-btn', 'cart-badge'].map(id => [id, new Element('div')]));
+  const nodes = Object.fromEntries(['screen', 'title', 'back-btn', 'home-btn', 'cart-btn', 'cart-badge'].map(id => [id, new Element('div')]));
   const products = [1, 2].map(id => ({id, name: 'Plane ' + id, description: 'Model', price_rub: 0, price_stars: 0, stock: 0, infinite_stock: true, single_in_cart: true, open_price: true}));
   const timers = new Map(), alerts = [], requests = [], invoices = [], invoiceCallbacks = [], orders = new Map();
   let timerID = 0, rate = 100, held = false, release, fail = false, checkouts = 0;

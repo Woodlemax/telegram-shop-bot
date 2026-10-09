@@ -433,6 +433,7 @@
   "review_admin_deleted": "🗑 Review #%d deleted.",
   "webapp_menu_button": "🛍 Shop",
   "webapp_title": "🛍 Shop",
+  "webapp_home": "Home",
   "webapp_catalog": "Catalog",
   "webapp_cart": "Cart",
   "webapp_cart_empty": "Your cart is empty",

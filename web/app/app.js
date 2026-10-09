@@ -37,6 +37,7 @@
   var screenEl = document.getElementById('screen');
   var titleEl = document.getElementById('title');
   var backBtn = document.getElementById('back-btn');
+  var homeBtn = document.getElementById('home-btn');
   var cartBtn = document.getElementById('cart-btn');
   var cartBadge = document.getElementById('cart-badge');
 
@@ -140,6 +141,17 @@
       navStack.pop();
       backBtn.className = navStack.length > 1 ? 'icon-btn' : 'icon-btn hidden';
       navStack[navStack.length - 1]();
+    }).catch(function (err) { navigationPending = false; priceError(err); });
+  }
+
+  function goHome() {
+    if (navigationPending || checkoutPending) { return; }
+    navigationPending = true;
+    return flushPriceEditors().then(function () {
+      navigationPending = false;
+      navStack = [renderCatalog];
+      backBtn.className = 'icon-btn hidden';
+      renderCatalog();
     }).catch(function (err) { navigationPending = false; priceError(err); });
   }
 
@@ -901,6 +913,7 @@
     }
 
     backBtn.onclick = pop;
+    homeBtn.onclick = goHome;
     cartBtn.onclick = function () { push(renderCart); };
 
     var lang = '';
@@ -915,6 +928,8 @@
     }).catch(function () {
       dict = {};
     }).then(function () {
+      homeBtn.title = t('webapp_home');
+      homeBtn.setAttribute('aria-label', t('webapp_home'));
       setTitle(t('webapp_title'));
       push(renderCatalog);
       // Prime the cart badge in the background.

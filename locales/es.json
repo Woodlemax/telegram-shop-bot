@@ -433,6 +433,7 @@
   "review_admin_deleted": "🗑 Reseña #%d eliminada.",
   "webapp_menu_button": "🛍 Tienda",
   "webapp_title": "🛍 Tienda",
+  "webapp_home": "Inicio",
   "webapp_catalog": "Catálogo",
   "webapp_cart": "Carrito",
   "webapp_cart_empty": "Tu carrito está vacío",

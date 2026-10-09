@@ -433,6 +433,7 @@
   "review_admin_deleted": "🗑 Rezension #%d gelöscht.",
   "webapp_menu_button": "🛍 Shop",
   "webapp_title": "🛍 Shop",
+  "webapp_home": "Zur Startseite",
   "webapp_catalog": "Katalog",
   "webapp_cart": "Warenkorb",
   "webapp_cart_empty": "Dein Warenkorb ist leer",
