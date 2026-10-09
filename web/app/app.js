@@ -760,7 +760,18 @@
       var list = el('div', 'list');
       for (var i = 0; i < order.items.length; i++) {
         var item = order.items[i];
-        var row = el('div', 'order-item', item.name + ' × ' + item.quantity);
+        var row = el('div', 'order-item');
+        var itemLabel = item.name + ' × ' + item.quantity;
+        if (item.product_id > 0) {
+          var productLink = el('button', 'cart-product-link', itemLabel);
+          productLink.type = 'button';
+          (function (productID, link) {
+            link.onclick = function () { push(function () { renderProduct(productID); }); };
+          })(item.product_id, productLink);
+          row.appendChild(productLink);
+        } else {
+          row.textContent = itemLabel;
+        }
         if (item.download_available) {
           row.appendChild(el('div', 'card-price', item.archive_name));
           (function (productID, parent) {
