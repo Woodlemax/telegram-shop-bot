@@ -17,10 +17,10 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background: var(--bg);
   color: var(--text);
-  text-align: center;
+  text-align: left;
 }
 
-/* Keep new controls consistent with the centered Mini App copy. */
+/* Keep new controls consistent with the left-aligned Mini App copy. */
 button, input, textarea, select { text-align: inherit; }
 
 #topbar {
@@ -51,6 +51,7 @@ button, input, textarea, select { text-align: inherit; }
 .hidden { display: none !important; }
 
 .icon-btn {
+  text-align: center;
   position: relative;
   border: none;
   background: var(--secondary-bg);
@@ -93,11 +94,11 @@ button, input, textarea, select { text-align: inherit; }
   background: var(--secondary-bg);
   color: var(--text);
   font-size: 15px;
-  text-align: center;
+  text-align: left;
   cursor: pointer;
 }
 
-.row { justify-content: center; text-align: center; }
+.row { justify-content: flex-start; text-align: left; }
 
 .thumb {
   width: 48px;
@@ -113,7 +114,7 @@ button, input, textarea, select { text-align: inherit; }
 .card-price { color: var(--hint); font-size: 13px; margin-top: 2px; }
 
 .empty, .loading {
-  text-align: center;
+  text-align: left;
   color: var(--hint);
   padding: 32px 0;
 }
@@ -145,7 +146,7 @@ button, input, textarea, select { text-align: inherit; }
 .product-rating { color: var(--hint); margin-top: 4px; }
 .product-sub { color: var(--link); margin-top: 4px; font-size: 14px; }
 .product-desc { color: var(--text); line-height: 1.4; }
-.product-telegram { text-align: center; text-decoration: none; }
+.product-telegram { text-align: left; text-decoration: none; }
 .product-stock { color: var(--hint); font-size: 13px; margin: 8px 0 16px; }
 
 .btn {
@@ -184,7 +185,7 @@ button, input, textarea, select { text-align: inherit; }
   color: var(--link);
   font-family: inherit;
   font-size: 15px;
-  text-align: center;
+  text-align: left;
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -210,7 +211,7 @@ button, input, textarea, select { text-align: inherit; }
   margin: 14px 0 6px;
   font-size: 16px;
   font-weight: 600;
-  text-align: center;
+  text-align: left;
 }
 
 .input {
@@ -229,7 +230,7 @@ button, input, textarea, select { text-align: inherit; }
 .open-price .btn { font-size: 14px; padding: 10px; }
 .orders-link { margin: 0 0 12px; }
 .catalog-orders { margin-top: 16px; margin-bottom: 0; }
-.order-card { width: 100%; text-align: center; padding: 14px; border: none; border-radius: 12px; background: var(--secondary-bg); color: var(--text); cursor: pointer; font: inherit; }
+.order-card { width: 100%; text-align: left; padding: 14px; border: none; border-radius: 12px; background: var(--secondary-bg); color: var(--text); cursor: pointer; font: inherit; }
 .order-heading { font-weight: 600; font-size: 16px; margin: 0 0 8px; overflow-wrap: anywhere; }
 .order-status { font-size: 14px; margin-bottom: 6px; }
 .order-summary { margin-top: 8px; font-size: 13px; color: var(--hint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -249,7 +250,7 @@ button, input, textarea, select { text-align: inherit; }
 .modifications-toggle {
   width: 100%; border: none; border-radius: 10px; padding: 10px 12px;
   background: var(--secondary-bg); color: var(--text); cursor: pointer;
-  font: inherit; font-size: 14px; text-align: center;
+  font: inherit; font-size: 14px; text-align: left;
 }
 .modifications-list {
   display: flex; flex-direction: column; gap: 8px; margin-left: 12px;
