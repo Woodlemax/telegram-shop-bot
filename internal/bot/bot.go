@@ -87,7 +87,7 @@ type Bot struct {
 	referralService *service.ReferralService
 	stars           *payment.StarsPayment
 	crypto          *payment.CryptoBotPayment
-	yookassa        *payment.YooKassaPayment
+	yookassa        *payment.YooKassaCheckout
 	stripe          *payment.StripePayment
 	ton             *payment.TONPayment
 	nowpayments     *payment.NowpaymentsPayment
@@ -219,7 +219,7 @@ func NewWithAPI(cfg *config.Config, api *tgbotapi.BotAPI, db *storage.DB, metric
 		referralService: referralSvc,
 		stars:           payment.NewStarsPayment(api, os, translate),
 		crypto:          payment.NewCryptoBotPayment(cfg.CryptoBotToken),
-		yookassa:        payment.NewYooKassaPayment(cfg.YooKassaShopID, cfg.YooKassaSecretKey, cfg.YooKassaReturnURL),
+		yookassa:        payment.NewYooKassaCheckout(cfg.YooKassaShopID, cfg.YooKassaSecretKey, cfg.YooKassaReturnURL, storage.NewSQLYooKassaCheckoutStore(db)),
 		stripe:          payment.NewStripePayment(cfg.StripeSecretKey, cfg.StripeWebhookSecret, cfg.StripeReturnURL),
 		ton:             payment.NewTONPayment(cfg.TONWalletAddress, cfg.TONAPIKey),
 		nowpayments:     payment.NewNowpaymentsPayment(cfg.NowpaymentsAPIKey, cfg.NowpaymentsIPNSecret, cfg.NowpaymentsReturnURL, config.NowpaymentsWebhookURL(cfg.WebhookURL)),

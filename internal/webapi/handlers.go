@@ -802,6 +802,10 @@ func (s *Server) issueOrderPayment(w http.ResponseWriter, r *http.Request, auth 
 			link = inv.PayURL
 		}
 	}
+	if errors.Is(err, storage.ErrOrderStatusConflict) || errors.Is(err, payment.ErrYooKassaAwaitingConfirmation) {
+		s.writeError(w, http.StatusConflict, "webapp_order_pay_unavailable")
+		return
+	}
 	if err != nil {
 		s.logger.Error("webapi: create invoice link", "order_id", orderID, "method", method)
 		s.writeError(w, http.StatusBadGateway, "webapp_err_internal")

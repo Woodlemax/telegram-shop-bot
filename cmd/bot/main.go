@@ -290,7 +290,7 @@ func runBot() {
 	// RUB card payments for the Mini App checkout. Separate instance from the
 	// bot's own (main owns the webapi deps, mirroring crypto); settlement is
 	// webhook-driven, backed up by the lost-webhook poller above.
-	yookassaPayments := payment.NewYooKassaPayment(cfg.YooKassaShopID, cfg.YooKassaSecretKey, cfg.YooKassaReturnURL)
+	yookassaPayments := payment.NewYooKassaCheckout(cfg.YooKassaShopID, cfg.YooKassaSecretKey, cfg.YooKassaReturnURL, storage.NewSQLYooKassaCheckoutStore(db))
 
 	// USD card payments for the Mini App checkout. Separate instance from the
 	// bot's own (main owns the webapi deps, mirroring yookassa); settlement

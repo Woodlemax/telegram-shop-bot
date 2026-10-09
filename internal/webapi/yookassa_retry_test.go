@@ -60,7 +60,7 @@ func TestYooKassaMiniAppResumeAfterProviderError(t *testing.T) {
 		_, _ = w.Write([]byte(`{"id":"retry_card_payment","test":true,"status":"pending","paid":false,"confirmation":{"type":"redirect","confirmation_url":"https://yoomoney.ru/test/retry"}}`))
 	}))
 	defer api.Close()
-	provider := payment.NewYooKassaPayment("test-shop", "fake-test-key", "https://t.me/test_shop_bot")
+	provider := payment.NewYooKassaCheckout("test-shop", "fake-test-key", "https://t.me/test_shop_bot", storage.NewSQLYooKassaCheckoutStore(db))
 	provider.SetBaseURL(api.URL + "/v3")
 	f.server.deps.YooKassa = provider
 
@@ -77,8 +77,8 @@ func TestYooKassaMiniAppResumeAfterProviderError(t *testing.T) {
 	if response["order_id"] != float64(id) || response["invoice_link"] != "https://yoomoney.ru/test/retry" {
 		t.Fatalf("wrong retry response: %v", response)
 	}
-	if len(keys) != 2 || keys[0] == "" || keys[1] == "" || keys[0] == keys[1] {
-		t.Fatalf("retry reused/missed idempotence key: %v", keys)
+	if len(keys) != 2 || keys[0] == "" || keys[1] == "" || keys[0] != keys[1] {
+		t.Fatalf("uncertain retry changed/missed idempotence key: %v", keys)
 	}
 	after, err := store.GetOrder(ctx, id)
 	if err != nil {

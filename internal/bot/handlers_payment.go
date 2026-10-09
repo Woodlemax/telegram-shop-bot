@@ -234,6 +234,10 @@ func (b *Bot) onPayYooKassa(ctx context.Context, cbID string, chatID, userID int
 
 	desc := fmt.Sprintf(b.t(lang, "yookassa_invoice_desc"), orderID)
 	invoice, err := b.yookassa.CreatePayment(ctx, orderID, amountMinor, desc)
+	if errors.Is(err, storage.ErrOrderStatusConflict) || errors.Is(err, payment.ErrYooKassaAwaitingConfirmation) {
+		b.send(tgbotapi.NewMessage(chatID, b.t(lang, "order_already_paid")))
+		return
+	}
 	if err != nil {
 		b.loggerFor(ctx).Error("create yookassa payment", "error", err)
 		b.send(tgbotapi.NewMessage(chatID, b.t(lang, "payment_error")))

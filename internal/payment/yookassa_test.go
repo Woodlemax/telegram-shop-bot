@@ -124,8 +124,8 @@ func TestYooKassaCreatePaymentSendsRedirectConfirmation(t *testing.T) {
 		t.Errorf("PayURL = %q, want %q", invoice.PayURL, "https://yoomoney/redirect/pay_1")
 	}
 
-	// A retried creation must not reuse the idempotence key: the ledger
-	// quarantines a second charge for the same order.
+	// Explicit low-level operations have separate keys. Buyer retries use
+	// YooKassaCheckout and its durable key instead (covered separately).
 	if _, err := client.CreatePayment(context.Background(), 42, 199900, "Order 42"); err != nil {
 		t.Fatalf("second CreatePayment returned error: %v", err)
 	}

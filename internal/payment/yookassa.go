@@ -125,11 +125,13 @@ type yookassaRefundObject struct {
 	Status string `json:"status"`
 }
 
-// CreatePayment registers a redirect payment for the given order and returns
-// its confirmation URL. A fresh idempotence key is used for every attempt:
-// the ledger quarantines a second successful charge for the same order, so a
-// retried request must not silently reuse an expired payment.
+// CreatePayment is the low-level provider operation. Buyer flows must use
+// YooKassaCheckout, which persists and reuses one request/payment per order.
 func (y *YooKassaPayment) CreatePayment(ctx context.Context, orderID int64, amountRUBMinor int64, description string) (*Invoice, error) {
+	return y.createPaymentWithKey(ctx, orderID, amountRUBMinor, description, y.returnURL, uuid.NewString())
+}
+
+func (y *YooKassaPayment) createPaymentWithKey(ctx context.Context, orderID int64, amountRUBMinor int64, description, returnURL, requestKey string) (*Invoice, error) {
 	if !y.Configured() {
 		return nil, ErrYooKassaNotConfigured
 	}
@@ -143,7 +145,7 @@ func (y *YooKassaPayment) CreatePayment(ctx context.Context, orderID int64, amou
 	reqBody := yookassaCreateRequest{
 		Amount:       yookassaAmount{Value: formatMinorUnits(amountRUBMinor, 2), Currency: "RUB"},
 		Capture:      true,
-		Confirmation: yookassaConfirmation{Type: "redirect", ReturnURL: y.returnURL},
+		Confirmation: yookassaConfirmation{Type: "redirect", ReturnURL: returnURL},
 		Description:  description,
 		Metadata:     map[string]string{"order_id": strconv.FormatInt(orderID, 10)},
 	}
@@ -158,7 +160,7 @@ func (y *YooKassaPayment) CreatePayment(ctx context.Context, orderID int64, amou
 		return nil, fmt.Errorf("yookassa: create request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Idempotence-Key", uuid.NewString())
+	req.Header.Set("Idempotence-Key", requestKey)
 	req.Header.Set("Authorization", y.basicAuth())
 
 	var payment yookassaPaymentObject
@@ -250,6 +252,14 @@ func (y *YooKassaPayment) CreateRefund(ctx context.Context, paymentID string, am
 
 // GetPayment reads the authoritative payment state from the YooKassa API.
 func (y *YooKassaPayment) GetPayment(ctx context.Context, paymentID string) (*Payment, error) {
+	object, err := y.getPaymentObject(ctx, paymentID)
+	if err != nil {
+		return nil, err
+	}
+	return object.toPayment()
+}
+
+func (y *YooKassaPayment) getPaymentObject(ctx context.Context, paymentID string) (*yookassaPaymentObject, error) {
 	if !y.Configured() {
 		return nil, ErrYooKassaNotConfigured
 	}
@@ -278,7 +288,7 @@ func (y *YooKassaPayment) GetPayment(ctx context.Context, paymentID string) (*Pa
 	if err := json.Unmarshal(rawBody, &object); err != nil {
 		return nil, fmt.Errorf("yookassa: parse payment response: %w", err)
 	}
-	return object.toPayment()
+	return &object, nil
 }
 
 // ListPayments pages through payments matching the given filters. It backs
