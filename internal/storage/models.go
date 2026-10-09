@@ -130,6 +130,7 @@ type Product struct {
 	OpenPrice      bool      `db:"open_price"`
 	PriceRUB       *float64  `db:"price_rub"`
 	Stock          int       `db:"stock"`
+	ComingSoon     bool      `db:"coming_soon"`
 	InfiniteStock  bool      `db:"infinite_stock"`
 	SingleInCart   bool      `db:"single_in_cart"`
 	IsDigital      bool      `db:"is_digital"`
@@ -353,4 +354,11 @@ var StatusDisplay = map[string]string{
 	OrderStatusPaid:      "✅ Оплачен",
 	OrderStatusDelivered: "📦 Доставлен",
 	OrderStatusCancelled: "❌ Отменён",
+}
+
+// IsComingSoon keeps previews visible at zero stock without treating an
+// unlimited digital product as already released.
+func (p *Product) IsComingSoon() bool { return p.ComingSoon && p.Stock <= 0 }
+func (p *Product) CanPurchase() bool {
+	return p.IsActive && !p.IsComingSoon() && (p.InfiniteStock || p.Stock > 0)
 }

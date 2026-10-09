@@ -141,6 +141,12 @@ func (b *Bot) sendAdminProductDetails(chatID int64, product *storage.Product, la
 	if product.SingleInCart {
 		singleLabel = b.t(lang, "admin_single_in_cart_off")
 	}
+	soonLabel := b.t(lang, "admin_coming_soon_on")
+	if product.ComingSoon {
+		soonLabel = b.t(lang, "admin_coming_soon_off")
+	}
+	text += "\n" + fmt.Sprintf(b.t(lang, "admin_coming_soon_current"), settingState(product.ComingSoon))
+	text += "\n" + fmt.Sprintf(b.t(lang, "admin_coming_soon_usage"), product.ID, product.ID)
 	openLabel := b.t(lang, "open_price_admin_on")
 	if product.OpenPrice {
 		openLabel = b.t(lang, "open_price_admin_off")
@@ -171,6 +177,7 @@ func (b *Bot) sendAdminProductDetails(chatID int64, product *storage.Product, la
 		keyboard.InlineKeyboard = append(keyboard.InlineKeyboard[:3], keyboard.InlineKeyboard[4:]...)
 	}
 
+	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(soonLabel, fmt.Sprintf("admin:comingsoon:%d", product.ID))))
 	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(b.t(lang, "admin_telegram_edit"), fmt.Sprintf("admin:telegram:edit:%d", product.ID))))
 	if product.TelegramURL != "" {
 		keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(b.t(lang, "admin_telegram_remove"), fmt.Sprintf("admin:telegram:remove:%d", product.ID))))
@@ -258,13 +265,15 @@ func (b *Bot) handleEditProductField(ctx context.Context, msg *tgbotapi.Message,
 			product.PriceUSD = 0
 			product.PriceStars = 0
 		}
-	case "infinitestock", "singleincart":
+	case "infinitestock", "singleincart", "comingsoon":
 		on, err := strconv.ParseBool(value)
 		if err != nil {
 			b.send(tgbotapi.NewMessage(msg.Chat.ID, b.t(lang, "admin_invalid_bool")))
 			return
 		}
-		if strings.EqualFold(field, "infinitestock") {
+		if strings.EqualFold(field, "comingsoon") {
+			product.ComingSoon = on
+		} else if strings.EqualFold(field, "infinitestock") {
 			product.InfiniteStock = on
 		} else {
 			product.SingleInCart = on
@@ -393,6 +402,8 @@ func (b *Bot) onAdminQuantitySetting(ctx context.Context, chatID int64, data, la
 		p.InfiniteStock = !p.InfiniteStock
 	case "singleincart":
 		p.SingleInCart = !p.SingleInCart
+	case "comingsoon":
+		p.ComingSoon = !p.ComingSoon
 	default:
 		return
 	}

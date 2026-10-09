@@ -272,7 +272,7 @@
   "admin_invalid_stock": "❌ 数量无效。",
   "admin_invalid_category_id": "❌ 分类 ID 无效。",
   "admin_invalid_bool": "❌ 请使用 true 或 false。",
-  "admin_supported_fields": "❌ 支持的字段：name、description、price、stock、category、active, openprice。, infinitestock, singleincart, telegram.",
+  "admin_supported_fields": "❌ 支持的字段：name、description、price、stock、category、active, openprice。, infinitestock, singleincart, telegram., comingsoon",
   "admin_product_update_failed": "❌ 更新商品失败。",
   "admin_product_updated": "✅ 商品已更新。",
   "admin_usage_deleteproduct": "用法：/deleteproduct <id>",
@@ -507,5 +507,10 @@
   "admin_product_list_page_missing": "未找到该页。请从 /listproduct 开始。",
   "admin_product_list_inactive": "（未启用）",
   "payment_method_locked": "此订单已选择其他支付方式。请使用已选择的方式继续付款。",
-  "payment_method_selected": "已选择的支付方式"
+  "payment_method_selected": "已选择的支付方式",
+  "product_coming_soon": "即将推出",
+  "admin_coming_soon_on": "启用即将推出",
+  "admin_coming_soon_off": "关闭即将推出",
+  "admin_coming_soon_current": "即将推出：%s",
+  "admin_coming_soon_usage": "/editproduct %d comingsoon true — 启用\n/editproduct %d comingsoon false — 关闭"
 }

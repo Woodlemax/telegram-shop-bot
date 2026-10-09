@@ -250,7 +250,7 @@ func (b *Bot) handleCallback(ctx context.Context, cb *tgbotapi.CallbackQuery) {
 		if b.isAdmin(userID) {
 			b.onAdminOpenPrice(ctx, chatID, data, lang)
 		}
-	case strings.HasPrefix(data, "admin:infinitestock:"), strings.HasPrefix(data, "admin:singleincart:"):
+	case strings.HasPrefix(data, "admin:infinitestock:"), strings.HasPrefix(data, "admin:singleincart:"), strings.HasPrefix(data, "admin:comingsoon:"):
 		b.ack(cb.ID)
 		if b.isAdmin(userID) {
 			b.onAdminQuantitySetting(ctx, chatID, data, lang)

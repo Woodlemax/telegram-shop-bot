@@ -272,7 +272,7 @@
   "admin_invalid_stock": "❌ Некорректное количество.",
   "admin_invalid_category_id": "❌ Некорректный ID категории.",
   "admin_invalid_bool": "❌ Используйте true или false.",
-  "admin_supported_fields": "❌ Поддерживаются поля: name, description, price, stock, category, active, openprice, infinitestock, singleincart, telegram.",
+  "admin_supported_fields": "❌ Поддерживаются поля: name, description, price, stock, category, active, openprice, infinitestock, singleincart, telegram., comingsoon",
   "admin_product_update_failed": "❌ Не удалось обновить товар.",
   "admin_product_updated": "✅ Товар обновлён.",
   "admin_usage_deleteproduct": "Использование: /deleteproduct <id>",
@@ -507,5 +507,10 @@
   "admin_product_list_page_missing": "Страница не найдена. Начните с /listproduct.",
   "admin_product_list_inactive": "(неактивен)",
   "payment_method_locked": "Для этого заказа уже выбран другой способ оплаты. Продолжите оплату выбранным способом.",
-  "payment_method_selected": "Выбранный способ оплаты"
+  "payment_method_selected": "Выбранный способ оплаты",
+  "product_coming_soon": "Скоро ожидается",
+  "admin_coming_soon_on": "Включить «Скоро ожидается»",
+  "admin_coming_soon_off": "Выключить «Скоро ожидается»",
+  "admin_coming_soon_current": "Скоро ожидается: %s",
+  "admin_coming_soon_usage": "/editproduct %d comingsoon true — включить\n/editproduct %d comingsoon false — выключить"
 }

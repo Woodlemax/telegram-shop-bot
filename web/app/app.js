@@ -300,7 +300,8 @@
           var info = el('div', 'card-info');
           info.appendChild(el('div', 'card-name', p.name));
           info.appendChild(el('div', 'card-price', productPrice(p) + ' / ' + stars(p.price_stars)));
-          if (p.open_price) { info.appendChild(el('div', 'product-desc', t('webapp_open_price_hint'))); }
+          if (p.coming_soon) { info.appendChild(el('div', 'product-stock', t('product_coming_soon'))); }
+          else if (p.open_price) { info.appendChild(el('div', 'product-desc', t('webapp_open_price_hint'))); }
           card.appendChild(info);
           card.onclick = function () { push(function () { renderProduct(p.id); }); };
           list.appendChild(card);
@@ -363,7 +364,7 @@
       priceLine.setAttribute('aria-live', 'polite');
       screenEl.appendChild(priceLine);
       var priceRates = data.open_price_rates || cart.open_price_rates;
-      var customPrice = p.open_price ? priceEditor(screenEl, p.id, cartItem ? cartItem.price_rub : 0, added, previewPrice, function () { return inCart; }) : null;
+      var customPrice = p.open_price && !p.coming_soon ? priceEditor(screenEl, p.id, cartItem ? cartItem.price_rub : 0, added, previewPrice, function () { return inCart; }) : null;
       function previewPrice(raw) {
         var amount = openPriceValue(raw);
         if (amount === null) { priceLine.textContent = t('open_price_invalid'); return; }
@@ -390,11 +391,13 @@
         };
         screenEl.appendChild(community);
       }
-      if (!p.infinite_stock) { screenEl.appendChild(el('div', 'product-stock', tf('webapp_stock', p.stock))); }
+      if (p.coming_soon) { screenEl.appendChild(el('div', 'product-stock', t('product_coming_soon'))); }
+      else if (!p.infinite_stock) { screenEl.appendChild(el('div', 'product-stock', tf('webapp_stock', p.stock))); }
 
       if (p.is_digital) { screenEl.appendChild(el('div', 'product-stock', t('digital_product'))); }
       var add = el('button', 'btn primary', t(inCart ? 'product_go_to_cart' : 'webapp_add_to_cart'));
       add.type = 'button';
+      if (p.coming_soon) { add.textContent = t('product_coming_soon'); add.disabled = true; }
       function added(cart) {
         var firstAdd = !inCart;
         updateCartBadge(countItems(cart));
@@ -414,6 +417,7 @@
         if (firstAdd && tg && tg.HapticFeedback) { tg.HapticFeedback.notificationOccurred('success'); }
       }
       add.onclick = function () {
+        if (p.coming_soon) { return; }
         if (inCart) { push(renderCart); return; }
         add.disabled = true;
         if (customPrice) {

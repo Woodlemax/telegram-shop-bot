@@ -24,7 +24,7 @@ func NewCartStore(db *sql.DB) *SQLCartStore {
 func (s *SQLCartStore) AddItem(ctx context.Context, userID, productID int64) error {
 	query := `
 		INSERT INTO cart_items (user_id, product_id, quantity)
-		SELECT ?, id, 1 FROM products WHERE id=? AND deleted_at IS NULL
+		SELECT ?, id, 1 FROM products WHERE id=? AND deleted_at IS NULL AND NOT(coming_soon=1 AND stock<=0)
 		ON CONFLICT(user_id, product_id) DO UPDATE SET
 			quantity = CASE WHEN EXISTS(SELECT 1 FROM products WHERE id=excluded.product_id AND single_in_cart=1)
 			 THEN 1 ELSE cart_items.quantity + 1 END

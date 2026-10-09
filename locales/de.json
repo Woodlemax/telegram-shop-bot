@@ -272,7 +272,7 @@
   "admin_invalid_stock": "❌ Ungültige Menge.",
   "admin_invalid_category_id": "❌ Ungültige Kategorie-ID.",
   "admin_invalid_bool": "❌ Verwende true oder false.",
-  "admin_supported_fields": "❌ Unterstützte Felder: name, description, price, stock, category, active, openprice, infinitestock, singleincart, telegram.",
+  "admin_supported_fields": "❌ Unterstützte Felder: name, description, price, stock, category, active, openprice, infinitestock, singleincart, telegram., comingsoon",
   "admin_product_update_failed": "❌ Produkt konnte nicht aktualisiert werden.",
   "admin_product_updated": "✅ Produkt aktualisiert.",
   "admin_usage_deleteproduct": "Verwendung: /deleteproduct <id>",
@@ -507,5 +507,10 @@
   "admin_product_list_page_missing": "Seite nicht gefunden. Beginne mit /listproduct.",
   "admin_product_list_inactive": "(inaktiv)",
   "payment_method_locked": "Für diese Bestellung wurde bereits eine andere Zahlungsmethode gewählt. Fahre mit der gewählten Methode fort.",
-  "payment_method_selected": "Gewählte Zahlungsmethode"
+  "payment_method_selected": "Gewählte Zahlungsmethode",
+  "product_coming_soon": "Demnächst verfügbar",
+  "admin_coming_soon_on": "Demnächst aktivieren",
+  "admin_coming_soon_off": "Demnächst deaktivieren",
+  "admin_coming_soon_current": "Demnächst verfügbar: %s",
+  "admin_coming_soon_usage": "/editproduct %d comingsoon true — aktivieren\n/editproduct %d comingsoon false — deaktivieren"
 }

@@ -313,6 +313,7 @@ type productJSON struct {
 	PriceRUB      *float64 `json:"price_rub"`
 	OpenPrice     bool     `json:"open_price"`
 	Stock         int      `json:"stock"`
+	ComingSoon    bool     `json:"coming_soon"`
 	InfiniteStock bool     `json:"infinite_stock"`
 	SingleInCart  bool     `json:"single_in_cart"`
 	IsDigital     bool     `json:"is_digital"`
@@ -333,6 +334,7 @@ func toProductJSON(p *storage.Product) productJSON {
 		PriceRUB:      p.PriceRUB,
 		OpenPrice:     p.OpenPrice,
 		Stock:         p.Stock,
+		ComingSoon:    p.IsComingSoon(),
 		InfiniteStock: p.InfiniteStock,
 		SingleInCart:  p.SingleInCart,
 		IsDigital:     p.IsDigital,
@@ -706,7 +708,7 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request, auth *Au
 			s.writeError(w, http.StatusConflict, "webapp_err_not_found")
 		case errors.Is(err, storage.ErrSingleItemLimit):
 			s.writeError(w, http.StatusConflict, "product_single_in_cart")
-		case errors.As(err, &stockErr):
+		case errors.Is(err, storage.ErrProductOutOfStock), errors.As(err, &stockErr):
 			s.writeError(w, http.StatusConflict, "webapp_err_out_of_stock")
 		case errors.Is(err, storage.ErrEmptyCart):
 			s.writeError(w, http.StatusBadRequest, "webapp_err_empty_cart")

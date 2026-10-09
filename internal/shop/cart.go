@@ -54,7 +54,7 @@ func (s *CartService) Add(ctx context.Context, userID, productID int64) error {
 	if err != nil {
 		return err
 	}
-	if !(p.IsActive && (p.InfiniteStock || p.Stock > 0)) {
+	if !p.CanPurchase() {
 		return storage.ErrProductOutOfStock
 	}
 	if err := s.cart.AddItem(ctx, userID, productID); err != nil {
@@ -166,7 +166,7 @@ func (s *CartService) ChangeQuantity(ctx context.Context, userID, productID int6
 		if err != nil {
 			return fmt.Errorf("cart service: get product %d for quantity change: %w", productID, err)
 		}
-		if !p.IsActive || (!p.InfiniteStock && p.Stock <= 0) {
+		if !p.CanPurchase() {
 			return storage.ErrProductOutOfStock
 		}
 		if p.SingleInCart && newQty > 1 {
