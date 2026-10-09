@@ -802,6 +802,15 @@
       screenEl.appendChild(list);
       screenEl.appendChild(el('div', 'cart-total', t('webapp_total') + ': ' + orderTotal(order)));
       var refresh = el('button', 'btn secondary', t('webapp_orders_refresh'));
+      if (order.receipt_url) {
+        var receipt = el('button', 'btn primary', t('webapp_order_receipt'));
+        receipt.type = 'button';
+        receipt.onclick = function () {
+          if (tg && tg.openLink) { tg.openLink(order.receipt_url); }
+          else { window.open(order.receipt_url, '_blank', 'noopener,noreferrer'); }
+        };
+        screenEl.appendChild(receipt);
+      }
       refresh.type = 'button'; refresh.onclick = function () { renderOrder(id); }; screenEl.appendChild(refresh);
       if (order.status === 'pending' && order.payment_state === 'pending') {
         var resume = el('button', 'btn primary', t('webapp_order_pay_continue'));

@@ -14,6 +14,7 @@ const ordersPerPage = 10
 // Only buyer-visible snapshots are returned: no provider identifiers, user IDs,
 // archive references or administrative payment records.
 type orderJSON struct {
+	ReceiptURL       string          `json:"receipt_url,omitempty"`
 	ID               int64           `json:"id"`
 	Status           string          `json:"status"`
 	PaymentState     string          `json:"payment_state"`
@@ -41,7 +42,11 @@ func toOrderJSON(o *storage.Order) orderJSON {
 	for _, item := range o.Items {
 		items = append(items, orderItemJSON{ProductID: item.ProductID, Name: item.ProductName, Quantity: item.Quantity})
 	}
-	return orderJSON{ID: o.ID, Status: o.Status, PaymentState: o.PaymentState, PaymentMethod: o.PaymentMethod, CheckoutProvider: o.CheckoutProvider, TotalRUB: o.TotalRUB, TotalUSD: o.TotalUSD, TotalStars: o.TotalStars, CreatedAt: o.CreatedAt, UpdatedAt: o.UpdatedAt, Items: items}
+	receiptURL := ""
+	if o.TaxReceipt != nil && o.TaxReceipt.UserID == o.UserID && storage.ValidTaxReceiptURL(o.TaxReceipt.URL) {
+		receiptURL = o.TaxReceipt.URL
+	}
+	return orderJSON{ReceiptURL: receiptURL, ID: o.ID, Status: o.Status, PaymentState: o.PaymentState, PaymentMethod: o.PaymentMethod, CheckoutProvider: o.CheckoutProvider, TotalRUB: o.TotalRUB, TotalUSD: o.TotalUSD, TotalStars: o.TotalStars, CreatedAt: o.CreatedAt, UpdatedAt: o.UpdatedAt, Items: items}
 }
 func (s *Server) handleOrders(w http.ResponseWriter, r *http.Request, auth *AuthResult) {
 	w.Header().Set("Cache-Control", "no-store")

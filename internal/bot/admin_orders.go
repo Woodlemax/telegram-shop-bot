@@ -114,6 +114,11 @@ func (b *Bot) formatAdminOrderCard(lang string, order *storage.Order, user *stor
 	if order.PaymentID != "" {
 		sb.WriteString(fmt.Sprintf(b.t(lang, "admin_order_card_payment_id"), order.PaymentID))
 	}
+	if order.TaxReceipt != nil {
+		sb.WriteString(fmt.Sprintf(b.t(lang, "admin_receipt_card"), order.TaxReceipt.URL, b.t(lang, "receipt_status_"+order.TaxReceipt.DeliveryStatus)))
+	} else if order.PaymentMethod == storage.PaymentMethodYooKassa && order.PaymentID != "" {
+		sb.WriteString(fmt.Sprintf(b.t(lang, "admin_receipt_hint"), order.ID))
+	}
 	sb.WriteString(fmt.Sprintf(b.t(lang, "admin_order_card_created"), order.CreatedAt.Format("02.01.2006 15:04")))
 	sb.WriteString(fmt.Sprintf(b.t(lang, "admin_order_card_updated"), order.UpdatedAt.Format("02.01.2006 15:04")))
 	return sb.String()

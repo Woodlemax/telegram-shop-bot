@@ -141,6 +141,10 @@ func (s *SQLOrderStore) GetOrder(ctx context.Context, id int64) (*Order, error) 
 		return nil, err
 	}
 	o.Items = items
+	o.TaxReceipt, err = NewOrderTaxReceiptStore(s.db).Get(ctx, o.ID)
+	if err != nil {
+		return nil, err
+	}
 
 	return &o, nil
 }
@@ -207,6 +211,10 @@ func (s *SQLOrderStore) GetUserOrders(ctx context.Context, userID int64) ([]Orde
 			return nil, err
 		}
 		orders[i].Items = items
+		orders[i].TaxReceipt, err = NewOrderTaxReceiptStore(s.db).Get(ctx, orders[i].ID)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return orders, nil
@@ -310,6 +318,10 @@ func (s *SQLOrderStore) GetAllOrders(ctx context.Context, statusFilter string) (
 			return nil, err
 		}
 		orders[i].Items = items
+		orders[i].TaxReceipt, err = NewOrderTaxReceiptStore(s.db).Get(ctx, orders[i].ID)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return orders, nil

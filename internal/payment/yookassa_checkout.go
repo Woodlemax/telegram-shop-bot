@@ -41,7 +41,7 @@ func (y *YooKassaCheckout) CreatePayment(ctx context.Context, orderID, amountMin
 	for attempt := 0; attempt < 5; attempt++ {
 		intent, err := y.intents.GetOrCreate(ctx, storage.YooKassaCheckoutIntent{
 			OrderID: orderID, ShopID: y.shopID, RequestKey: uuid.NewString(), AmountMinor: amountMinor,
-			Description: description, ReturnURL: y.returnURL, CreatedAt: y.now().UTC(),
+			Description: yookassaOrderDescription(orderID, description), ReturnURL: y.returnURL, CreatedAt: y.now().UTC(),
 		})
 		if err != nil {
 			return nil, err

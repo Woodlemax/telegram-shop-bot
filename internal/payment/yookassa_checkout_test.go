@@ -245,7 +245,7 @@ func TestYooKassaCheckoutLostCreationResponseReusesFrozenRequest(t *testing.T) {
 	if err := db.Conn().QueryRow("SELECT description FROM yookassa_checkout_intents WHERE order_id=?", id).Scan(&saved); err != nil {
 		t.Fatal(err)
 	}
-	if saved != "Bot description" {
+	if saved != yookassaOrderDescription(id, "Bot description") {
 		t.Fatalf("creation body changed: %s", saved)
 	}
 }

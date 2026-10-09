@@ -135,6 +135,8 @@ func (b *Bot) routeMessage(ctx context.Context, msg *tgbotapi.Message) {
 		b.handleOrdersAll(ctx, msg)
 	case "order":
 		b.handleOrderCard(ctx, msg)
+	case "receipt":
+		b.handleTaxReceipt(ctx, msg)
 	case "setdelivered":
 		b.handleSetDelivered(ctx, msg)
 	case "reviews":

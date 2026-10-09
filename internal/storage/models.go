@@ -154,6 +154,7 @@ type CartItem struct {
 }
 
 type Order struct {
+	TaxReceipt             *OrderTaxReceipt
 	ID                     int64     `db:"id"`
 	UserID                 int64     `db:"user_id"`
 	Status                 string    `db:"status"` // pending|paid|cancelled

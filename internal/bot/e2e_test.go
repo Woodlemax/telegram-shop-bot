@@ -61,9 +61,10 @@ type tgCall struct {
 func (c tgCall) markup() string { return c.Params.Get("reply_markup") }
 
 type fakeTelegram struct {
-	mu        sync.Mutex
-	calls     []tgCall
-	nextMsgID int
+	mu             sync.Mutex
+	calls          []tgCall
+	nextMsgID      int
+	failSendChatID int64
 }
 
 func (f *fakeTelegram) serveHTTP(w http.ResponseWriter, r *http.Request) {
@@ -84,6 +85,14 @@ func (f *fakeTelegram) serveHTTP(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(payload)
 	}
 
+	f.mu.Lock()
+	blocked := method == "sendMessage" && f.failSendChatID != 0 && params.Get("chat_id") == strconv.FormatInt(f.failSendChatID, 10)
+	f.mu.Unlock()
+	if blocked {
+		f.record(tgCall{Method: method, Params: params})
+		writeJSON(map[string]any{"ok": false, "error_code": 403, "description": "bot blocked"})
+		return
+	}
 	switch method {
 	case "getMe":
 		writeJSON(map[string]any{
