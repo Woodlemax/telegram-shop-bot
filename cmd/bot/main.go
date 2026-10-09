@@ -312,6 +312,7 @@ func runBot() {
 		apiServer = webapi.New(webapi.Deps{
 			Auth:              webapi.NewAuthenticator(cfg.BotToken, webapi.DefaultAuthTTL),
 			Catalog:           shop.NewCatalogService(productStore, exchangeSvc),
+			ProductGroups:     storage.NewProductGroupStore(db.Conn()),
 			Cart:              shop.NewCartService(cartStore, productStore, exchangeSvc),
 			Orders:            b.OrderService(),
 			Users:             userStore,

@@ -55,6 +55,10 @@ func (b *Bot) handleListProduct(ctx context.Context, msg *tgbotapi.Message) {
 		if !p.IsActive {
 			status = " " + b.t(lang, "admin_product_list_inactive")
 		}
+		parent, err := b.productGroups.Parent(ctx, p.ID)
+		if err == nil && parent > 0 {
+			status += fmt.Sprintf(b.t(lang, "admin_product_parent_list"), parent)
+		}
 		fmt.Fprintf(&sb, "%d: %s%s\n", p.ID, string(name), status)
 	}
 	message := tgbotapi.NewMessage(msg.Chat.ID, sb.String())

@@ -137,6 +137,7 @@ type Localizer interface {
 
 // Deps carries every dependency of the Mini App API server.
 type Deps struct {
+	ProductGroups     *storage.ProductGroupStore
 	Auth              *Authenticator
 	Catalog           CatalogService
 	Cart              CartService
@@ -210,6 +211,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/catalog", s.withAuth(s.handleCatalog))
 	mux.HandleFunc("GET /api/products", s.withAuth(s.handleProducts))
 	mux.HandleFunc("GET /api/products/{id}", s.withAuth(s.handleProduct))
+	mux.HandleFunc("GET /api/products/{id}/modifications", s.withAuth(s.handleModifications))
 	mux.HandleFunc("GET /api/cart", s.withAuth(s.handleCartGet))
 	mux.HandleFunc("POST /api/cart", s.withAuth(s.handleCartPost))
 	mux.HandleFunc("DELETE /api/cart", s.withAuth(s.handleCartDelete))
@@ -302,22 +304,23 @@ func (s *Server) handleCatalog(w http.ResponseWriter, r *http.Request, _ *AuthRe
 
 // productJSON is the wire form of a product in lists and cards.
 type productJSON struct {
-	ID            int64    `json:"id"`
-	CategoryID    int64    `json:"category_id"`
-	Name          string   `json:"name"`
-	Description   string   `json:"description"`
-	TelegramURL   string   `json:"telegram_url,omitempty"`
-	Photo         string   `json:"photo,omitempty"`
-	PriceUSD      float64  `json:"price_usd"`
-	PriceStars    int      `json:"price_stars"`
-	PriceRUB      *float64 `json:"price_rub"`
-	OpenPrice     bool     `json:"open_price"`
-	Stock         int      `json:"stock"`
-	ComingSoon    bool     `json:"coming_soon"`
-	InfiniteStock bool     `json:"infinite_stock"`
-	SingleInCart  bool     `json:"single_in_cart"`
-	IsDigital     bool     `json:"is_digital"`
-	SubPeriodDays int      `json:"sub_period_days,omitempty"`
+	ModificationCount int      `json:"modification_count,omitempty"`
+	ID                int64    `json:"id"`
+	CategoryID        int64    `json:"category_id"`
+	Name              string   `json:"name"`
+	Description       string   `json:"description"`
+	TelegramURL       string   `json:"telegram_url,omitempty"`
+	Photo             string   `json:"photo,omitempty"`
+	PriceUSD          float64  `json:"price_usd"`
+	PriceStars        int      `json:"price_stars"`
+	PriceRUB          *float64 `json:"price_rub"`
+	OpenPrice         bool     `json:"open_price"`
+	Stock             int      `json:"stock"`
+	ComingSoon        bool     `json:"coming_soon"`
+	InfiniteStock     bool     `json:"infinite_stock"`
+	SingleInCart      bool     `json:"single_in_cart"`
+	IsDigital         bool     `json:"is_digital"`
+	SubPeriodDays     int      `json:"sub_period_days,omitempty"`
 }
 
 func toProductJSON(p *storage.Product) productJSON {
@@ -371,6 +374,14 @@ func (s *Server) handleProducts(w http.ResponseWriter, r *http.Request, _ *AuthR
 		}
 	}
 
+	if page > 1000000 {
+		s.writeError(w, http.StatusBadRequest, "webapp_err_bad_request")
+		return
+	}
+	if s.deps.ProductGroups != nil {
+		s.handleGroupedProducts(w, r, categoryID, page)
+		return
+	}
 	prods, total, err := s.deps.Catalog.ListProductsPaged(r.Context(), categoryID, productsPerPage, (page-1)*productsPerPage)
 	if err != nil {
 		s.logger.Error("webapi: list products", "category_id", categoryID, "error", err)

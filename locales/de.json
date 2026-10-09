@@ -251,7 +251,7 @@
   "admin_export_bad_date": "❗ Ungültiges Datum: „%s“. Format: YYYY-MM-DD, z. B.: /export_orders 2026-01-01 2026-02-01",
   "admin_export_failed": "❌ Bestellungen konnten nicht exportiert werden.",
   "admin_export_caption": "Bestellexport: %d Zeilen",
-  "admin_panel": "🔧 Admin-Panel\n\nProdukte:\n/listproduct [Seite] — Produkte mit IDs auflisten\n/addproduct — Produkt hinzufügen\n/editproduct <id> — Produkt bearbeiten\n/deleteproduct <id> — Produkt löschen\n\nKategorien:\n/addcategory <emoji> <Name> — Kategorie erstellen\n/editcategory <id> name|emoji <Wert> — Feld ändern\n/deletecategory <id> — Kategorie löschen\n/listcategories — Kategorienliste mit IDs\n\nBestellungen:\n/orders_all [Status] — Alle Bestellungen\n/order <id> — Bestellkarte\n/setdelivered <id> — Bestellung als geliefert markieren\n/reviews — Neueste Bewertungen (Moderation)\n/export_orders — Bestellungen als CSV exportieren\n/payreview — Zahlungsprüfungswarteschlange\n/paystatus — Status der Zahlungsanbieter\n/refund <bestell_id> [betrag] — Bezahlte Bestellung erstatten (Doppelbestätigung)\n/setbalance <user_id> <±betrag> [grund] — Nutzerguthaben anpassen\n\nPromo-Codes:\n/addpromo <Code> <Rabatt%> [max_Nutzungen] [Tage] [category_id | products=ID,ID] — Promo-Code erstellen\n/listpromos — Aktive Promo-Codes\n/deletepromo <id> — Promo-Code deaktivieren\n\nDesign:\n/btnstyle — Buttonfarben anpassen\n\nAnalytik:\n/analytics — Verkaufsstatistik\n\n/rubrate [RUB pro USD] — Rubelkurs\n\n/receipt <id> <url> — Attach and send a My Tax receipt",
+  "admin_panel": "🔧 Admin-Panel\n\nProdukte:\n/listproduct [Seite] — Produkte mit IDs auflisten\n/addproduct — Produkt hinzufügen\n/editproduct <id> — Produkt bearbeiten\n/deleteproduct <id> — Produkt löschen\n\nKategorien:\n/addcategory <emoji> <Name> — Kategorie erstellen\n/editcategory <id> name|emoji <Wert> — Feld ändern\n/deletecategory <id> — Kategorie löschen\n/listcategories — Kategorienliste mit IDs\n\nBestellungen:\n/orders_all [Status] — Alle Bestellungen\n/order <id> — Bestellkarte\n/setdelivered <id> — Bestellung als geliefert markieren\n/reviews — Neueste Bewertungen (Moderation)\n/export_orders — Bestellungen als CSV exportieren\n/payreview — Zahlungsprüfungswarteschlange\n/paystatus — Status der Zahlungsanbieter\n/refund <bestell_id> [betrag] — Bezahlte Bestellung erstatten (Doppelbestätigung)\n/setbalance <user_id> <±betrag> [grund] — Nutzerguthaben anpassen\n\nPromo-Codes:\n/addpromo <Code> <Rabatt%> [max_Nutzungen] [Tage] [category_id | products=ID,ID] — Promo-Code erstellen\n/listpromos — Aktive Promo-Codes\n/deletepromo <id> — Promo-Code deaktivieren\n\nDesign:\n/btnstyle — Buttonfarben anpassen\n\nAnalytik:\n/analytics — Verkaufsstatistik\n\n/rubrate [RUB pro USD] — Rubelkurs\n\n/receipt <id> <url> — Attach and send a My Tax receipt\n/editproduct <modification_id> parent <main_id> — Modification group",
   "admin_delivered_ok": "✅ Bestellung #%d als geliefert markiert.",
   "admin_product_create_failed": "❌ Produkt konnte nicht erstellt werden.",
   "admin_add_product_name": "📝 Gib den Produktnamen ein:",
@@ -272,7 +272,7 @@
   "admin_invalid_stock": "❌ Ungültige Menge.",
   "admin_invalid_category_id": "❌ Ungültige Kategorie-ID.",
   "admin_invalid_bool": "❌ Verwende true oder false.",
-  "admin_supported_fields": "❌ Unterstützte Felder: name, description, price, stock, category, active, openprice, infinitestock, singleincart, telegram., comingsoon",
+  "admin_supported_fields": "❌ Unterstützte Felder: name, description, price, stock, category, active, openprice, infinitestock, singleincart, telegram., comingsoon, parent",
   "admin_product_update_failed": "❌ Produkt konnte nicht aktualisiert werden.",
   "admin_product_updated": "✅ Produkt aktualisiert.",
   "admin_usage_deleteproduct": "Verwendung: /deleteproduct <id>",
@@ -530,5 +530,11 @@
   "receipt_status_pending": "pending",
   "receipt_status_sending": "sending",
   "receipt_status_sent": "sent",
-  "receipt_status_failed": "unconfirmed"
+  "receipt_status_failed": "unconfirmed",
+  "webapp_modifications": "Modifikationen (%d)",
+  "webapp_modifications_more": "Show more",
+  "admin_product_parent": "Main product ID: %d; 0 means standalone",
+  "admin_product_parent_usage": "/editproduct %d parent MAIN_ID — attach modification\n/editproduct %d parent 0 — detach",
+  "admin_product_parent_invalid": "Invalid group: use different products in the same category. The main product cannot be a modification; a product with modifications cannot be nested.",
+  "admin_product_parent_list": " → main #%d"
 }

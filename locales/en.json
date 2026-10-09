@@ -251,7 +251,7 @@
   "admin_export_bad_date": "❗ Invalid date: \"%s\". Format: YYYY-MM-DD, e.g.: /export_orders 2026-01-01 2026-02-01",
   "admin_export_failed": "❌ Failed to export orders.",
   "admin_export_caption": "Order export: %d rows",
-  "admin_panel": "🔧 Admin panel\n\nProducts:\n/listproduct [page] — List products with IDs\n/addproduct — Add product\n/editproduct <id> — Edit product\n/deleteproduct <id> — Delete product\n\nCategories:\n/addcategory <emoji> <name> — Create category\n/editcategory <id> name|emoji <value> — Change field\n/deletecategory <id> — Delete category\n/listcategories — Category list with IDs\n\nOrders:\n/orders_all [status] — All orders\n/order <id> — Order card\n/setdelivered <id> — Mark order as delivered\n/reviews — Latest reviews (moderation)\n/export_orders — Export orders to CSV\n/payreview — Payment review queue\n/paystatus — Payment provider status\n/refund <order_id> [amount] — Refund a paid order (two-tap confirm)\n/setbalance <user_id> <±amount> [reason] — Adjust user balance\n\nPromo codes:\n/addpromo <code> <discount%> [max_uses] [days] [category_id | products=ID,ID] — Create promo code\n/listpromos — Active promo codes\n/deletepromo <id> — Deactivate promo code\n\nDesign:\n/btnstyle — Configure button colors\n\nAnalytics:\n/analytics — Sales statistics\n\n/rubrate [RUB per USD] — RUB exchange rate\n\n/receipt <id> <url> — Attach and send a My Tax receipt",
+  "admin_panel": "🔧 Admin panel\n\nProducts:\n/listproduct [page] — List products with IDs\n/addproduct — Add product\n/editproduct <id> — Edit product\n/deleteproduct <id> — Delete product\n\nCategories:\n/addcategory <emoji> <name> — Create category\n/editcategory <id> name|emoji <value> — Change field\n/deletecategory <id> — Delete category\n/listcategories — Category list with IDs\n\nOrders:\n/orders_all [status] — All orders\n/order <id> — Order card\n/setdelivered <id> — Mark order as delivered\n/reviews — Latest reviews (moderation)\n/export_orders — Export orders to CSV\n/payreview — Payment review queue\n/paystatus — Payment provider status\n/refund <order_id> [amount] — Refund a paid order (two-tap confirm)\n/setbalance <user_id> <±amount> [reason] — Adjust user balance\n\nPromo codes:\n/addpromo <code> <discount%> [max_uses] [days] [category_id | products=ID,ID] — Create promo code\n/listpromos — Active promo codes\n/deletepromo <id> — Deactivate promo code\n\nDesign:\n/btnstyle — Configure button colors\n\nAnalytics:\n/analytics — Sales statistics\n\n/rubrate [RUB per USD] — RUB exchange rate\n\n/receipt <id> <url> — Attach and send a My Tax receipt\n/editproduct <modification_id> parent <main_id> — Modification group",
   "admin_delivered_ok": "✅ Order #%d marked as delivered.",
   "admin_product_create_failed": "❌ Failed to create product.",
   "admin_add_product_name": "📝 Enter the product name:",
@@ -272,7 +272,7 @@
   "admin_invalid_stock": "❌ Invalid quantity.",
   "admin_invalid_category_id": "❌ Invalid category ID.",
   "admin_invalid_bool": "❌ Use true or false.",
-  "admin_supported_fields": "❌ Supported fields: name, description, price, stock, category, active, openprice, infinitestock, singleincart, telegram., comingsoon",
+  "admin_supported_fields": "❌ Supported fields: name, description, price, stock, category, active, openprice, infinitestock, singleincart, telegram., comingsoon, parent",
   "admin_product_update_failed": "❌ Failed to update product.",
   "admin_product_updated": "✅ Product updated.",
   "admin_usage_deleteproduct": "Usage: /deleteproduct <id>",
@@ -530,5 +530,11 @@
   "receipt_status_pending": "pending",
   "receipt_status_sending": "sending",
   "receipt_status_sent": "sent",
-  "receipt_status_failed": "unconfirmed"
+  "receipt_status_failed": "unconfirmed",
+  "webapp_modifications": "Modifications (%d)",
+  "webapp_modifications_more": "Show more",
+  "admin_product_parent": "Main product ID: %d; 0 means standalone",
+  "admin_product_parent_usage": "/editproduct %d parent MAIN_ID — attach modification\n/editproduct %d parent 0 — detach",
+  "admin_product_parent_invalid": "Invalid group: use different products in the same category. The main product cannot be a modification; a product with modifications cannot be nested.",
+  "admin_product_parent_list": " → main #%d"
 }

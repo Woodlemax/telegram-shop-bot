@@ -251,7 +251,7 @@
   "admin_export_bad_date": "❗ Неверная дата: «%s». Формат: YYYY-MM-DD, например: /export_orders 2026-01-01 2026-02-01",
   "admin_export_failed": "❌ Не удалось выгрузить заказы.",
   "admin_export_caption": "Экспорт заказов: %d строк",
-  "admin_panel": "🔧 Панель администратора\n\nТовары:\n/listproduct [страница] — Список товаров с ID\n/addproduct — Добавить товар\n/editproduct <id> — Редактировать товар\n/deleteproduct <id> — Удалить товар\n\nКатегории:\n/addcategory <emoji> <название> — Создать категорию\n/editcategory <id> name|emoji <значение> — Изменить поле\n/deletecategory <id> — Удалить категорию\n/listcategories — Список категорий с ID\n\nЗаказы:\n/orders_all [статус] — Все заказы\n/order <id> — Карточка заказа\n/setdelivered <id> — Отметить заказ доставленным\n/reviews — Последние отзывы (модерация)\n/export_orders — Экспорт заказов в CSV\n/payreview — Очередь проверки платежей\n/paystatus — Статус платёжных провайдеров\n/refund <id_заказа> [сумма] — Возврат оплаченного заказа (двойное подтверждение)\n/setbalance <user_id> <±сумма> [причина] — Изменить баланс пользователя\n\nПромокоды:\n/addpromo <код> <скидка%> [макс_использований] [дней] [category_id | products=ID,ID] — Создать промокод\n/listpromos — Активные промокоды\n/deletepromo <id> — Деактивировать промокод\n\nДизайн:\n/btnstyle — Настроить цвета кнопок\n\nАналитика:\n/analytics — Статистика продаж\n\n/rubrate [рублей за USD] — Курс рубля\n\n/receipt <id> <ссылка> — Прикрепить и отправить чек из «Моего налога»",
+  "admin_panel": "🔧 Панель администратора\n\nТовары:\n/listproduct [страница] — Список товаров с ID\n/addproduct — Добавить товар\n/editproduct <id> — Редактировать товар\n/deleteproduct <id> — Удалить товар\n\nКатегории:\n/addcategory <emoji> <название> — Создать категорию\n/editcategory <id> name|emoji <значение> — Изменить поле\n/deletecategory <id> — Удалить категорию\n/listcategories — Список категорий с ID\n\nЗаказы:\n/orders_all [статус] — Все заказы\n/order <id> — Карточка заказа\n/setdelivered <id> — Отметить заказ доставленным\n/reviews — Последние отзывы (модерация)\n/export_orders — Экспорт заказов в CSV\n/payreview — Очередь проверки платежей\n/paystatus — Статус платёжных провайдеров\n/refund <id_заказа> [сумма] — Возврат оплаченного заказа (двойное подтверждение)\n/setbalance <user_id> <±сумма> [причина] — Изменить баланс пользователя\n\nПромокоды:\n/addpromo <код> <скидка%> [макс_использований] [дней] [category_id | products=ID,ID] — Создать промокод\n/listpromos — Активные промокоды\n/deletepromo <id> — Деактивировать промокод\n\nДизайн:\n/btnstyle — Настроить цвета кнопок\n\nАналитика:\n/analytics — Статистика продаж\n\n/rubrate [рублей за USD] — Курс рубля\n\n/receipt <id> <ссылка> — Прикрепить и отправить чек из «Моего налога»\n/editproduct <id_модификации> parent <id_самолёта> — Группа модификаций",
   "admin_delivered_ok": "✅ Заказ #%d отмечен как доставленный.",
   "admin_product_create_failed": "❌ Не удалось создать товар.",
   "admin_add_product_name": "📝 Введите название товара:",
@@ -272,7 +272,7 @@
   "admin_invalid_stock": "❌ Некорректное количество.",
   "admin_invalid_category_id": "❌ Некорректный ID категории.",
   "admin_invalid_bool": "❌ Используйте true или false.",
-  "admin_supported_fields": "❌ Поддерживаются поля: name, description, price, stock, category, active, openprice, infinitestock, singleincart, telegram., comingsoon",
+  "admin_supported_fields": "❌ Поддерживаются поля: name, description, price, stock, category, active, openprice, infinitestock, singleincart, telegram., comingsoon, parent",
   "admin_product_update_failed": "❌ Не удалось обновить товар.",
   "admin_product_updated": "✅ Товар обновлён.",
   "admin_usage_deleteproduct": "Использование: /deleteproduct <id>",
@@ -530,5 +530,11 @@
   "receipt_status_pending": "ожидает отправки",
   "receipt_status_sending": "отправляется",
   "receipt_status_sent": "отправлен",
-  "receipt_status_failed": "отправка не подтверждена"
+  "receipt_status_failed": "отправка не подтверждена",
+  "webapp_modifications": "Модификации (%d)",
+  "webapp_modifications_more": "Показать ещё",
+  "admin_product_parent": "Основной товар (ID): %d; 0 — самостоятельный товар",
+  "admin_product_parent_usage": "/editproduct %d parent ID_самолёта — привязать модификацию\n/editproduct %d parent 0 — убрать привязку",
+  "admin_product_parent_invalid": "Не удалось привязать модификацию: нужны разные товары в одной категории. Основной товар не должен быть модификацией; товар с модификациями нельзя вложить в другой.",
+  "admin_product_parent_list": " → основной #%d"
 }

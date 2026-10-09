@@ -34,7 +34,7 @@ func (b *Bot) onAdminProductTelegram(ctx context.Context, chatID, userID int64, 
 	case "remove":
 		b.saveProductTelegram(ctx, chatID, id, "", lang)
 	case "cancel":
-		b.sendAdminProductDetails(chatID, p, lang)
+		b.sendAdminProductDetails(ctx, chatID, p, lang)
 	case "edit":
 		_ = b.archives.CancelUpload(ctx, userID)
 		b.cart.CancelPriceInput(ctx, userID)
@@ -98,6 +98,6 @@ func (b *Bot) saveProductTelegram(ctx context.Context, chatID, id int64, raw, la
 		b.send(tgbotapi.NewMessage(chatID, b.t(lang, "admin_product_update_failed")))
 		return false
 	}
-	b.sendAdminProductDetails(chatID, p, lang)
+	b.sendAdminProductDetails(ctx, chatID, p, lang)
 	return true
 }

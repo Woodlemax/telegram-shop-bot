@@ -110,7 +110,7 @@ func (b *Bot) finishAddProduct(ctx context.Context, chatID, userID, categoryID i
 	b.send(tgbotapi.NewMessage(chatID, b.t(lang, "admin_product_created")))
 }
 
-func (b *Bot) sendAdminProductDetails(chatID int64, product *storage.Product, lang string) {
+func (b *Bot) sendAdminProductDetails(ctx context.Context, chatID int64, product *storage.Product, lang string) {
 	stockText := strconv.Itoa(product.Stock)
 	if product.InfiniteStock {
 		stockText = "∞"
@@ -126,6 +126,11 @@ func (b *Bot) sendAdminProductDetails(chatID int64, product *storage.Product, la
 		product.ID, product.ID, product.ID, product.ID, product.ID, product.ID,
 	)
 	text = currencyText(text, product.PriceRUB != nil)
+	parent, err := b.productGroups.Parent(ctx, product.ID)
+	if err == nil {
+		text += "\n" + fmt.Sprintf(b.t(lang, "admin_product_parent"), parent)
+	}
+	text += "\n" + fmt.Sprintf(b.t(lang, "admin_product_parent_usage"), product.ID, product.ID)
 	settingState := func(on bool) string {
 		if on {
 			return "✅"
@@ -204,7 +209,7 @@ func (b *Bot) handleEditProduct(ctx context.Context, msg *tgbotapi.Message) {
 		return
 	}
 
-	b.sendAdminProductDetails(msg.Chat.ID, product, lang)
+	b.sendAdminProductDetails(ctx, msg.Chat.ID, product, lang)
 }
 
 func (b *Bot) handleEditProductField(ctx context.Context, msg *tgbotapi.Message, prodID int64, field, value string) {
@@ -224,6 +229,25 @@ func (b *Bot) handleEditProductField(ctx context.Context, msg *tgbotapi.Message,
 	}
 
 	switch strings.ToLower(field) {
+	case "parent", "main":
+		if msg.Chat.ID != msg.From.ID {
+			return
+		}
+		parentID := int64(0)
+		if strings.TrimSpace(value) != "-" {
+			var err error
+			parentID, err = strconv.ParseInt(strings.TrimSpace(value), 10, 64)
+			if err != nil || parentID < 0 {
+				b.send(tgbotapi.NewMessage(msg.Chat.ID, b.t(lang, "admin_product_parent_invalid")))
+				return
+			}
+		}
+		if err := b.productGroups.SetParent(ctx, prodID, parentID); err != nil {
+			b.send(tgbotapi.NewMessage(msg.Chat.ID, b.t(lang, "admin_product_parent_invalid")))
+			return
+		}
+		b.send(tgbotapi.NewMessage(msg.Chat.ID, b.t(lang, "admin_product_updated")))
+		return
 	case "telegram", "telegramlink":
 		raw := value
 		if strings.TrimSpace(raw) == "-" {
@@ -367,7 +391,7 @@ func (b *Bot) onAdminToggleStock(ctx context.Context, chatID int64, data, lang s
 		return
 	}
 
-	b.sendAdminProductDetails(chatID, product, lang)
+	b.sendAdminProductDetails(ctx, chatID, product, lang)
 }
 
 func (b *Bot) routeEditProduct(ctx context.Context, msg *tgbotapi.Message) {
@@ -411,5 +435,5 @@ func (b *Bot) onAdminQuantitySetting(ctx context.Context, chatID int64, data, la
 		b.send(tgbotapi.NewMessage(chatID, b.t(lang, "admin_product_update_failed")))
 		return
 	}
-	b.sendAdminProductDetails(chatID, p, lang)
+	b.sendAdminProductDetails(ctx, chatID, p, lang)
 }

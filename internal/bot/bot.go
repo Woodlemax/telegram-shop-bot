@@ -97,11 +97,12 @@ type Bot struct {
 	i18n            *service.I18nService
 	outWebhook      *service.OutboundWebhookService
 
-	wishlist    *storage.WishlistStore
-	uiSettings  storage.UISettingsStore
-	subs        storage.SubscriptionStore
-	archives    *storage.DigitalArchiveStore
-	taxReceipts *storage.OrderTaxReceiptStore
+	wishlist      *storage.WishlistStore
+	uiSettings    storage.UISettingsStore
+	subs          storage.SubscriptionStore
+	archives      *storage.DigitalArchiveStore
+	taxReceipts   *storage.OrderTaxReceiptStore
+	productGroups *storage.ProductGroupStore
 	// tgbotapi v5 omits recurring fields. Reference-counted signals preserve
 	// them across concurrent duplicate deliveries of the same charge.
 	pendingSubSignalsMu sync.Mutex
@@ -238,6 +239,7 @@ func NewWithAPI(cfg *config.Config, api *tgbotapi.BotAPI, db *storage.DB, metric
 		subs:            storage.NewSQLSubscriptionStore(db),
 		archives:        storage.NewDigitalArchiveStore(db),
 		taxReceipts:     storage.NewOrderTaxReceiptStore(db.Conn()),
+		productGroups:   storage.NewProductGroupStore(db.Conn()),
 	}
 	// One-time setup at construction: no request/update context exists yet, so
 	// context.Background() is the honest root (not a per-update ctx).

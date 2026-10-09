@@ -33,6 +33,7 @@
 
   // Navigation stack of {render: fn} so the back button always works.
   var navStack = [];
+  var expandedProductGroups = {};
 
   var screenEl = document.getElementById('screen');
   var titleEl = document.getElementById('title');
@@ -284,29 +285,73 @@
 
   // ---- screen: product list --------------------------------------------------
 
+  function productListCard(p) {
+    var card = el('button', 'card'); card.type = 'button';
+    var img = el('img', 'thumb'); loadImage(img, p.photo); card.appendChild(img);
+    var info = el('div', 'card-info');
+    info.appendChild(el('div', 'card-name', p.name));
+    info.appendChild(el('div', 'card-price', productPrice(p) + ' / ' + stars(p.price_stars)));
+    if (p.coming_soon) { info.appendChild(el('div', 'product-stock', t('product_coming_soon'))); }
+    else if (p.open_price) { info.appendChild(el('div', 'product-desc', t('webapp_open_price_hint'))); }
+    card.appendChild(info);
+    card.onclick = function () { push(function () { renderProduct(p.id); }); };
+    return card;
+  }
+
+  function appendProductGroup(list, p) {
+    if (!p.modification_count) { list.appendChild(productListCard(p)); return; }
+    var group = el('div', 'product-group'); group.appendChild(productListCard(p));
+    var toggle = el('button', 'modifications-toggle'); toggle.type = 'button';
+    var children = el('div', 'modifications-list hidden');
+    children.id = 'modifications-' + p.id;
+    toggle.setAttribute('aria-controls', children.id);
+    var expanded = !!expandedProductGroups[p.id], loaded = false, pending = false, nextPage = 1;
+    var more = null;
+    function update() {
+      toggle.textContent = (expanded ? '▾ ' : '▸ ') + tf('webapp_modifications', p.modification_count);
+      toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      children.className = 'modifications-list' + (expanded ? '' : ' hidden');
+      expandedProductGroups[p.id] = expanded;
+    }
+    function loadNext() {
+      if (pending) { return; } pending = true;
+      if (more) { children.removeChild(more); more = null; }
+      var wait = el('div', 'loading', t('webapp_loading')); children.appendChild(wait);
+      api('GET', '/api/products/' + p.id + '/modifications?page=' + nextPage).then(function (data) {
+        children.removeChild(wait); pending = false; loaded = true;
+        p.modification_count = data.total; update();
+        for (var i = 0; i < data.products.length; i++) { children.appendChild(productListCard(data.products[i])); }
+        nextPage = data.page + 1;
+        if (data.page * data.per_page < data.total) {
+          more = el('button', 'btn secondary', t('webapp_modifications_more')); more.type = 'button';
+          more.onclick = loadNext; children.appendChild(more);
+        }
+      }).catch(function (err) {
+        children.removeChild(wait); pending = false;
+        more = el('button', 'btn secondary', t('webapp_orders_refresh')); more.type = 'button';
+        more.onclick = loadNext; children.appendChild(more); showError(err);
+      });
+    }
+    toggle.onclick = function () {
+      expanded = !expanded; update();
+      if (expanded && !loaded) { loadNext(); }
+    };
+    group.appendChild(toggle); group.appendChild(children); list.appendChild(group);
+    update(); if (expanded) { loadNext(); }
+  }
+
   function renderProducts(cat, page) {
     page = page || 1;
+    var activeRender = function () { renderProducts(cat, page); };
+    if (navStack.length) { navStack[navStack.length - 1] = activeRender; }
     setTitle((cat.emoji ? cat.emoji + ' ' : '') + cat.name);
     loading();
     api('GET', '/api/products?category=' + cat.id + '&page=' + page).then(function (data) {
+      if (navStack[navStack.length - 1] !== activeRender) { return; }
       clearScreen();
       var list = el('div', 'list');
       for (var i = 0; i < data.products.length; i++) {
-        (function (p) {
-          var card = el('button', 'card');
-          card.type = 'button';
-          var img = el('img', 'thumb');
-          loadImage(img, p.photo);
-          card.appendChild(img);
-          var info = el('div', 'card-info');
-          info.appendChild(el('div', 'card-name', p.name));
-          info.appendChild(el('div', 'card-price', productPrice(p) + ' / ' + stars(p.price_stars)));
-          if (p.coming_soon) { info.appendChild(el('div', 'product-stock', t('product_coming_soon'))); }
-          else if (p.open_price) { info.appendChild(el('div', 'product-desc', t('webapp_open_price_hint'))); }
-          card.appendChild(info);
-          card.onclick = function () { push(function () { renderProduct(p.id); }); };
-          list.appendChild(card);
-        })(data.products[i]);
+        appendProductGroup(list, data.products[i]);
       }
       if (!data.products.length) {
         list.appendChild(el('div', 'empty', t('webapp_empty')));

@@ -83,7 +83,7 @@ func (b *Bot) onAdminOpenPrice(ctx context.Context, chatID int64, data, lang str
 	}); ok {
 		cache.Invalidate(ctx, id)
 	}
-	b.sendAdminProductDetails(chatID, p, lang)
+	b.sendAdminProductDetails(ctx, chatID, p, lang)
 }
 
 func (b *Bot) onFreeOrder(ctx context.Context, cbID string, chatID, userID int64, data, lang string) {
