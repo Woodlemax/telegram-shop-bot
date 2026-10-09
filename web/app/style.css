@@ -93,6 +93,8 @@ body {
   cursor: pointer;
 }
 
+.row { justify-content: center; text-align: center; }
+
 .thumb {
   width: 48px;
   height: 48px;
