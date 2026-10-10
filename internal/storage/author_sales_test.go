@@ -120,9 +120,12 @@ func TestAuthorSaleValidation(t *testing.T) {
 			t.Fatalf("unsafe author accepted %q", raw)
 		}
 	}
+	unknown := Product{AuthorTelegramURL: "@author", PriceStars: 100, PriceUSD: 5}
+	if err := validateProduct(&unknown); err != nil || unknown.PriceRUB != nil || unknown.PriceUSD != 0 || unknown.PriceStars != 0 {
+		t.Fatalf("unknown author price changed or rejected: %+v %v", unknown, err)
+	}
 	price := float64(100)
 	for _, p := range []Product{
-		{AuthorTelegramURL: "@author"},
 		{AuthorTelegramURL: "@author", PriceRUB: &price, OpenPrice: true},
 		{AuthorTelegramURL: "@author", PriceRUB: &price, SubPeriodDays: 30},
 	} {

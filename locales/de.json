@@ -539,6 +539,8 @@
   "admin_product_parent_list": " → main #%d",
   "product_buy_from_author": "Beim Autor kaufen",
   "admin_author_current": "Kauf beim Autor: %s",
-  "admin_author_usage": "/editproduct %d author @username — Kauf beim Autor aktivieren\n/editproduct %d author - — deaktivieren",
-  "admin_author_invalid": "Persönlichen @username des Autors oder https://t.me/username angeben. Zuerst den festen RUB-Preis mit price festlegen. Abonnements werden nicht unterstützt. Deaktivieren: author -."
+  "admin_author_usage": "/editproduct %d author @username — Kauf beim Autor aktivieren\n/editproduct %d author - — deaktivieren\n/editproduct %d price - — Preis beim Autor erfragen",
+  "admin_author_invalid": "Persönlichen @username des Autors oder https://t.me/username angeben. Abonnements werden nicht unterstützt. Deaktivieren: author -.",
+  "product_author_price_on_request": "Preis beim Autor erfragen",
+  "admin_author_price_required": "Vor dem Deaktivieren einen Zahlenpreis mit price festlegen."
 }

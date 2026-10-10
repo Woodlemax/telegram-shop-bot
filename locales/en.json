@@ -539,6 +539,8 @@
   "admin_product_parent_list": " → main #%d",
   "product_buy_from_author": "Buy from author",
   "admin_author_current": "Purchase from author: %s",
-  "admin_author_usage": "/editproduct %d author @username — enable author purchase\n/editproduct %d author - — disable",
-  "admin_author_invalid": "Use the author’s personal @username or https://t.me/username. First set the fixed RUB price with price. Subscriptions are not supported. To disable: author -."
+  "admin_author_usage": "/editproduct %d author @username — enable author purchase\n/editproduct %d author - — disable\n/editproduct %d price - — ask the author for the price",
+  "admin_author_invalid": "Use the author’s personal @username or https://t.me/username. Subscriptions are not supported. To disable: author -.",
+  "product_author_price_on_request": "Ask the author for the price",
+  "admin_author_price_required": "Set a numeric price with price before disabling author purchase."
 }

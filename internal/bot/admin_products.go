@@ -120,9 +120,15 @@ func (b *Bot) sendAdminProductDetails(ctx context.Context, chatID int64, product
 		toggleLabel = b.t(lang, "admin_btn_stock_on")
 	}
 
+	detailsTemplate := b.t(lang, "admin_product_details")
+	var priceValue any = productAmount(product)
+	if product.IsAuthorSale() && product.PriceRUB == nil {
+		detailsTemplate = strings.Replace(detailsTemplate, "$%.2f", "%s", 1)
+		priceValue = b.t(lang, "product_author_price_on_request")
+	}
 	text := fmt.Sprintf(
-		b.t(lang, "admin_product_details"),
-		product.ID, product.Name, product.Description, productAmount(product), stockText, product.CategoryID, product.IsActive,
+		detailsTemplate,
+		product.ID, product.Name, product.Description, priceValue, stockText, product.CategoryID, product.IsActive,
 		product.ID, product.ID, product.ID, product.ID, product.ID, product.ID,
 	)
 	text = currencyText(text, product.PriceRUB != nil)
@@ -163,7 +169,7 @@ func (b *Bot) sendAdminProductDetails(ctx context.Context, chatID int64, product
 		authorText = b.t(lang, "admin_telegram_empty")
 	}
 	text += "\n" + fmt.Sprintf(b.t(lang, "admin_author_current"), authorText)
-	text += "\n" + fmt.Sprintf(b.t(lang, "admin_author_usage"), product.ID, product.ID)
+	text += "\n" + fmt.Sprintf(b.t(lang, "admin_author_usage"), product.ID, product.ID, product.ID)
 	linkText := product.TelegramURL
 	if linkText == "" {
 		linkText = b.t(lang, "admin_telegram_empty")
@@ -270,8 +276,12 @@ func (b *Bot) handleEditProductField(ctx context.Context, msg *tgbotapi.Message,
 			raw = ""
 		}
 		link, err := storage.NormalizeAuthorTelegramURL(raw)
-		if err != nil || (link != "" && (product.PriceRUB == nil || product.SubPeriodDays > 0)) {
+		if err != nil || (link != "" && product.SubPeriodDays > 0) {
 			b.send(tgbotapi.NewMessage(msg.Chat.ID, b.t(lang, "admin_author_invalid")))
+			return
+		}
+		if link == "" && product.IsAuthorSale() && product.PriceRUB == nil {
+			b.send(tgbotapi.NewMessage(msg.Chat.ID, b.t(lang, "admin_author_price_required")))
 			return
 		}
 		product.AuthorTelegramURL = link
@@ -294,6 +304,12 @@ func (b *Bot) handleEditProductField(ctx context.Context, msg *tgbotapi.Message,
 	case "description":
 		product.Description = value
 	case "price":
+		if strings.TrimSpace(value) == "-" && product.IsAuthorSale() {
+			product.PriceRUB = nil
+			product.PriceUSD = 0
+			product.PriceStars = 0
+			break
+		}
 		price, err := strconv.ParseFloat(value, 64)
 		if err != nil {
 			b.send(tgbotapi.NewMessage(msg.Chat.ID, b.t(lang, "admin_invalid_price")))

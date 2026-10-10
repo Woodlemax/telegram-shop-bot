@@ -1,0 +1,151 @@
+{
+  "source": "https://docs.google.com/spreadsheets/d/1yeIieddgt5nM7OqXax2Q4rkqHdHYX8SxSluIsCjNJIg/edit?gid=850794402#gid=850794402",
+  "sheet": "Другие авторы",
+  "verified_date": "2026-10-11",
+  "verification": "Personal Telegram profiles confirmed by profile name, matching username and Send Message action. HTTP 200 and generic contact page alone were not accepted.",
+  "models": [
+    {
+      "source_row": 4,
+      "name": "Koza",
+      "author_telegram_url": "https://t.me/alpo15",
+      "price_rub": null,
+      "description": "Модульная разборная модель с размахом 1150 мм. Детали соединяются мебельными саморезами 3×20 мм; для печати используются LW-PLA и TPU. Рекомендуются мотор 2807 или 3008, пропеллер 8×6 и аккумулятор 4S 21700. Для подписчиков канала файлы бесплатны, возможна поддержка автора донатом. Условия получения уточняйте у автора.",
+      "telegram_url": "",
+      "photo": "https://shop-bot-production-15ea.up.railway.app/app/assets/other-authors/koza.jpg",
+      "source_photo": "row-4-image24.jpg",
+      "asset_path": "web/app/assets/other-authors/koza.jpg",
+      "asset_bytes": 166213,
+      "asset_sha256": "3242c7a4f265274f2360194df02b62c4a1966ebc9e263a39aed8577abd5f7418"
+    },
+    {
+      "source_row": 6,
+      "name": "CSTalon",
+      "author_telegram_url": "https://t.me/Andreyfpv",
+      "price_rub": 0,
+      "description": "Самолёт для дальних FPV-полётов с хорошей эффективностью и размахом 1400 мм. Рекомендуется мотор Tornado T5 640–900 kV. Файлы модели доступны бесплатно.",
+      "telegram_url": "",
+      "photo": "https://shop-bot-production-15ea.up.railway.app/app/assets/other-authors/cstalon.jpg",
+      "source_photo": "row-6-image30.jpg",
+      "asset_path": "web/app/assets/other-authors/cstalon.jpg",
+      "asset_bytes": 233190,
+      "asset_sha256": "17abffbff687d71d20b27cb489d91ac03666b61f1733947db4b6e7273ca2a534"
+    },
+    {
+      "source_row": 7,
+      "name": "Whale",
+      "author_telegram_url": "https://t.me/Andreyfpv",
+      "price_rub": 2500,
+      "description": "Большой двухмоторный самолёт для дальних полётов с запасом аккумуляторов. Размах — 2450 мм. Рекомендуются два мотора Tornado T5 640–900 kV и два регулятора от 60 А.",
+      "telegram_url": "",
+      "photo": "https://shop-bot-production-15ea.up.railway.app/app/assets/other-authors/whale.jpg",
+      "source_photo": "row-7-image12.jpg",
+      "asset_path": "web/app/assets/other-authors/whale.jpg",
+      "asset_bytes": 197866,
+      "asset_sha256": "fc7f0f3b4ba54fc3867c9421e783db30949238d034d1864ab69a852332da0df6"
+    },
+    {
+      "source_row": 8,
+      "name": "Vjurok",
+      "author_telegram_url": "https://t.me/Andreyfpv",
+      "price_rub": 0,
+      "description": "Компактное манёвренное FPV-крыло с размахом 600 мм, которое не привлекает лишнего внимания. Подойдут моторы 2004 или 1608, регулятор около 20 А и аккумулятор 3–4S. Файлы модели доступны бесплатно.",
+      "telegram_url": "",
+      "photo": "https://shop-bot-production-15ea.up.railway.app/app/assets/other-authors/vjurok.jpg",
+      "source_photo": "row-8-image31.jpg",
+      "asset_path": "web/app/assets/other-authors/vjurok.jpg",
+      "asset_bytes": 168138,
+      "asset_sha256": "4cca5cbe9f48575111d1fd5dd72f742a1279e2bdc830cb908172e41c7d023191"
+    },
+    {
+      "source_row": 10,
+      "name": "Shephard",
+      "author_telegram_url": "https://t.me/DraKDiller",
+      "price_rub": 3000,
+      "description": "Модель с размахом 1380 мм под мотор Tornado T5 900–1050 kV, пропеллер 10×8 и аккумулятор 6S LiPo. Автор рекомендует складной пропеллер. Инструкция находится в закреплённом сообщении канала FPVwingRussia.",
+      "telegram_url": "https://t.me/FPVwingRussia",
+      "photo": "https://shop-bot-production-15ea.up.railway.app/app/assets/other-authors/shephard.jpg",
+      "source_photo": "row-10-image17.jpg",
+      "asset_path": "web/app/assets/other-authors/shephard.jpg",
+      "asset_bytes": 363404,
+      "asset_sha256": "904aa0f73ef730943e7db43cf95d152822fc398db71f361aa8223927a7eec1a7"
+    },
+    {
+      "source_row": 11,
+      "name": "Zero",
+      "author_telegram_url": "https://t.me/DraKDiller",
+      "price_rub": 1500,
+      "description": "Модель с размахом 900 мм под мотор 2807 и пропеллер 6–7 дюймов. Восьмидюймовый пропеллер не помещается. Подходят аккумуляторы вплоть до 4000 мА·ч 6S. Инструкция находится в закреплённом сообщении канала FPVwingRussia.",
+      "telegram_url": "https://t.me/FPVwingRussia",
+      "photo": "https://shop-bot-production-15ea.up.railway.app/app/assets/other-authors/zero.jpg",
+      "source_photo": "row-11-image18.jpg",
+      "asset_path": "web/app/assets/other-authors/zero.jpg",
+      "asset_bytes": 119527,
+      "asset_sha256": "ef8eb8b1dea7c1b6377d53d7652ca38df4ba705bc6e9055e3d421231dae927a4"
+    },
+    {
+      "source_row": 12,
+      "name": "PiNCHER",
+      "author_telegram_url": "https://t.me/DraKDiller",
+      "price_rub": 2000,
+      "description": "Модель с размахом 1100 мм под мотор 2807 или меньший и пропеллер 6–7 дюймов. Подходят аккумуляторы вплоть до 5000 мА·ч 6S. Инструкция находится в закреплённом сообщении канала FPVwingRussia.",
+      "telegram_url": "https://t.me/FPVwingRussia",
+      "photo": "https://shop-bot-production-15ea.up.railway.app/app/assets/other-authors/pincher.jpg",
+      "source_photo": "row-12-image9.jpg",
+      "asset_path": "web/app/assets/other-authors/pincher.jpg",
+      "asset_bytes": 206975,
+      "asset_sha256": "0c2757fb9afb9752f105f98c212da7c28371e5489e7ab74ab9533940fb205dc0"
+    },
+    {
+      "source_row": 14,
+      "name": "PLAk",
+      "author_telegram_url": "https://t.me/AlexSalut",
+      "price_rub": 1584,
+      "description": "FPV-крыло с вариантами размаха 810 и 1000 мм. Рекомендуются мотор 2806.5 1700 kV и аккумулятор 4S или 6S. Цена на Cults 3D — 1584 ₽; для подписчиков из РФ и СНГ файлы доступны бесплатно через канал PLAKplane. Условия получения уточняйте у автора.",
+      "telegram_url": "https://t.me/PLAKplane",
+      "photo": "https://shop-bot-production-15ea.up.railway.app/app/assets/other-authors/plak.jpg",
+      "source_photo": "row-14-image28.jpg",
+      "asset_path": "web/app/assets/other-authors/plak.jpg",
+      "asset_bytes": 168074,
+      "asset_sha256": "c94f639976108041f0497e40deae3c2c8888bff8cd4976446d150f07585fa42f"
+    },
+    {
+      "source_row": 24,
+      "name": "БВС-2МС",
+      "author_telegram_url": "https://t.me/opty41",
+      "price_rub": null,
+      "description": "Крупная модель с размахом 2800 мм. Рекомендуются мотор T-Motor AS2820 880 kV или аналогичный, пропеллер 14 дюймов и регуляторы от 45 А. Файлы не распространяются открыто: для получения и участия в бета-тестировании напишите автору.",
+      "telegram_url": "",
+      "photo": "https://shop-bot-production-15ea.up.railway.app/app/assets/other-authors/bvs-2ms.png",
+      "source_photo": "row-24-image21.png",
+      "asset_path": "web/app/assets/other-authors/bvs-2ms.png",
+      "asset_bytes": 437776,
+      "asset_sha256": "e9752fe0bca64ce6ec3838ae16e7c3f647e4f90667d20a0b837cd885dc8f6653"
+    },
+    {
+      "source_row": 29,
+      "name": "Сапсан Pro",
+      "author_telegram_url": "https://t.me/HappyPilot_FPV",
+      "price_rub": 0,
+      "description": "Четырёхмоторная версия для любителей скорости: широкий диапазон скоростей, стабильность и отзывчивое управление. Размах — 1165 мм. Подходят четыре мотора 2207, 2807 или 2306, пропеллеры до 8 дюймов и пять сервоприводов Emax ES08/09 по 9 г. Бесплатное дополнение к Сапсан Lite; условия получения уточняйте у автора.",
+      "telegram_url": "",
+      "photo": "https://shop-bot-production-15ea.up.railway.app/app/assets/other-authors/sapsan-pro.png",
+      "source_photo": "row-29-image15.png",
+      "asset_path": "web/app/assets/other-authors/sapsan-pro.png",
+      "asset_bytes": 464347,
+      "asset_sha256": "a247670d067b35823ea5548f78317bc4725f6075a34d010345542cfa4e5d71b0"
+    }
+  ],
+  "existing_models_preserved": [
+    "Сокол",
+    "Торгута",
+    "Сапсан"
+  ],
+  "skipped_no_personal_telegram_contact": [
+    "Sabre FPV",
+    "Rifter FPV",
+    "Sleipnir",
+    "Orca FPV",
+    "Titan Talon"
+  ],
+  "sapsan_pro": "Separate offer; existing Сапсан remains unchanged."
+}

@@ -286,7 +286,8 @@
   // ---- screen: product list --------------------------------------------------
 
   function catalogPrice(p) {
-    return p.buy_from_author ? rub(p.price_rub) : productPrice(p) + ' / ' + stars(p.price_stars);
+    if (p.buy_from_author) return p.price_rub == null ? t('product_author_price_on_request') : rub(p.price_rub);
+    return productPrice(p) + ' / ' + stars(p.price_stars);
   }
 
   function productListCard(p) {

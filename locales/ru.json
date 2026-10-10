@@ -539,6 +539,8 @@
   "admin_product_parent_list": " → основной #%d",
   "product_buy_from_author": "Купить у автора",
   "admin_author_current": "Покупка у автора: %s",
-  "admin_author_usage": "/editproduct %d author @username — включить покупку у автора\n/editproduct %d author - — выключить",
-  "admin_author_invalid": "Укажите личный @username автора или https://t.me/username. Сначала задайте цену в рублях командой price. Подписки не поддерживаются. Для отключения: author -."
+  "admin_author_usage": "/editproduct %d author @username — включить покупку у автора\n/editproduct %d author - — выключить\n/editproduct %d price - — цену уточнить у автора",
+  "admin_author_invalid": "Укажите личный @username автора или https://t.me/username. Подписки не поддерживаются. Для отключения: author -.",
+  "product_author_price_on_request": "Цену уточнить у автора",
+  "admin_author_price_required": "Сначала задайте числовую цену командой price, затем отключите покупку у автора."
 }

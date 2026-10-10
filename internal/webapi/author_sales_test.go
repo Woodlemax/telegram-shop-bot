@@ -47,6 +47,18 @@ func TestAuthorSaleMiniAppRUBOnlyAndCartBlocked(t *testing.T) {
 			t.Fatalf("author card: %v", item)
 		}
 	}
+	p.PriceRUB = nil
+	if err = products.UpdateProduct(ctx, p); err != nil {
+		t.Fatal(err)
+	}
+	r = f.request(t, http.MethodGet, fmt.Sprintf("/api/products/%d", id), "", true)
+	if r.Code != 200 {
+		t.Fatal(r.Body.String())
+	}
+	unknown := decodeJSON(t, r)["product"].(map[string]any)
+	if unknown["price_rub"] != nil || unknown["buy_from_author"] != true || unknown["price_stars"] != float64(0) || unknown["price_usd"] != float64(0) {
+		t.Fatalf("unknown author price became zero: %v", unknown)
+	}
 	r = f.request(t, http.MethodGet, "/api/cart", "", true)
 	if r.Code != 200 || len(decodeJSON(t, r)["items"].([]any)) != 0 {
 		t.Fatal("old cart retained author", r.Body.String())

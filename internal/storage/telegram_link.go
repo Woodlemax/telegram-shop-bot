@@ -48,7 +48,7 @@ func NormalizeTelegramURL(raw string) (string, error) {
 	return "https://t.me/" + path, nil
 }
 
-var ErrInvalidAuthorSale = errors.New("author sale requires a personal Telegram username, fixed RUB price and no subscription")
+var ErrInvalidAuthorSale = errors.New("author sale requires a personal Telegram username, no open price and no subscription")
 
 // NormalizeAuthorTelegramURL accepts public usernames only, not channel invitations or posts.
 func NormalizeAuthorTelegramURL(raw string) (string, error) {
@@ -73,7 +73,7 @@ func validateProduct(p *Product) error {
 	}
 	p.AuthorTelegramURL = author
 	if p.IsAuthorSale() {
-		if p.PriceRUB == nil || p.OpenPrice || p.SubPeriodDays > 0 {
+		if p.OpenPrice || p.SubPeriodDays > 0 {
 			return ErrInvalidAuthorSale
 		}
 		p.PriceUSD = 0

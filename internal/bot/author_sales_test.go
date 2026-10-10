@@ -30,6 +30,19 @@ func TestAdminAuthorSaleCommandsAndPermissions(t *testing.T) {
 	if e.qInt(`SELECT open_price FROM products WHERE id=?`, id) != 0 {
 		t.Fatal("open price enabled for author")
 	}
+	e.cmd(e2eAdminID, fmt.Sprintf("/editproduct %d price -", id), "ru")
+	if e.qInt(`SELECT price_rub IS NULL FROM products WHERE id=?`, id) != 1 {
+		t.Fatal("unknown author price was not saved")
+	}
+	calls = e.cmd(e2eAdminID, fmt.Sprintf("/editproduct %d", id), "ru")
+	if !strings.Contains(tgText(calls), "Цену уточнить у автора") || strings.Contains(tgText(calls), "$0.00") || strings.Contains(tgText(calls), "%!") {
+		t.Fatal("unknown author price displayed as free or broken")
+	}
+	e.cmd(e2eAdminID, fmt.Sprintf("/editproduct %d author -", id), "ru")
+	if e.qStr(`SELECT author_telegram_url FROM products WHERE id=?`, id) == "" {
+		t.Fatal("unknown author offer became a free shop product")
+	}
+	e.cmd(e2eAdminID, fmt.Sprintf("/editproduct %d price 1500", id), "ru")
 	e.cmd(e2eAdminID, fmt.Sprintf("/editproduct %d author -", id), "ru")
 	if e.qStr(`SELECT author_telegram_url FROM products WHERE id=?`, id) != "" {
 		t.Fatal("author mode not disabled")

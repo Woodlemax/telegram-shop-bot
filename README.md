@@ -434,5 +434,8 @@ channel username. Invitations and message links are rejected.
 Author offers remain visible regardless of shop inventory and cannot enter the
 shop cart or generate a new shop order. Enabling this mode removes the product
 from all current carts atomically; existing orders and purchased files are
-retained. A fixed RUB price is required; subscriptions are unsupported and
+retained. An unknown author price is shown as **Ask the author for the price**,
+not as a free offer. Use `/editproduct ID price -` after enabling author mode
+to clear the price, or `price 1500` to set it again. A numeric price is required
+before disabling author mode. Subscriptions are unsupported and
 open-price mode is disabled when configuring the author.
