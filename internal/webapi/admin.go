@@ -73,6 +73,8 @@ func (s *Server) adminResult(w http.ResponseWriter, v any, err error) {
 		message = "Можно добавить не больше 10 фотографий."
 	} else if errors.Is(err, storage.ErrPromoExists) {
 		message = "Такой промокод уже существует."
+	} else if errors.Is(err, storage.ErrInvalidFileRequirement) {
+		message = "Загрузите эталон и укажите описание нужного файла. Проверка недоступна для внешней покупки и подписки."
 	} else if errors.Is(err, storage.ErrInvalidMoney) {
 		message = "Проверьте цену, количество и остальные поля."
 	} else if errors.Is(err, storage.ErrPaymentReviewConflict) || errors.Is(err, storage.ErrOrderStatusConflict) {
@@ -126,7 +128,7 @@ func (s *Server) handleAdminUpload(w http.ResponseWriter, r *http.Request, a *Au
 	}
 	kind := r.PathValue("kind")
 	limit := int64(16 << 20)
-	if kind == "archive" {
+	if kind == "archive" || kind == "reference" {
 		limit = 128 << 20
 	} else if kind != "photo" {
 		s.writeError(w, 404, "Неизвестный тип файла.")

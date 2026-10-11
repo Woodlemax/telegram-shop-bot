@@ -544,5 +544,16 @@
   "product_author_price_on_request": "向作者询价",
   "admin_author_price_required": "关闭向作者购买前，请用 price 设置数字价格。",
   "admin_app_open": "打开管理应用",
-  "admin_app_entry": "在独立的管理员 Mini App 中管理商品、订单和设置。"
+  "admin_app_entry": "在独立的管理员 Mini App 中管理商品、订单和设置。",
+  "file_check_attach": "附加文件",
+  "file_check_required": "购买此附加组件前，请在商品页面上传原始文件。",
+  "file_check_cart_required": "付款前，请验证购物车中受保护附加组件所需的文件。",
+  "file_check_uploading": "正在验证文件…",
+  "file_check_verified": "文件已验证，可以购买。",
+  "file_check_mismatch": "文件与当前基准不一致。请上传未经修改的原始文件。",
+  "file_check_reference_changed": "基准文件已更改。请重新打开商品页面并再次上传文件。",
+  "file_check_empty": "请选择非空文件。",
+  "file_check_too_large": "文件不得超过128 MB。",
+  "file_check_upload_failed": "上传失败。请检查网络连接后重试。",
+  "file_check_not_required": "验证已关闭。请重新打开商品页面。"
 }

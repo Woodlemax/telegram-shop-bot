@@ -382,6 +382,34 @@
     }).catch(showError);
   }
 
+  function needsFileCheck(check) { return check && check.required && !check.verified; }
+  function fileCheckControl(parent, productID, check, onVerified) {
+    var box = el('div', 'file-check');
+    var attach = el('button', 'btn primary', t('file_check_attach')); attach.type = 'button';
+    var input = el('input', 'hidden'); input.type = 'file'; input.setAttribute('aria-label', t('file_check_attach'));
+    var description = el('p', 'file-check-description', check.description || check.reference_name);
+    var status = el('p', 'price-save-status'); status.setAttribute('role', 'status');
+    attach.onclick = function () { input.click(); };
+    input.onchange = function () {
+      var file = input.files && input.files[0]; if (!file) { return; }
+      if (!file.size) { status.textContent = t('file_check_empty'); input.value = ''; return; }
+      if (file.size > (check.max_bytes || 134217728)) { status.textContent = t('file_check_too_large'); input.value = ''; return; }
+      attach.disabled = true; status.textContent = t('file_check_uploading');
+      var xhr = new XMLHttpRequest(); xhr.open('POST', '/api/products/' + productID + '/verify-file');
+      xhr.setRequestHeader('Authorization', 'tma ' + initData); xhr.timeout = 240000;
+      xhr.upload.onprogress = function (event) { if (event.lengthComputable) { status.textContent = t('file_check_uploading') + ' ' + Math.round(event.loaded / event.total * 100) + '%'; } };
+      function failure(key) { attach.disabled = false; input.value = ''; status.textContent = t(key); }
+      xhr.onerror = xhr.ontimeout = function () { failure('file_check_upload_failed'); };
+      xhr.onload = function () {
+        var result; try { result = JSON.parse(xhr.responseText); } catch (_) { failure('file_check_upload_failed'); return; }
+        if (xhr.status < 200 || xhr.status >= 300 || !result.file_check || !result.file_check.verified) { failure(result.error || 'file_check_reference_changed'); return; }
+        status.textContent = t('file_check_verified'); if (document.documentElement.contains(box)) { onVerified(); }
+      };
+      xhr.send(file);
+    };
+    box.appendChild(attach); box.appendChild(description); box.appendChild(input); box.appendChild(status); parent.appendChild(box);
+  }
+
   // ---- screen: product card ---------------------------------------------------
 
   function renderProduct(id) {
@@ -390,6 +418,7 @@
       var data = results[0];
       var cart = results[1];
       var p = data.product;
+      var fileLocked = needsFileCheck(data.file_check);
       var cartItem = null;
       for (var c = 0; c < cart.items.length; c++) {
         if (cart.items[c].product_id === p.id && cart.items[c].quantity > 0) { cartItem = cart.items[c]; break; }
@@ -415,7 +444,7 @@
       priceLine.setAttribute('aria-live', 'polite');
       screenEl.appendChild(priceLine);
       var priceRates = data.open_price_rates || cart.open_price_rates;
-      var customPrice = !p.buy_from_author && p.open_price && !p.coming_soon ? priceEditor(screenEl, p.id, cartItem ? cartItem.price_rub : 0, added, previewPrice, function () { return inCart; }) : null;
+      var customPrice = !fileLocked && !p.buy_from_author && p.open_price && !p.coming_soon ? priceEditor(screenEl, p.id, cartItem ? cartItem.price_rub : 0, added, previewPrice, function () { return inCart; }) : null;
       function previewPrice(raw) {
         var amount = openPriceValue(raw);
         if (amount === null) { priceLine.textContent = t('open_price_invalid'); return; }
@@ -457,6 +486,8 @@
         }
         return;
       }
+      if (fileLocked) { fileCheckControl(screenEl, p.id, data.file_check, function () { renderProduct(p.id); }); return; }
+      if (data.file_check && data.file_check.required) { screenEl.appendChild(el('p', 'file-check-success', t('file_check_verified'))); }
       if (p.coming_soon) { screenEl.appendChild(el('div', 'product-stock', t('product_coming_soon'))); }
       else if (!p.infinite_stock) { screenEl.appendChild(el('div', 'product-stock', tf('webapp_stock', p.stock))); }
 
@@ -537,7 +568,8 @@
           info.appendChild(productLink);
           var priceLine = el('div', 'card-price');
           priceLine.setAttribute('aria-live', 'polite'); info.appendChild(priceLine);
-          var input = item.open_price ? priceEditor(info, item.product_id, item.price_rub, function (updated) {
+          if (needsFileCheck(item.file_check)) { fileCheckControl(info, item.product_id, item.file_check, renderCart); }
+          var input = item.open_price && !needsFileCheck(item.file_check) ? priceEditor(info, item.product_id, item.price_rub, function (updated) {
             cart = updated; updateCartView();
           }, updateCartView) : null;
           rows.push({id: item.product_id, price: priceLine, input: input});
@@ -550,7 +582,7 @@
           var qty = el('span', 'qty', String(item.quantity));
           var plus = el('button', 'icon-btn', '+');
           plus.type = 'button';
-          plus.disabled = !!item.single_in_cart;
+          plus.disabled = !!item.single_in_cart || needsFileCheck(item.file_check);
           plus.onclick = function () { changeQty(item.product_id, 1); };
           var del = el('button', 'icon-btn danger', '\u00d7');
           del.type = 'button';
@@ -646,6 +678,7 @@
         }
       }
       function renderPayments(previewFree) {
+        for (var f = 0; f < cart.items.length; f++) { if (needsFileCheck(cart.items[f].file_check)) { paymentBox.appendChild(el('p', 'file-check-description', t('file_check_cart_required'))); return; } }
         if (previewFree) {
           var getFree = el('button', 'btn primary', t('free_order_button'));
           getFree.type = 'button'; getFree.disabled = checkoutPending; getFree.onclick = function () { checkout('free', promo.value, getFree); };
@@ -832,6 +865,7 @@
         } else {
           row.textContent = itemLabel;
         }
+        if (needsFileCheck(item.file_check)) { fileCheckControl(row, item.product_id, item.file_check, function () { renderOrder(id); }); }
         if (item.download_available) {
           row.appendChild(el('div', 'card-price', item.archive_name));
           (function (productID, parent) {
@@ -857,8 +891,9 @@
       }
       refresh.type = 'button'; refresh.onclick = function () { renderOrder(id); }; screenEl.appendChild(refresh);
       if (order.status === 'pending' && order.payment_state === 'pending') {
+        var locked = order.items.some(function (item) { return needsFileCheck(item.file_check); });
         var resume = el('button', 'btn primary', t('webapp_order_pay_continue'));
-        resume.type = 'button';
+        resume.type = 'button'; resume.disabled = locked;
         resume.onclick = function () { push(function () { renderOrderPayment(id); }); };
         screenEl.appendChild(resume);
         var cancel = el('button', 'btn secondary danger', t('btn_cancel_order'));

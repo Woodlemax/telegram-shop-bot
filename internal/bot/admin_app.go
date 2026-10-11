@@ -89,6 +89,8 @@ func (b *Bot) AdminRead(ctx context.Context, actor int64, resource string, id in
 		return nil, adminAppError{403, "Доступ разрешён только администратору."}
 	}
 	switch resource {
+	case "file-check":
+		return storage.NewProductFileCheckStore(b.adminDB.Conn()).Requirement(ctx, id)
 	case "bootstrap":
 		categories, err := b.adminStore().ListCategoriesAdmin(ctx)
 		if err != nil {
@@ -302,6 +304,16 @@ func (b *Bot) AdminWrite(ctx context.Context, actor int64, resource string, id i
 	}()
 	ok := map[string]any{"ok": true}
 	switch resource {
+	case "file-check":
+		var input struct {
+			Enabled     bool   `json:"enabled"`
+			Description string `json:"description"`
+			Revision    int64  `json:"revision"`
+		}
+		if err = decodeAdmin(raw, &input); err != nil {
+			return nil, err
+		}
+		return storage.NewProductFileCheckStore(b.adminDB.Conn()).Save(ctx, id, input.Enabled, input.Description, input.Revision)
 	case "products":
 		var input struct {
 			Product  storage.Product `json:"product"`

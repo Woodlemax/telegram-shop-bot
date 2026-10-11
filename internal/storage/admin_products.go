@@ -75,6 +75,15 @@ func (s *SQLProductStore) SaveAdminProduct(ctx context.Context, p *Product, pare
 		return 0, err
 	}
 	defer tx.Rollback()
+	if p.IsAuthorSale() || p.SubPeriodDays > 0 {
+		var protected bool
+		if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM product_file_requirements WHERE product_id=? AND enabled=1)`, p.ID).Scan(&protected); err != nil {
+			return 0, err
+		}
+		if protected {
+			return 0, ErrInvalidFileRequirement
+		}
+	}
 	var category int64
 	if err = tx.QueryRowContext(ctx, `SELECT id FROM categories WHERE id=?`, p.CategoryID).Scan(&category); err != nil {
 		return 0, ErrNotFound

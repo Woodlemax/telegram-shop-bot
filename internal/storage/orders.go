@@ -46,6 +46,11 @@ func (s *SQLOrderStore) createOrderOnce(ctx context.Context, order *Order, items
 		return 0, fmt.Errorf("order store: begin tx: %w", err)
 	}
 	defer func() { _ = tx.Rollback() }()
+	for _, item := range items {
+		if err := checkProductFileAccess(ctx, tx, order.UserID, item.ProductID); err != nil {
+			return 0, err
+		}
+	}
 
 	state, err := stateForLegacyStatus(order.Status)
 	if err != nil {

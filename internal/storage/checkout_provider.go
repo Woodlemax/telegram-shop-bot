@@ -26,7 +26,7 @@ func claimCheckoutProvider(ctx context.Context, db checkoutProviderDB, id int64,
 	}
 	result, err := db.ExecContext(ctx, `UPDATE orders SET checkout_provider=?
  WHERE id=? AND status='pending' AND payment_state='pending'
- AND checkout_provider IN ('',?)`, provider, id, provider)
+ AND checkout_provider IN ('',?) AND `+orderFileAccessSQL, provider, id, provider, id)
 	if err != nil {
 		return err
 	}
@@ -47,6 +47,13 @@ func claimCheckoutProvider(ctx context.Context, db checkoutProviderDB, id int64,
 	}
 	if status != OrderStatusPending || state != PaymentStatePending {
 		return ErrOrderStatusConflict
+	}
+	var allowed bool
+	if err := db.QueryRowContext(ctx, `SELECT `+orderFileAccessSQL, id).Scan(&allowed); err != nil {
+		return err
+	}
+	if !allowed {
+		return ErrFileVerificationRequired
 	}
 	return ErrCheckoutProviderConflict
 }

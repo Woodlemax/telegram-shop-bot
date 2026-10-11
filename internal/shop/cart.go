@@ -27,8 +27,9 @@ type CartView struct {
 
 // CartItemView pairs a product with its quantity in the cart.
 type CartItemView struct {
-	Product  storage.Product
-	Quantity int
+	Product   storage.Product
+	Quantity  int
+	FileCheck *storage.ProductFileStatus
 }
 
 // CartService provides business logic for managing a user's shopping cart.
@@ -120,9 +121,19 @@ func (s *CartService) Get(ctx context.Context, userID int64) (*CartView, error) 
 			view.BaseRUB = false
 		}
 
+		var fileCheck *storage.ProductFileStatus
+		if checker, ok := s.cart.(interface {
+			ProductFileStatus(context.Context, int64, int64) (*storage.ProductFileStatus, error)
+		}); ok {
+			fileCheck, err = checker.ProductFileStatus(ctx, userID, p.ID)
+			if err != nil {
+				return nil, err
+			}
+		}
 		view.Items = append(view.Items, CartItemView{
-			Product:  *p,
-			Quantity: ci.Quantity,
+			Product:   *p,
+			Quantity:  ci.Quantity,
+			FileCheck: fileCheck,
 		})
 		view.TotalUSD += p.PriceUSD * float64(ci.Quantity)
 		view.TotalStars += p.PriceStars * ci.Quantity
@@ -165,6 +176,17 @@ func (s *CartService) ChangeQuantity(ctx context.Context, userID, productID int6
 	}
 
 	if delta > 0 {
+		if checker, ok := s.cart.(interface {
+			ProductFileStatus(context.Context, int64, int64) (*storage.ProductFileStatus, error)
+		}); ok {
+			status, err := checker.ProductFileStatus(ctx, userID, productID)
+			if err != nil {
+				return err
+			}
+			if status.Required && !status.Verified {
+				return storage.ErrFileVerificationRequired
+			}
+		}
 		p, err := s.products.GetProduct(ctx, productID)
 		if err != nil {
 			return fmt.Errorf("cart service: get product %d for quantity change: %w", productID, err)

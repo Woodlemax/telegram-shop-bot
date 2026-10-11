@@ -187,6 +187,9 @@ func (s *StarsPayment) validatePreCheckout(ctx context.Context, query *tgbotapi.
 		return PreCheckoutKeyAmountMismatch
 	}
 	if err := s.orders.ClaimCheckoutProvider(ctx, orderID, storage.PaymentMethodStars); err != nil {
+		if errors.Is(err, storage.ErrFileVerificationRequired) {
+			return "file_check_required"
+		}
 		if errors.Is(err, storage.ErrCheckoutProviderConflict) {
 			return PreCheckoutKeyPaymentMethodConflict
 		}

@@ -30,11 +30,12 @@ type orderJSON struct {
 	DisplayTotalRUB  *float64        `json:"display_total_rub,omitempty"`
 }
 type orderItemJSON struct {
-	ProductID         int64  `json:"product_id"`
-	Name              string `json:"name"`
-	Quantity          int    `json:"quantity"`
-	DownloadAvailable bool   `json:"download_available"`
-	ArchiveName       string `json:"archive_name,omitempty"`
+	FileCheck         *storage.ProductFileStatus `json:"file_check,omitempty"`
+	ProductID         int64                      `json:"product_id"`
+	Name              string                     `json:"name"`
+	Quantity          int                        `json:"quantity"`
+	DownloadAvailable bool                       `json:"download_available"`
+	ArchiveName       string                     `json:"archive_name,omitempty"`
 }
 
 func toOrderJSON(o *storage.Order) orderJSON {
@@ -92,6 +93,19 @@ func (s *Server) handleOrder(w http.ResponseWriter, r *http.Request, auth *AuthR
 	}
 	result := s.displayOrderJSON(o)
 	result.PaymentMethods = s.orderPaymentMethods(o)
+	if o.Status == storage.OrderStatusPending && o.PaymentState == storage.PaymentStatePending && s.deps.FileChecks != nil {
+		for i := range result.Items {
+			check, e := s.deps.FileChecks.Status(r.Context(), auth.User.ID, result.Items[i].ProductID)
+			if e != nil {
+				s.writeError(w, 500, "webapp_err_internal")
+				return
+			}
+			result.Items[i].FileCheck = check
+			if check.Required && !check.Verified {
+				result.PaymentMethods = []string{}
+			}
+		}
+	}
 	if s.deps.Archives != nil {
 		files, err := s.deps.Archives.ForOrder(r.Context(), auth.User.ID, id)
 		if err != nil {

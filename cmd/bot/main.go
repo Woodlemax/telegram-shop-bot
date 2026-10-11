@@ -310,6 +310,7 @@ func runBot() {
 		exchangeSvc := b.ExchangeService()
 		productStore := storage.NewSQLProductStore(db)
 		apiServer = webapi.New(webapi.Deps{
+			FileChecks:         storage.NewProductFileCheckStore(db.Conn()),
 			AdminIDs:           cfg.AdminIDs,
 			Admin:              b,
 			AdminMediaDir:      b.AdminMediaDirectory(),

@@ -35,6 +35,9 @@ func (b *Bot) AdminUpload(ctx context.Context, actor, id int64, kind, name strin
 	if !b.isAdmin(actor) {
 		return nil, adminAppError{403, "Доступ разрешён только администратору."}
 	}
+	if kind == "reference" {
+		return b.adminReferenceUpload(ctx, actor, id, name, reader)
+	}
 	p, err := b.adminStore().GetProduct(ctx, id)
 	if err != nil {
 		return nil, err

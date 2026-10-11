@@ -13,8 +13,8 @@ func (s *SQLCartStore) SetPrice(ctx context.Context, userID, productID int64, am
 		return ErrInvalidMoney
 	}
 	res, err := s.db.ExecContext(ctx, `INSERT INTO cart_items(user_id,product_id,quantity,custom_price)
- SELECT ?,id,1,? FROM products WHERE id=? AND deleted_at IS NULL AND author_telegram_url='' AND open_price=1 AND is_active=1 AND sub_period_days=0 AND NOT(coming_soon=1 AND stock<=0) AND (infinite_stock=1 OR stock>0)
- ON CONFLICT(user_id,product_id) DO UPDATE SET custom_price=excluded.custom_price, quantity=CASE WHEN EXISTS(SELECT 1 FROM products WHERE id=excluded.product_id AND single_in_cart=1) THEN 1 ELSE cart_items.quantity END`, userID, amount, productID)
+ SELECT ?,id,1,? FROM products WHERE id=? AND deleted_at IS NULL AND author_telegram_url='' AND open_price=1 AND is_active=1 AND sub_period_days=0 AND NOT(coming_soon=1 AND stock<=0) AND (infinite_stock=1 OR stock>0) AND `+productFileAccessSQL+`
+ ON CONFLICT(user_id,product_id) DO UPDATE SET custom_price=excluded.custom_price, quantity=CASE WHEN EXISTS(SELECT 1 FROM products WHERE id=excluded.product_id AND single_in_cart=1) THEN 1 ELSE cart_items.quantity END`, userID, amount, productID, productID, userID)
 	if err != nil {
 		return err
 	}
@@ -23,6 +23,9 @@ func (s *SQLCartStore) SetPrice(ctx context.Context, userID, productID int64, am
 		return err
 	}
 	if n != 1 {
+		if err := checkProductFileAccess(ctx, s.db, userID, productID); err != nil {
+			return err
+		}
 		return ErrNotFound
 	}
 	return nil
@@ -96,6 +99,13 @@ func (s *SQLOrderStore) confirmFreeOrderOnce(ctx context.Context, id, userID int
 	}
 	if status != OrderStatusPending || paymentState != PaymentStatePending {
 		return ErrOrderStatusConflict
+	}
+	var allowed bool
+	if err := tx.QueryRowContext(ctx, `SELECT `+orderFileAccessSQL, id).Scan(&allowed); err != nil {
+		return err
+	}
+	if !allowed {
+		return ErrFileVerificationRequired
 	}
 	if totalUSD != 0 || totalRUB != 0 || totalStars != 0 || ton != 0 || sub != 0 {
 		return ErrInvalidMoney

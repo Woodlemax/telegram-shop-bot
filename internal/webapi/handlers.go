@@ -137,6 +137,7 @@ type Localizer interface {
 
 // Deps carries every dependency of the Mini App API server.
 type Deps struct {
+	FileChecks         *storage.ProductFileCheckStore
 	AdminIDs           []int64
 	Admin              AdminBackend
 	AdminMediaDir      string
@@ -222,6 +223,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/catalog", s.withAuth(s.handleCatalog))
 	mux.HandleFunc("GET /api/products", s.withAuth(s.handleProducts))
 	mux.HandleFunc("GET /api/products/{id}", s.withAuth(s.handleProduct))
+	mux.HandleFunc("POST /api/products/{id}/verify-file", s.withAuth(s.handleVerifyProductFile))
 	mux.HandleFunc("GET /api/products/{id}/modifications", s.withAuth(s.handleModifications))
 	mux.HandleFunc("GET /api/cart", s.withAuth(s.handleCartGet))
 	mux.HandleFunc("POST /api/cart", s.withAuth(s.handleCartPost))
@@ -417,7 +419,8 @@ func (s *Server) handleProducts(w http.ResponseWriter, r *http.Request, _ *AuthR
 }
 
 // GET /api/products/{id} — product card with rating and photo gallery.
-func (s *Server) handleProduct(w http.ResponseWriter, r *http.Request, _ *AuthResult) {
+func (s *Server) handleProduct(w http.ResponseWriter, r *http.Request, auth *AuthResult) {
+	w.Header().Set("Cache-Control", "no-store")
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	if err != nil || id <= 0 {
 		s.writeError(w, http.StatusBadRequest, "webapp_err_bad_request")
@@ -470,6 +473,14 @@ func (s *Server) handleProduct(w http.ResponseWriter, r *http.Request, _ *AuthRe
 		"rating_count": count,
 		"photos":       photos,
 	}
+	if s.deps.FileChecks != nil {
+		check, e := s.deps.FileChecks.Status(ctx, auth.User.ID, id)
+		if e != nil {
+			s.writeError(w, 500, "webapp_err_internal")
+			return
+		}
+		resp["file_check"] = check
+	}
 	if p.OpenPrice {
 		resp["open_price_rates"] = s.openPriceRates()
 	}
@@ -490,6 +501,7 @@ func (s *Server) cartJSON(view *shop.CartView) map[string]any {
 			sub = true
 		}
 		items = append(items, map[string]any{
+			"file_check":     it.FileCheck,
 			"product_id":     it.Product.ID,
 			"name":           it.Product.Name,
 			"photo":          photoRef(it.Product.PhotoURL),
@@ -547,6 +559,9 @@ func (s *Server) handleCartPost(w http.ResponseWriter, r *http.Request, auth *Au
 		return
 	}
 	if req.Price != nil {
+		if !s.checkFilePurchase(w, r, auth.User.ID, req.ProductID) {
+			return
+		}
 		setter, ok := s.deps.Cart.(interface {
 			SetPrice(context.Context, int64, int64, int) error
 		})
@@ -566,8 +581,13 @@ func (s *Server) handleCartPost(w http.ResponseWriter, r *http.Request, auth *Au
 		return
 	}
 
+	if delta > 0 && !s.checkFilePurchase(w, r, auth.User.ID, req.ProductID) {
+		return
+	}
 	if err := s.deps.Cart.ChangeQuantity(r.Context(), auth.User.ID, req.ProductID, delta); err != nil {
 		switch {
+		case errors.Is(err, storage.ErrFileVerificationRequired):
+			s.writeError(w, http.StatusForbidden, "file_check_required")
 		case errors.Is(err, storage.ErrNotFound):
 			s.writeError(w, http.StatusConflict, "webapp_err_not_found")
 		case errors.Is(err, storage.ErrSingleItemLimit):
@@ -675,6 +695,11 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request, auth *Au
 		s.writeError(w, http.StatusBadRequest, "webapp_err_empty_cart")
 		return
 	}
+	for _, item := range view.Items {
+		if !s.checkFilePurchase(w, r, userID, item.Product.ID) {
+			return
+		}
+	}
 	if err := shop.ValidateSubscriptionCart(view); err != nil {
 		s.writeError(w, http.StatusBadRequest, "webapp_err_sub_alone")
 		return
@@ -731,6 +756,8 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request, auth *Au
 	if err != nil {
 		var stockErr *shop.ErrInsufficientStock
 		switch {
+		case errors.Is(err, storage.ErrFileVerificationRequired):
+			s.writeError(w, http.StatusForbidden, "file_check_required")
 		case errors.Is(err, storage.ErrNotFound):
 			s.writeError(w, http.StatusConflict, "webapp_err_not_found")
 		case errors.Is(err, storage.ErrSingleItemLimit):
@@ -765,19 +792,28 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request, auth *Au
 func (s *Server) issueOrderPayment(w http.ResponseWriter, r *http.Request, auth *AuthResult, order *storage.Order, method string, subPeriod int) {
 	ctx, userID, orderID := r.Context(), auth.User.ID, order.ID
 	lang := auth.User.LanguageCode
+	if !s.checkOrderFiles(w, r, auth, order.Items) {
+		return
+	}
 	if method == storage.PaymentMethodFree {
 		err := s.deps.Orders.(interface {
 			ConfirmFreeOrder(context.Context, int64, int64) error
 		}).ConfirmFreeOrder(ctx, orderID, userID)
 		if err != nil {
-			s.writeError(w, http.StatusConflict, "free_order_error")
+			if errors.Is(err, storage.ErrFileVerificationRequired) {
+				s.writeError(w, 403, "file_check_required")
+			} else {
+				s.writeError(w, http.StatusConflict, "free_order_error")
+			}
 			return
 		}
 		s.writeJSON(w, http.StatusOK, map[string]any{"order_id": orderID, "free": true})
 		return
 	}
 	if err := s.deps.Orders.ClaimCheckoutProvider(ctx, orderID, method); err != nil {
-		if errors.Is(err, storage.ErrCheckoutProviderConflict) {
+		if errors.Is(err, storage.ErrFileVerificationRequired) {
+			s.writeError(w, 403, "file_check_required")
+		} else if errors.Is(err, storage.ErrCheckoutProviderConflict) {
 			s.writeError(w, http.StatusConflict, "payment_method_locked")
 		} else if errors.Is(err, storage.ErrOrderStatusConflict) || errors.Is(err, storage.ErrNotFound) {
 			s.writeError(w, http.StatusConflict, "webapp_order_pay_unavailable")

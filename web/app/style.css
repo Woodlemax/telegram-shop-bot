@@ -265,3 +265,7 @@ input, textarea, select { text-align: inherit; }
   padding-left: 10px; border-left: 2px solid var(--hint);
 }
 .modifications-toggle:focus-visible { outline: 2px solid var(--button); outline-offset: 2px; }
+
+.file-check { width: 100%; margin: 10px 0; }
+.file-check-description { margin: 8px 0; font-size: 14px; line-height: 1.4; overflow-wrap: anywhere; }
+.file-check-success { color: var(--link); font-size: 14px; }

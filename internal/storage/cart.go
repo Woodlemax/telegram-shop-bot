@@ -24,18 +24,21 @@ func NewCartStore(db *sql.DB) *SQLCartStore {
 func (s *SQLCartStore) AddItem(ctx context.Context, userID, productID int64) error {
 	query := `
 		INSERT INTO cart_items (user_id, product_id, quantity)
-		SELECT ?, id, 1 FROM products WHERE id=? AND deleted_at IS NULL AND author_telegram_url='' AND NOT(coming_soon=1 AND stock<=0)
+		SELECT ?, id, 1 FROM products WHERE id=? AND deleted_at IS NULL AND author_telegram_url='' AND NOT(coming_soon=1 AND stock<=0) AND ` + productFileAccessSQL + `
 		ON CONFLICT(user_id, product_id) DO UPDATE SET
 			quantity = CASE WHEN EXISTS(SELECT 1 FROM products WHERE id=excluded.product_id AND single_in_cart=1)
 			 THEN 1 ELSE cart_items.quantity + 1 END
 	`
-	res, err := s.db.ExecContext(ctx, query, userID, productID)
+	res, err := s.db.ExecContext(ctx, query, userID, productID, productID, userID)
 	if err != nil {
 		return err
 	}
 	if n, err := res.RowsAffected(); err != nil {
 		return err
 	} else if n == 0 {
+		if err := checkProductFileAccess(ctx, s.db, userID, productID); err != nil {
+			return err
+		}
 		return ErrNotFound
 	}
 	return nil
@@ -45,8 +48,15 @@ func (s *SQLCartStore) UpdateQuantity(ctx context.Context, userID, productID int
 	if quantity <= 0 {
 		return s.RemoveItem(ctx, userID, productID)
 	}
-	query := `UPDATE cart_items SET quantity = CASE WHEN EXISTS(SELECT 1 FROM products WHERE id=cart_items.product_id AND single_in_cart=1) THEN 1 ELSE ? END WHERE user_id = ? AND product_id = ?`
-	_, err := s.db.ExecContext(ctx, query, quantity, userID, productID)
+	query := `UPDATE cart_items SET quantity = CASE WHEN EXISTS(SELECT 1 FROM products WHERE id=cart_items.product_id AND single_in_cart=1) THEN 1 ELSE ? END WHERE user_id = ? AND product_id = ? AND ` + productFileAccessSQL
+	res, err := s.db.ExecContext(ctx, query, quantity, userID, productID, productID, userID)
+	if err == nil {
+		if n, e := res.RowsAffected(); e != nil {
+			return e
+		} else if n == 0 {
+			return checkProductFileAccess(ctx, s.db, userID, productID)
+		}
+	}
 	return err
 }
 

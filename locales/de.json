@@ -544,5 +544,16 @@
   "product_author_price_on_request": "Preis beim Autor erfragen",
   "admin_author_price_required": "Vor dem Deaktivieren einen Zahlenpreis mit price festlegen.",
   "admin_app_open": "Verwaltung öffnen",
-  "admin_app_entry": "Produkte, Bestellungen und Einstellungen im separaten Administrator Mini App verwalten."
+  "admin_app_entry": "Produkte, Bestellungen und Einstellungen im separaten Administrator Mini App verwalten.",
+  "file_check_attach": "Datei anhängen",
+  "file_check_required": "Hänge die Originaldatei auf der Produktseite an, bevor du diese Erweiterung kaufst.",
+  "file_check_cart_required": "Prüfe vor der Zahlung die erforderlichen Dateien für geschützte Erweiterungen im Warenkorb.",
+  "file_check_uploading": "Datei wird geprüft…",
+  "file_check_verified": "Datei geprüft. Kauf verfügbar.",
+  "file_check_mismatch": "Die Datei stimmt nicht mit der aktuellen Referenz überein. Hänge das unveränderte Original an.",
+  "file_check_reference_changed": "Die Referenz wurde geändert. Öffne das Produkt erneut und hänge die Datei noch einmal an.",
+  "file_check_empty": "Wähle eine nicht leere Datei.",
+  "file_check_too_large": "Die Datei darf höchstens 128 MB groß sein.",
+  "file_check_upload_failed": "Upload fehlgeschlagen. Prüfe die Verbindung und versuche es erneut.",
+  "file_check_not_required": "Die Prüfung ist deaktiviert. Öffne die Produktseite erneut."
 }

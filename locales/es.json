@@ -544,5 +544,16 @@
   "product_author_price_on_request": "Consultar el precio al autor",
   "admin_author_price_required": "Establece un precio numérico con price antes de desactivar la compra al autor.",
   "admin_app_open": "Abrir administración",
-  "admin_app_entry": "Gestiona productos, pedidos y ajustes en la Mini App de administración."
+  "admin_app_entry": "Gestiona productos, pedidos y ajustes en la Mini App de administración.",
+  "file_check_attach": "Adjuntar archivo",
+  "file_check_required": "Adjunta el archivo original en la ficha antes de comprar este complemento.",
+  "file_check_cart_required": "Verifica los archivos de los complementos protegidos del carrito antes de pagar.",
+  "file_check_uploading": "Comprobando archivo…",
+  "file_check_verified": "Archivo verificado. Compra disponible.",
+  "file_check_mismatch": "El archivo no coincide con la referencia actual. Adjunta el original sin cambios.",
+  "file_check_reference_changed": "La referencia ha cambiado. Abre de nuevo el producto y adjunta el archivo.",
+  "file_check_empty": "Selecciona un archivo no vacío.",
+  "file_check_too_large": "El archivo no debe superar los 128 MB.",
+  "file_check_upload_failed": "No se pudo subir el archivo. Comprueba la conexión e inténtalo de nuevo.",
+  "file_check_not_required": "La verificación está desactivada. Abre de nuevo el producto."
 }
