@@ -96,7 +96,7 @@ func (b *Bot) AdminRead(ctx context.Context, actor int64, resource string, id in
 		if err != nil {
 			return nil, err
 		}
-		return map[string]any{"categories": categories, "rub_rate": b.currentRUBRate(), "stars_rate": b.exchange.GetUSDToStarsRate(), "max_photos": storage.MaxProductPhotos, "max_archive_mb": 50}, nil
+		return map[string]any{"categories": categories, "rub_rate": b.currentRUBRate(), "stars_rate": b.exchange.GetUSDToStarsRate(), "max_photos": storage.MaxProductPhotos, "max_archive_mb": storage.MaxAdminArchiveBytes >> 20}, nil
 	case "products":
 		if id > 0 {
 			return b.adminProduct(ctx, id)
@@ -308,7 +308,7 @@ func (b *Bot) AdminWrite(ctx context.Context, actor int64, resource string, id i
 		if err = b.archives.BeginUpload(ctx, actor, actor, id); err != nil {
 			return nil, err
 		}
-		return map[string]any{"message": fmt.Sprintf("Отправьте ZIP документом в личный чат бота для товара #%d. Ожидание — 15 минут. Новый архив будет доступен прежним покупателям. Для отмены: /cancel.", id), "chat_url": (&url.URL{Scheme: "https", Host: "t.me", Path: "/" + b.api.Self.UserName}).String()}, nil
+		return map[string]any{"message": fmt.Sprintf("Отправьте ZIP до 50 МБ документом в личный чат бота для товара #%d. Большой ZIP загрузите через админку — он будет разбит на части. Ожидание — 15 минут. Новый архив будет доступен прежним покупателям. Для отмены: /cancel.", id), "chat_url": (&url.URL{Scheme: "https", Host: "t.me", Path: "/" + b.api.Self.UserName}).String()}, nil
 	case "archive-upload-cancel":
 		return ok, b.archives.CancelUpload(ctx, actor)
 	case "file-check":

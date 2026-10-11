@@ -18,7 +18,7 @@ import (
 func digitalDocument(e *e2eEnv, userID int64, name, fileID string) []tgCall {
 	return e.do(tgbotapi.Update{Message: &tgbotapi.Message{
 		Chat: &tgbotapi.Chat{ID: userID, Type: "private"}, From: &tgbotapi.User{ID: userID, LanguageCode: "ru"},
-		Document: &tgbotapi.Document{FileID: fileID, FileName: name, FileSize: 80_000_000},
+		Document: &tgbotapi.Document{FileID: fileID, FileName: name, FileSize: 49_000_000},
 	}})
 }
 
@@ -45,7 +45,9 @@ func TestDigitalArchivePaymentAndReplacement(t *testing.T) {
 	e := newE2EEnv(t)
 	ctx := context.Background()
 	buyer := int64(781)
-	uploadDigital(e, "zip-80mb-v1")
+	if _, err := e.bot.archives.Add(ctx, e.prodReg, "zip-80mb-v1", "plane.zip", 80_000_000); err != nil {
+		t.Fatal(err)
+	}
 	// The upload uses only document metadata, never getFile/download/upload.
 	if got := e.qInt("SELECT size_bytes FROM digital_archives LIMIT 1"); got != 80_000_000 {
 		t.Fatalf("size=%d", got)
@@ -82,7 +84,9 @@ func TestDigitalArchivePaymentAndReplacement(t *testing.T) {
 		t.Fatal("duplicate automatic delivery")
 	}
 	// Replacement changes the entitlement of an already-delivered purchase.
-	uploadDigital(e, "zip-80mb-v2")
+	if _, err := e.bot.archives.Add(ctx, e.prodReg, "zip-80mb-v2", "plane.zip", 80_000_000); err != nil {
+		t.Fatal(err)
+	}
 	before = e.tg.count()
 	e.bot.ProcessDigitalDeliveries(ctx)
 	if len(documentCalls(e.tg.since(before))) != 0 {

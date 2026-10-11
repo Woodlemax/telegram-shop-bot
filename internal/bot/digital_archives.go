@@ -3,6 +3,7 @@ package bot
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"strconv"
@@ -66,6 +67,10 @@ func (b *Bot) handleArchiveUpload(ctx context.Context, msg *tgbotapi.Message) bo
 		return true
 	}
 	d := msg.Document
+	if int64(d.FileSize) > storage.MaxTelegramArchiveUploadBytes {
+		b.send(tgbotapi.NewMessage(msg.Chat.ID, "ZIP больше 50 МБ загрузите через админку: Товар → Архив → Выберите ZIP-архив. Он будет автоматически разбит на части, и покупатель получит все части. Текущий архив сохранён."))
+		return true
+	}
 	version, err := b.archives.Add(ctx, id, d.FileID, d.FileName, int64(d.FileSize))
 	if err != nil {
 		b.send(tgbotapi.NewMessage(msg.Chat.ID, b.t(msg.From.LanguageCode, "digital_admin_zip_only")))
@@ -91,9 +96,35 @@ func (c deliveryHTTPClient) Do(r *http.Request) (*http.Response, error) {
 }
 
 func (b *Bot) sendDigitalDocument(ctx context.Context, d *storage.DigitalDelivery, lang string) (int, error) {
+	parts, err := b.archives.Parts(ctx, d)
+	if err != nil {
+		return 0, err
+	}
+	message := 0
+	for _, p := range parts {
+		previous, err := b.archives.PreparePart(ctx, d, p.Number)
+		if err != nil {
+			return message, err
+		}
+		if previous > 0 {
+			message = previous
+			continue
+		}
+		message, err = b.sendArchivePart(ctx, d, p, len(parts), lang)
+		if err != nil {
+			return message, err
+		}
+		if err = b.archives.FinishPart(ctx, d, p.Number, message); err != nil {
+			return message, err
+		}
+	}
+	return message, nil
+}
+
+func (b *Bot) sendArchivePart(ctx context.Context, d *storage.DigitalDelivery, p storage.ArchivePart, total int, lang string) (int, error) {
 	timeout := 30 * time.Second
-	var document tgbotapi.RequestFileData = tgbotapi.FileID(d.FileID)
-	if path, local := service.LocalArchivePath(b.AdminMediaDirectory(), d.FileID); local {
+	var document tgbotapi.RequestFileData = tgbotapi.FileID(p.FileID)
+	if path, local := service.LocalArchivePath(b.AdminMediaDirectory(), p.FileID); local {
 		file, err := os.Open(path)
 		if err != nil {
 			return 0, err
@@ -103,12 +134,17 @@ func (b *Bot) sendDigitalDocument(ctx context.Context, d *storage.DigitalDeliver
 		if err != nil {
 			return 0, err
 		}
-		if !stat.Mode().IsRegular() || stat.Size() <= 0 || stat.Size() > storage.MaxTelegramArchiveUploadBytes {
+		size := p.SizeBytes
+		if size == 0 {
+			size = stat.Size()
+		}
+		if !stat.Mode().IsRegular() || size <= 0 || size > storage.MaxTelegramArchiveUploadBytes || p.OffsetBytes < 0 || p.OffsetBytes > stat.Size()-size {
 			return 0, storage.ErrDigitalArchiveNotReady
 		}
-		document = tgbotapi.FileReader{Name: d.FileName, Reader: file}
-		// Stay below the durable queue's two-minute lease.
+		document = tgbotapi.FileReader{Name: p.FileName, Reader: io.NewSectionReader(file, p.OffsetBytes, size)}
 		timeout = 90 * time.Second
+	} else if strings.HasPrefix(p.FileID, "local:") {
+		return 0, storage.ErrDigitalArchiveNotReady
 	}
 	sendCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
@@ -120,14 +156,25 @@ func (b *Bot) sendDigitalDocument(ctx context.Context, d *storage.DigitalDeliver
 		name = name[:300]
 	}
 	doc.Caption = fmt.Sprintf(b.t(lang, "digital_delivery_caption"), string(name), d.ArchiveID, d.OrderID)
+	if total > 1 {
+		if lang == "ru" {
+			doc.Caption += fmt.Sprintf("\nЧасть %d из %d. Сохраните все части в одну папку и откройте файл .001 через 7-Zip.", p.Number, total)
+		} else {
+			doc.Caption += fmt.Sprintf("\nPart %d of %d. Save all parts in one folder and open the .001 file with 7-Zip.", p.Number, total)
+		}
+	}
 	if !b.adminOnly() {
-		doc.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(b.t(lang, "digital_download_again"), fmt.Sprintf("digital:download:%d", d.ID)),
-		))
+		doc.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(b.t(lang, "digital_download_again"), fmt.Sprintf("digital:download:%d", d.ID))))
 	}
 	msg, err := api.Send(doc)
-	if err == nil && strings.HasPrefix(d.FileID, "local:") && msg.Document != nil && msg.Document.FileID != "" {
-		if cacheErr := b.archives.RememberTelegramFile(ctx, d.ArchiveID, d.FileID, msg.Document.FileID); cacheErr != nil {
+	if err == nil && strings.HasPrefix(p.FileID, "local:") && msg.Document != nil && msg.Document.FileID != "" {
+		var cacheErr error
+		if total > 1 {
+			cacheErr = b.archives.RememberPartFile(ctx, d.ArchiveID, p, msg.Document.FileID)
+		} else {
+			cacheErr = b.archives.RememberTelegramFile(ctx, d.ArchiveID, p.FileID, msg.Document.FileID)
+		}
+		if cacheErr != nil {
 			b.logger.Warn("archive Telegram file cache failed", "archive_id", d.ArchiveID)
 		}
 	}

@@ -187,11 +187,11 @@ func TestAdminAppEightyMegabyteArchiveAndPriorPurchases(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer file.Close()
-	if _, err = e.bot.AdminUpload(ctx, e2eAdminID, e.prodReg, "archive", "plane.zip", file); err == nil {
-		t.Fatal("large browser upload accepted")
+	if _, err = e.bot.AdminUpload(ctx, e2eAdminID, e.prodReg, "archive", "plane.zip", file); err != nil {
+		t.Fatal(err)
 	}
-	if e.qInt("SELECT count(*) FROM digital_archives") != 1 {
-		t.Fatal("rejected upload changed archive")
+	if e.qInt("SELECT count(*) FROM digital_archives") != 2 || e.qInt("SELECT count(*) FROM digital_archive_parts") != 2 {
+		t.Fatal("large ZIP not split")
 	}
 	e.bot.cfg.BotAdminOnly = true
 	e.bot.cfg.AdminMiniAppOnly = true
@@ -202,12 +202,12 @@ func TestAdminAppEightyMegabyteArchiveAndPriorPurchases(t *testing.T) {
 	if !strings.Contains(guide["chat_url"].(string), "t.me/") {
 		t.Fatal("missing bot chat")
 	}
-	calls := digitalDocument(e, e2eAdminID, "plane.zip", "new-telegram-file-80mb")
+	calls := digitalDocument(e, e2eAdminID, "plane.zip", "new-telegram-file")
 	if !strings.Contains(tgText(calls), "ZIP прикреплён") {
 		t.Fatal("admin-only mode blocked configured upload", tgText(calls))
 	}
 	owned, err := e.bot.archives.Owned(ctx, buyer, deliveryID)
-	if err != nil || owned.FileID != "new-telegram-file-80mb" || owned.FileName != "plane.zip" {
+	if err != nil || owned.FileID != "new-telegram-file" || owned.FileName != "plane.zip" {
 		t.Fatal("previous purchase not updated", owned, err)
 	}
 	for _, invalid := range []struct{ kind, name, body string }{{"archive", "bad.zip", "not zip"}, {"photo", "script.svg", "<svg onload='x'/>"}} {
@@ -226,7 +226,7 @@ func TestAdminAppEightyMegabyteArchiveAndPriorPurchases(t *testing.T) {
 	e.bot.ProcessDigitalDeliveries(ctx)
 	calls = e.tg.since(beforeCalls)
 	docs := documentCalls(calls)
-	if len(docs) != 1 || docs[0].Params.Get("document") != "new-telegram-file-80mb" {
+	if len(docs) != 1 || docs[0].Params.Get("document") != "new-telegram-file" {
 		t.Fatal("archive not sent as Telegram document", docs)
 	}
 	for _, call := range calls {

@@ -66,7 +66,7 @@ func (b *Bot) AdminUpload(ctx context.Context, actor, id int64, kind, name strin
 	defer f.Close()
 	limit := int64(16 << 20)
 	if kind == "archive" {
-		limit = storage.MaxTelegramArchiveUploadBytes
+		limit = storage.MaxAdminArchiveBytes
 	}
 	count, err := io.Copy(f, io.LimitReader(reader, limit+1))
 	if err != nil {
@@ -74,7 +74,7 @@ func (b *Bot) AdminUpload(ctx context.Context, actor, id int64, kind, name strin
 	}
 	if count == 0 || count > limit {
 		if kind == "archive" && count > limit {
-			return nil, adminInvalid("ZIP больше 50 МБ прикрепите через Telegram: используйте кнопку на вкладке «Архив».")
+			return nil, adminInvalid("Максимальный размер ZIP — 512 МБ.")
 		}
 		return nil, adminInvalid("Пустой или слишком большой файл.")
 	}

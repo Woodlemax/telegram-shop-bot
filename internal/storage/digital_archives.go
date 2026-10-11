@@ -19,6 +19,7 @@ type DigitalArchive struct {
 	ID, ProductID    int64
 	FileID, FileName string
 	SizeBytes        int64
+	Parts            int
 }
 
 type DigitalDelivery struct {
@@ -29,7 +30,7 @@ type DigitalDelivery struct {
 
 type DigitalArchiveStore struct{ db *sql.DB }
 
-const MaxTelegramArchiveUploadBytes int64 = 50 << 20
+const MaxTelegramArchiveUploadBytes int64 = 50_000_000
 
 // Keep the archive version and existing entitlements when Telegram stores a
 // browser-uploaded ZIP. A concurrent upload of the same bytes may win first.
@@ -80,6 +81,11 @@ func (s *DigitalArchiveStore) Add(ctx context.Context, productID int64, fileID, 
 	id, err := res.LastInsertId()
 	if err != nil {
 		return 0, err
+	}
+	for _, part := range archiveParts(fileID, name, size) {
+		if _, err = tx.ExecContext(ctx, `INSERT INTO digital_archive_parts(archive_id,part_number,file_id,file_name,offset_bytes,size_bytes) VALUES(?,?,?,?,?,?)`, id, part.Number, part.FileID, part.FileName, part.OffsetBytes, part.SizeBytes); err != nil {
+			return 0, err
+		}
 	}
 	_, err = tx.ExecContext(ctx, `UPDATE digital_deliveries SET archive_id=?,
         state=CASE WHEN state='sending' THEN 'pending' ELSE state END,
@@ -212,7 +218,7 @@ func (s *DigitalArchiveStore) Finish(ctx context.Context, d *DigitalDelivery, me
 			return err
 		}
 		defer tx.Rollback()
-		res, err := tx.ExecContext(ctx, `UPDATE digital_deliveries SET state='sent',message_id=?,lease_until=0 WHERE id=? AND lease_token=? AND state='sending'`, messageID, d.ID, d.LeaseToken)
+		res, err := tx.ExecContext(ctx, `UPDATE digital_deliveries SET state='sent',message_id=?,lease_until=0 WHERE id=? AND lease_token=? AND state='sending' AND NOT EXISTS(SELECT 1 FROM digital_archive_parts p WHERE p.archive_id=digital_deliveries.archive_id AND NOT EXISTS(SELECT 1 FROM digital_delivery_parts f WHERE f.delivery_id=digital_deliveries.id AND f.archive_id=p.archive_id AND f.part_number=p.part_number))`, messageID, d.ID, d.LeaseToken)
 		if err != nil {
 			return err
 		}
@@ -328,7 +334,16 @@ func (s *DigitalArchiveStore) ForOrder(ctx context.Context, userID, orderID int6
 // order, stock or payment. Requests while pending/sending share the same row and
 // never invalidate an in-flight worker lease. Entitlement is checked atomically.
 func (s *DigitalArchiveStore) RequestOrderDownload(ctx context.Context, userID, orderID, productID int64) error {
-	res, err := s.db.ExecContext(ctx, `UPDATE digital_deliveries SET
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	// Reset acknowledged parts only for a new download of a completed delivery.
+	if _, err = tx.ExecContext(ctx, `DELETE FROM digital_delivery_parts WHERE delivery_id IN (SELECT d.id FROM digital_deliveries d JOIN orders o ON o.id=d.order_id WHERE d.order_id=? AND d.product_id=? AND o.user_id=? AND d.state='sent' AND `+digitalEntitlement+`)`, orderID, productID, userID); err != nil {
+		return err
+	}
+	res, err := tx.ExecContext(ctx, `UPDATE digital_deliveries SET
         state=CASE WHEN state='sent' THEN 'pending' ELSE state END,
         available_at=CASE WHEN state IN ('sent','pending') THEN 0 ELSE available_at END,
         attempts=CASE WHEN state='sent' THEN 0 ELSE attempts END,
@@ -346,5 +361,5 @@ func (s *DigitalArchiveStore) RequestOrderDownload(ctx context.Context, userID, 
 	if n != 1 {
 		return ErrNotFound
 	}
-	return nil
+	return tx.Commit()
 }

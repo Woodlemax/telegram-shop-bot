@@ -129,7 +129,7 @@ func (s *Server) handleAdminUpload(w http.ResponseWriter, r *http.Request, a *Au
 	kind := r.PathValue("kind")
 	limit := int64(16 << 20)
 	if kind == "archive" {
-		limit = storage.MaxTelegramArchiveUploadBytes
+		limit = storage.MaxAdminArchiveBytes
 	} else if kind == "reference" {
 		limit = 128 << 20
 	} else if kind != "photo" {
@@ -141,8 +141,8 @@ func (s *Server) handleAdminUpload(w http.ResponseWriter, r *http.Request, a *Au
 		return
 	}
 	controller := http.NewResponseController(w)
-	_ = controller.SetReadDeadline(time.Now().Add(3 * time.Minute))
-	_ = controller.SetWriteDeadline(time.Now().Add(4 * time.Minute))
+	_ = controller.SetReadDeadline(time.Now().Add(10 * time.Minute))
+	_ = controller.SetWriteDeadline(time.Now().Add(11 * time.Minute))
 	reader := http.MaxBytesReader(w, r.Body, limit)
 	v, err := s.deps.Admin.AdminUpload(r.Context(), a.User.ID, id, kind, r.URL.Query().Get("name"), reader)
 	var tooLarge *http.MaxBytesError

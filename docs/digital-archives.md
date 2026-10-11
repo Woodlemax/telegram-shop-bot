@@ -1,23 +1,28 @@
 # Digital ZIP products
 
-Administrators attach ZIP documents to regular products. The bot stores the
-Telegram `file_id`; it never downloads the archive or reuploads its bytes.
-An 80 MB document is therefore delivered by reusing the file already held by
-Telegram. Real delivery of the owner's archive must still be checked in Telegram.
+Administrators upload ZIPs through the admin Mini App (up to 512 MiB). Archives
+larger than 50,000,000 bytes are split into ordered binary volumes of at most
+49,000,000 bytes: `model.zip.001`, `model.zip.002`, etc. The original ZIP remains
+in persistent `admin-media`; uploads stream byte ranges without extracting or
+recompressing model files. All bytes are preserved.
 
 ## Attach or replace an archive
 
-1. Open the administrator's **private** chat with the bot.
-2. Open `/admin`, select the product, and press **Upload / replace ZIP**.
-   Alternatively send `/setarchive <product_id>`.
-3. Send the `.zip` as a document within 15 minutes. `/cancel` cancels the upload.
-4. The product becomes digital and uses the shop's configured payment methods. Subscription
-   products cannot have ZIP archives. Each digital product is ordered once per
-   cart, and completed digital sales do not reduce its stock.
+1. Open `/admin`, select a product and open **Archive**.
+2. Choose the original ZIP and confirm replacement. Large ZIPs split automatically.
+3. Small ZIPs (up to 50 MB) can alternatively be attached through the Telegram
+   button, in the administrator's private chat within 15 minutes; `/cancel`
+   cancels this pending upload. Legacy `/setarchive` applies only with the legacy
+   admin interface enabled. Newly attached large Telegram documents are rejected
+   with instructions to use the browser splitter, preserving the existing archive.
+4. The product becomes digital. Replacement updates all previous purchases as
+   one atomic version, including every part. Subscription products cannot have ZIPs.
 
-The upload records the filename and size declared by Telegram. It checks the
-`.zip` extension, not the compressed contents; upload a ZIP you have verified.
-There is no public download URL or file identifier in the catalog API.
+Already stored large Telegram documents remain reusable by `file_id`, without
+reupload. The cloud Bot API cannot download them for splitting: reattach the
+original ZIP through the admin Mini App to convert it into parts. Browser uploads
+are checked as nonempty ZIPs. There is no public download URL or file identifier
+in the catalog API.
 
 ## Payment and delivery
 
@@ -35,8 +40,12 @@ Zero-total orders can receive a separately recorded free grant through
 **Get without payment**. They have no money receipt; the same worker and download
 ownership checks apply. See [open prices](open-prices.md).
 
-The worker sends `sendDocument` with the stored `file_id`. Successful sends store
-the message ID. An entirely digital order is then marked delivered; mixed orders
+The worker sends every part as `sendDocument`, streaming a bounded byte range on
+first upload and storing the returned Telegram `file_id` for reuse. Each successful
+part stores its message ID in durable progress. Leases renew before each upload;
+a retry skips acknowledged parts, while a fresh download resets part progress.
+Every caption states the part number and instructs the buyer to save all parts in
+one folder and open `.001` with 7-Zip. A delivery completes only after all parts. An entirely digital order is then marked delivered; mixed orders
 retain their existing physical fulfillment workflow.
 
 Failures use durable backoff from one minute up to one hour. Two-minute leases
@@ -73,7 +82,9 @@ is retained for history.
 ## Validation
 
 Tests use the real order/payment storage with an imitation Telegram API:
-80 MB document metadata, administrative permissions, ZIP validation, expiration
+legacy 80 MB Telegram document metadata, an 80 MiB browser ZIP split and reassembled
+with a matching SHA-256, second-part failure/resume, cached multipart downloads,
+replacement by a single ZIP, administrative permissions, ZIP validation, expiration
 and cancellation, no delivery before payment, confirmation through every supported
 payment method, incorrect amounts and payment identifiers, balance checkout, no stock
 decrement, payment replay, updated access for previous buyers, ownership checks,

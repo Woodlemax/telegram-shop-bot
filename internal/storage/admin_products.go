@@ -182,5 +182,13 @@ func (s *DigitalArchiveStore) Latest(ctx context.Context, productID int64) (*Dig
 	if err != nil {
 		return nil, err
 	}
+	a.Parts = 1
+	var count int
+	if err = s.db.QueryRowContext(ctx, `SELECT count(*) FROM digital_archive_parts WHERE archive_id=?`, a.ID).Scan(&count); err != nil {
+		return nil, err
+	}
+	if count > 0 {
+		a.Parts = count
+	}
 	return &a, nil
 }
