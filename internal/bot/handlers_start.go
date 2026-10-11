@@ -43,7 +43,7 @@ func (b *Bot) handleStart(ctx context.Context, msg *tgbotapi.Message) {
 	refCode := strings.TrimSpace(msg.CommandArguments())
 	// Deep links are issued as start=ref_<code>; stored codes have no prefix.
 	refCode = strings.TrimPrefix(refCode, "ref_")
-	if refCode != "" {
+	if b.purchaseRewardsEnabled() && refCode != "" {
 		referrer, err := b.referrals.GetUserByReferralCode(ctx, refCode)
 		if err == nil && referrer != nil && referrer.TelegramID != msg.From.ID {
 			// Check registration limit (Anti-Fraud)
@@ -96,7 +96,7 @@ func (b *Bot) sendMainMenu(chatID, userID int64, msgID int, lang string, ctx con
 // mainMenuKeyboard builds the two-column main menu (reference layout):
 // [Каталог|Поиск] [Корзина|Избранное] [Заказы|Профиль] [Бонус за друга|Поддержка] [Условия].
 func (b *Bot) mainMenuKeyboard(lang, cartLabel string) StyledKeyboard {
-	return StyledKeyboard{
+	kb := StyledKeyboard{
 		{
 			b.styledBtn(BtnKeyMenuCatalog, b.t(lang, "btn_catalog"), "back:catalog", StylePrimary),
 			b.styledBtn(BtnKeyMenuSearch, b.t(lang, "btn_search"), "search:hint", StyleDefault),
@@ -117,6 +117,10 @@ func (b *Bot) mainMenuKeyboard(lang, cartLabel string) StyledKeyboard {
 			b.styledBtn(BtnKeyMenuTerms, b.t(lang, "btn_terms"), "terms", StyleDefault),
 		},
 	}
+	if !b.purchaseRewardsEnabled() {
+		kb[3] = kb[3][1:]
+	}
+	return kb
 }
 
 // handleHelp sends a list of available commands.

@@ -182,8 +182,6 @@ func NewWithAPI(cfg *config.Config, api *tgbotapi.BotAPI, db *storage.DB, metric
 	if err != nil {
 		return nil, err
 	}
-	loyaltyStore := storage.NewLoyaltyStore(db.Conn())
-	loyaltySvc := service.NewLoyaltyService(loyaltyStore, 1)
 
 	i18nSvc, err := service.NewI18nService(cfg.LocalesDir)
 	if err != nil {
@@ -198,14 +196,19 @@ func NewWithAPI(cfg *config.Config, api *tgbotapi.BotAPI, db *storage.DB, metric
 
 	balanceStore := storage.NewSQLBalanceStore(db.Conn())
 	paymentDeps := shop.PaymentDeps{
-		Users:     us,
-		Loyalty:   loyaltySvc,
-		Points:    loyaltyStore,
-		Referrals: referralStore,
-		Promos:    promoStore,
-		Cache:     cachedPS,
-		Metrics:   metrics,
-		Balances:  balanceStore,
+		Users:    us,
+		Cache:    cachedPS,
+		Metrics:  metrics,
+		Balances: balanceStore,
+	}
+
+	// Purchase cashback and referral rewards are opt-in; ordinary promo discounts remain available.
+	if cfg.PurchaseRewardsEnabled {
+		loyaltyStore := storage.NewLoyaltyStore(db.Conn())
+		paymentDeps.Loyalty = service.NewLoyaltyService(loyaltyStore, 1)
+		paymentDeps.Points = loyaltyStore
+		paymentDeps.Referrals = referralStore
+		paymentDeps.Promos = promoStore
 	}
 
 	b := &Bot{
@@ -290,6 +293,8 @@ func (b *Bot) API() *tgbotapi.BotAPI {
 	return b.api
 }
 
+func (b *Bot) purchaseRewardsEnabled() bool { return b.cfg != nil && b.cfg.PurchaseRewardsEnabled }
+
 func (b *Bot) starsOnlyPayments() bool { return b.cfg != nil && b.cfg.StarsOnlyPayments }
 
 func (b *Bot) cryptoPaymentsEnabled() bool {
@@ -342,6 +347,19 @@ func (b *Bot) registerCommands() {
 		tgbotapi.BotCommand{Command: "help", Description: "All commands"},
 		tgbotapi.BotCommand{Command: "cancel", Description: "Cancel current action"},
 	)
+	if !b.purchaseRewardsEnabled() {
+		filtered := cmds.Commands[:0]
+		for _, command := range cmds.Commands {
+			if command.Command == "referral" {
+				continue
+			}
+			if command.Command == "profile" {
+				command.Description = "Your profile"
+			}
+			filtered = append(filtered, command)
+		}
+		cmds.Commands = filtered
+	}
 	if b.adminOnly() {
 		cmds = tgbotapi.NewSetMyCommands(
 			tgbotapi.BotCommand{Command: "start", Description: "Open shop"},

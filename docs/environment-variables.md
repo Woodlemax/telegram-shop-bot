@@ -18,6 +18,7 @@ Copy `.env.example` to `.env` and fill in the values.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `PURCHASE_REWARDS_ENABLED` | `false` | Opt in to purchase cashback, loyalty levels and first-purchase referral rewards. Disabled in PrintWing; ordinary promo discounts and existing balances/points are preserved. |
 | `BOT_USERNAME` | — | Bot's username without `@`. Used for referral deep-links in onboarding messages. |
 
 ---

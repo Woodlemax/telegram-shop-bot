@@ -764,7 +764,7 @@ func (b *Bot) recordStarsPaymentAnomaly(ctx context.Context, msg *tgbotapi.Messa
 // the referrer, and the welcome promo for the referred buyer. All sends are
 // best-effort; the payment itself is already final.
 func (b *Bot) NotifyPaymentOutcome(ctx context.Context, outcome *shop.PaymentOutcome) {
-	if outcome == nil || outcome.Order == nil {
+	if !b.purchaseRewardsEnabled() || outcome == nil || outcome.Order == nil {
 		return
 	}
 

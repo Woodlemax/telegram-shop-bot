@@ -17,6 +17,10 @@ func (b *Bot) handleReferral(ctx context.Context, msg *tgbotapi.Message) {
 // link, the number of invited friends and the total referral points earned.
 // A referral code is generated lazily on first open.
 func (b *Bot) sendReferralScreen(ctx context.Context, chatID, userID int64, msgID int, lang string) {
+	if !b.purchaseRewardsEnabled() {
+		b.sendMainMenu(chatID, userID, msgID, lang, ctx)
+		return
+	}
 	user, err := b.users.GetByTelegramID(ctx, userID)
 	if err != nil {
 		b.loggerFor(ctx).Error("referral screen: load user", "error", err)

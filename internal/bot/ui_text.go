@@ -271,14 +271,16 @@ func (b *Bot) formatProfileText(lang string, user *storage.User, orderCount int)
 	if user.Username != "" {
 		sb.WriteString(fmt.Sprintf(b.t(lang, "profile_username_line"), escapeHTML(user.Username)))
 	}
-	sb.WriteString(fmt.Sprintf(b.t(lang, "profile_loyalty_line"), escapeHTML(user.LoyaltyLevel), user.LoyaltyPts))
-	if next, threshold := loyaltyNextLevel(user.LoyaltyLevel); next != "" {
-		sb.WriteString(fmt.Sprintf(b.t(lang, "profile_loyalty_progress"), escapeHTML(next), user.LoyaltyPts, threshold))
-	} else {
-		sb.WriteString(b.t(lang, "profile_loyalty_max"))
+	if b.purchaseRewardsEnabled() {
+		sb.WriteString(fmt.Sprintf(b.t(lang, "profile_loyalty_line"), escapeHTML(user.LoyaltyLevel), user.LoyaltyPts))
+		if next, threshold := loyaltyNextLevel(user.LoyaltyLevel); next != "" {
+			sb.WriteString(fmt.Sprintf(b.t(lang, "profile_loyalty_progress"), escapeHTML(next), user.LoyaltyPts, threshold))
+		} else {
+			sb.WriteString(b.t(lang, "profile_loyalty_max"))
+		}
 	}
 	sb.WriteString(fmt.Sprintf(b.t(lang, "profile_orders_line"), orderCount))
-	if user.ReferralCode.Valid && user.ReferralCode.String != "" {
+	if b.purchaseRewardsEnabled() && user.ReferralCode.Valid && user.ReferralCode.String != "" {
 		sb.WriteString(fmt.Sprintf(b.t(lang, "profile_referral_line"), escapeHTML(user.ReferralCode.String)))
 	}
 

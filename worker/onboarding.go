@@ -18,22 +18,26 @@ type onboardingUserStore interface {
 }
 
 type OnboardingWorker struct {
-	bot         *tgbotapi.BotAPI
-	userStore   onboardingUserStore
-	i18n        *service.I18nService
-	botUsername string
-	interval    time.Duration
+	bot             *tgbotapi.BotAPI
+	userStore       onboardingUserStore
+	i18n            *service.I18nService
+	botUsername     string
+	interval        time.Duration
+	referralEnabled bool
 }
 
 func NewOnboardingWorker(bot *tgbotapi.BotAPI, userStore onboardingUserStore, i18n *service.I18nService, botUsername string, interval time.Duration) *OnboardingWorker {
 	return &OnboardingWorker{
-		bot:         bot,
-		userStore:   userStore,
-		i18n:        i18n,
-		botUsername: botUsername,
-		interval:    interval,
+		bot:             bot,
+		userStore:       userStore,
+		i18n:            i18n,
+		botUsername:     botUsername,
+		interval:        interval,
+		referralEnabled: true,
 	}
 }
+
+func (w *OnboardingWorker) SetReferralEnabled(enabled bool) { w.referralEnabled = enabled }
 
 func (w *OnboardingWorker) Start(ctx context.Context) {
 	ticker := time.NewTicker(w.interval)
@@ -77,7 +81,9 @@ func (w *OnboardingWorker) runOnboarding(ctx context.Context) {
 		}
 
 		var text string
-		if u.ReferralCode.Valid && u.ReferralCode.String != "" {
+		if !w.referralEnabled {
+			text = fmt.Sprintf(w.i18n.T(lang, "onboarding_greeting_plain"), name)
+		} else if u.ReferralCode.Valid && u.ReferralCode.String != "" {
 			referralLink := fmt.Sprintf("https://t.me/%s?start=%s", w.botUsername, u.ReferralCode.String)
 			text = fmt.Sprintf(w.i18n.T(lang, "onboarding_greeting_with_referral"), name, referralLink)
 		} else {

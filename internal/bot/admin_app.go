@@ -239,7 +239,7 @@ func (b *Bot) AdminRead(ctx context.Context, actor int64, resource string, id in
 		for _, key := range AllButtonKeys {
 			buttons = append(buttons, map[string]string{"key": key, "label": ButtonKeyLabel(key), "style": styles[key]})
 		}
-		return map[string]any{"rub_rate": b.currentRUBRate(), "stars_rate": b.exchange.GetUSDToStarsRate(), "buttons": buttons, "payment_status": b.formatPayStatus("ru")}, nil
+		return map[string]any{"rub_rate": b.currentRUBRate(), "stars_rate": b.exchange.GetUSDToStarsRate(), "buttons": buttons, "payment_status": b.formatPayStatus("ru"), "purchase_rewards_enabled": b.purchaseRewardsEnabled()}, nil
 	case "user":
 		u, err := b.users.GetByTelegramID(ctx, id)
 		if err != nil {

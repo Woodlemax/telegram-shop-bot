@@ -62,6 +62,9 @@ type Config struct {
 	NowpaymentsAPIKey    string
 	NowpaymentsIPNSecret string
 	NowpaymentsReturnURL string
+
+	// Purchase cashback and first-purchase referral rewards are disabled by default.
+	PurchaseRewardsEnabled bool
 }
 
 // Load reads configuration from environment variables.
@@ -112,6 +115,14 @@ func load(lookup lookupFunc) (*Config, error) {
 		starsOnly, err = strconv.ParseBool(raw)
 		if err != nil {
 			return nil, fmt.Errorf("STARS_ONLY_PAYMENTS: %w", err)
+		}
+	}
+
+	purchaseRewardsEnabled := false
+	if raw := strings.TrimSpace(value(lookup, "PURCHASE_REWARDS_ENABLED")); raw != "" {
+		purchaseRewardsEnabled, err = strconv.ParseBool(raw)
+		if err != nil {
+			return nil, fmt.Errorf("PURCHASE_REWARDS_ENABLED: %w", err)
 		}
 	}
 
@@ -257,6 +268,8 @@ func load(lookup lookupFunc) (*Config, error) {
 		NowpaymentsAPIKey:     nowAPIKey,
 		NowpaymentsIPNSecret:  nowIPNSecret,
 		NowpaymentsReturnURL:  nowReturn,
+
+		PurchaseRewardsEnabled: purchaseRewardsEnabled,
 	}, nil
 }
 

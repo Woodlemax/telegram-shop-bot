@@ -181,8 +181,6 @@ func runBot() {
 		fsm = storage.NewMemoryFSMStore()
 		slog.Warn("Redis unavailable, using in-memory FSM and disabling Redis-dependent workers", "addr", cfg.RedisAddr)
 	}
-	loyaltyStore := storage.NewLoyaltyStore(db.Conn())
-	loyaltySvc := service.NewLoyaltyService(loyaltyStore, 1)
 
 	// 5. Initialize Bot
 	b, err := bot.New(cfg, db, metrics, fsm, redisClient, slog.Default())
@@ -214,7 +212,9 @@ func runBot() {
 	cartW := worker.NewCartRecoveryWorker(b.API(), cartStore, promoStore, userStore, i18n, metrics, time.Hour)
 	workers.Start(ctx, "cart_recovery", cartW.Start)
 
-	if redisClient != nil {
+	if redisClient != nil && cfg.PurchaseRewardsEnabled {
+		loyaltyStore := storage.NewLoyaltyStore(db.Conn())
+		loyaltySvc := service.NewLoyaltyService(loyaltyStore, 1)
 		loyaltyW := worker.NewLoyaltyWorker(loyaltyStore, loyaltySvc, redisClient, b.API(), i18n, userStore)
 		workers.Start(ctx, "loyalty", loyaltyW.Start)
 	}
@@ -224,6 +224,7 @@ func runBot() {
 	workers.Start(ctx, "wishlist_watcher", wishlistW.Start)
 
 	onboardingW := worker.NewOnboardingWorker(b.API(), userStore, i18n, cfg.BotUsername, 24*time.Hour)
+	onboardingW.SetReferralEnabled(cfg.PurchaseRewardsEnabled)
 	workers.Start(ctx, "onboarding", onboardingW.Start)
 
 	// Hourly subscription maintenance: expire overdue Stars subscriptions and

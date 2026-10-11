@@ -199,6 +199,9 @@ func newE2EEnvWithConfig(t *testing.T, mutate func(*config.Config)) *e2eEnv {
 		DBPath:         dbPath,
 		USDToStarsRate: 50,
 		LocalesDir:     filepath.Join("..", "..", "locales"),
+
+		// Legacy reward feature coverage opts in explicitly; default-off tests override this.
+		PurchaseRewardsEnabled: true,
 	}
 	if mutate != nil {
 		mutate(cfg)

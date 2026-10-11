@@ -39,5 +39,8 @@ func (b *Bot) sendProfile(ctx context.Context, chatID, userID int64, msgID int, 
 			Btn(b.t(lang, "btn_menu"), "back:menu"),
 		},
 	}
+	if !b.purchaseRewardsEnabled() {
+		kb = append(kb[:1], kb[2:]...)
+	}
 	b.sendOrEditStyled(chatID, msgID, text, "HTML", kb)
 }

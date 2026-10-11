@@ -219,6 +219,7 @@
   "product_in_stock": "📦 库存：%d 件",
   "product_out_of_stock": "📦 已售罄",
   "onboarding_greeting_with_referral": "👋 你好，<b>%s</b>！\n\n欢迎来到我们的商店。您还没有下过订单 — 现在是个好时机！\n\n🎁 <b>积分计划：</b>\n• 铜牌 → 银牌 → 金牌 → VIP\n• 消费返 1%% 至 10%% 积分\n\n👥 <b>推荐计划：</b>\n邀请好友，每邀请一位都可获得奖励！\n您的推荐链接：<code>%s</code>\n\n快来逛逛商品目录 — 总有适合您的商品 🛍",
+  "onboarding_greeting_plain": "👋 你好，<b>%s</b>！\n\n在商店浏览飞机模型、下单并下载你的文件 🛍",
   "onboarding_greeting": "👋 你好，<b>%s</b>！\n\n欢迎来到我们的商店。您还没有下过订单 — 现在是个好时机！\n\n🎁 <b>积分计划：</b>\n• 铜牌 → 银牌 → 金牌 → VIP\n• 消费返 1%% 至 10%% 积分\n\n快来逛逛商品目录 — 总有适合您的商品 🛍",
   "onboarding_default_name": "朋友",
   "wishlist_price_drop": "📉 价格下降！\n\n<b>%s</b>\n原价：$%.2f → 现价：$%.2f（降幅 %.0f%%）\n\n您心愿单中的商品正在等您！",

@@ -219,6 +219,7 @@
   "product_in_stock": "📦 In stock: %d pcs.",
   "product_out_of_stock": "📦 Out of stock",
   "onboarding_greeting_with_referral": "👋 Hi, <b>%s</b>!\n\nWelcome to our shop. You haven't placed an order yet — maybe it's time?\n\n🎁 <b>Loyalty Program:</b>\n• Bronze → Silver → Gold → VIP\n• Cashback from 1%% to 10%% in bonus points\n\n👥 <b>Referral Program:</b>\nInvite friends and earn bonuses for each one!\nYour referral link: <code>%s</code>\n\nCheck out the catalog — something is waiting for you 🛍",
+  "onboarding_greeting_plain": "👋 Hi, <b>%s</b>!\n\nBrowse aircraft models, place orders and download your archives in the shop 🛍",
   "onboarding_greeting": "👋 Hi, <b>%s</b>!\n\nWelcome to our shop. You haven't placed an order yet — maybe it's time?\n\n🎁 <b>Loyalty Program:</b>\n• Bronze → Silver → Gold → VIP\n• Cashback from 1%% to 10%% in bonus points\n\nCheck out the catalog — something is waiting for you 🛍",
   "onboarding_default_name": "friend",
   "wishlist_price_drop": "📉 Price dropped!\n\n<b>%s</b>\nWas: $%.2f → Now: $%.2f (−%.0f%%)\n\nThe item in your wishlist is waiting for you!",

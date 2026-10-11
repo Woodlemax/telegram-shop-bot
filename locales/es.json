@@ -219,6 +219,7 @@
   "product_in_stock": "📦 En stock: %d uds.",
   "product_out_of_stock": "📦 Sin stock",
   "onboarding_greeting_with_referral": "👋 ¡Hola, <b>%s</b>!\n\nBienvenido a nuestra tienda. Todavía no has hecho ningún pedido — ¿quizás es hora?\n\n🎁 <b>Programa de fidelización:</b>\n• Bronce → Plata → Oro → VIP\n• Cashback del 1%% al 10%% en puntos de bonificación\n\n👥 <b>Programa de referidos:</b>\n¡Invita a tus amigos y gana bonos por cada uno!\nTu enlace de referido: <code>%s</code>\n\nEcha un vistazo al catálogo — allí encontrarás algo para ti 🛍",
+  "onboarding_greeting_plain": "👋 ¡Hola, <b>%s</b>!\n\nDescubre modelos de aviones, haz pedidos y descarga tus archivos en la tienda 🛍",
   "onboarding_greeting": "👋 ¡Hola, <b>%s</b>!\n\nBienvenido a nuestra tienda. Todavía no has hecho ningún pedido — ¿quizás es hora?\n\n🎁 <b>Programa de fidelización:</b>\n• Bronce → Plata → Oro → VIP\n• Cashback del 1%% al 10%% en puntos de bonificación\n\nEcha un vistazo al catálogo — allí encontrarás algo para ti 🛍",
   "onboarding_default_name": "amigo",
   "wishlist_price_drop": "📉 ¡Bajada de precio!\n\n<b>%s</b>\nAntes: $%.2f → Ahora: $%.2f (−%.0f%%)\n\n¡El artículo de tu lista de deseos te espera!",

@@ -56,7 +56,7 @@ A full-featured e-commerce bot for Telegram — catalog, cart, Telegram Stars & 
 - Promo codes with category limits + personal one-off codes
 - Wishlist — price drop & restock alerts
 - Search: `/search <query>`
-- **Loyalty program** — 1–10 % cashback in points, levels
+- **Optional loyalty program** — 1–10 % cashback in points, levels; disabled by default (`PURCHASE_REWARDS_ENABLED=false`)
 - **Referral program** — `/referral` link; 100 points for the referrer, −10 % promo for the friend
 
 </td>

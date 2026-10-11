@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"shop_bot/internal/config"
 	"shop_bot/internal/service"
 	"shop_bot/internal/shop"
 	"shop_bot/internal/storage"
@@ -17,7 +18,7 @@ func newTextBot(t *testing.T) *Bot {
 		t.Fatalf("load locales: %v", err)
 	}
 
-	return &Bot{i18n: i18n}
+	return &Bot{i18n: i18n, cfg: &config.Config{PurchaseRewardsEnabled: true}}
 }
 
 func TestOrderStatusText_Localized(t *testing.T) {
