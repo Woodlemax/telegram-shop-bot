@@ -542,5 +542,7 @@
   "admin_author_usage": "/editproduct %d author @username — 启用向作者购买\n/editproduct %d author - — 关闭\n/editproduct %d price - — 向作者询价",
   "admin_author_invalid": "请输入作者的个人 @username 或 https://t.me/username。不支持订阅。关闭：author -.",
   "product_author_price_on_request": "向作者询价",
-  "admin_author_price_required": "关闭向作者购买前，请用 price 设置数字价格。"
+  "admin_author_price_required": "关闭向作者购买前，请用 price 设置数字价格。",
+  "admin_app_open": "打开管理应用",
+  "admin_app_entry": "在独立的管理员 Mini App 中管理商品、订单和设置。"
 }

@@ -26,6 +26,8 @@ A full-featured e-commerce bot for Telegram — catalog, cart, Telegram Stars & 
 
 ### ✨ Features
 
+**PrintWing administration:** `/admin` opens a separate administrator-only Mini App for products, categories, photos/ZIP uploads, orders, receipts/refunds, promo codes, reviews, payment review, analytics and settings. [Usage and deployment](docs/admin-mini-app.md).
+
 <table>
 <tr>
 <td width="50%">

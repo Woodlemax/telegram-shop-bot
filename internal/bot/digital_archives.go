@@ -9,6 +9,7 @@ import (
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"shop_bot/internal/service"
 	"shop_bot/internal/storage"
 )
 
@@ -93,6 +94,12 @@ func (b *Bot) sendDigitalDocument(ctx context.Context, d *storage.DigitalDeliver
 	defer cancel()
 	api := *b.api
 	api.Client = sanitizedTelegramClient{client: deliveryHTTPClient{b.api.Client, sendCtx}}
+	if _, local := service.LocalArchivePath(b.AdminMediaDirectory(), d.FileID); local {
+		message := tgbotapi.NewMessage(d.UserID, fmt.Sprintf(b.t(lang, "digital_delivery_caption"), d.ProductName, d.ArchiveID, d.OrderID))
+		message.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonURL(b.t(lang, "webapp_order_download"), b.localDigitalDownloadURL(d))))
+		msg, err := api.Send(message)
+		return msg.MessageID, err
+	}
 	doc := tgbotapi.NewDocument(d.UserID, tgbotapi.FileID(d.FileID))
 	name := []rune(d.ProductName)
 	if len(name) > 300 {

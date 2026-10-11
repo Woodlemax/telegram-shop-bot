@@ -542,5 +542,7 @@
   "admin_author_usage": "/editproduct %d author @username — включить покупку у автора\n/editproduct %d author - — выключить\n/editproduct %d price - — цену уточнить у автора",
   "admin_author_invalid": "Укажите личный @username автора или https://t.me/username. Подписки не поддерживаются. Для отключения: author -.",
   "product_author_price_on_request": "Цену уточнить у автора",
-  "admin_author_price_required": "Сначала задайте числовую цену командой price, затем отключите покупку у автора."
+  "admin_author_price_required": "Сначала задайте числовую цену командой price, затем отключите покупку у автора.",
+  "admin_app_open": "Открыть админку",
+  "admin_app_entry": "Управление магазином перенесено в отдельный Mini App. Товары, заказы и настройки доступны по кнопке ниже."
 }

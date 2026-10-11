@@ -137,27 +137,31 @@ type Localizer interface {
 
 // Deps carries every dependency of the Mini App API server.
 type Deps struct {
-	ProductGroups     *storage.ProductGroupStore
-	Auth              *Authenticator
-	Catalog           CatalogService
-	Cart              CartService
-	Orders            OrderService
-	Users             storage.UserStore
-	Promos            PromoStore
-	Reviews           RatingStore
-	Photos            PhotoStore
-	I18n              Localizer
-	Tg                TelegramAPI
-	Crypto            CryptoInvoicer
-	YooKassa          YooKassaInvoicer
-	Stripe            StripeInvoicer
-	TON               TONLinker
-	Nowpayments       NowpaymentsInvoicer
-	Files             FileURLResolver
-	Archives          OrderArchives
-	StarsOnlyPayments bool
-	USDToRUBRate      float64 // Fallback for callers without a shared exchange service.
-	Exchange          *service.ExchangeService
+	AdminIDs           []int64
+	Admin              AdminBackend
+	AdminMediaDir      string
+	ArchiveDownloadKey string
+	ProductGroups      *storage.ProductGroupStore
+	Auth               *Authenticator
+	Catalog            CatalogService
+	Cart               CartService
+	Orders             OrderService
+	Users              storage.UserStore
+	Promos             PromoStore
+	Reviews            RatingStore
+	Photos             PhotoStore
+	I18n               Localizer
+	Tg                 TelegramAPI
+	Crypto             CryptoInvoicer
+	YooKassa           YooKassaInvoicer
+	Stripe             StripeInvoicer
+	TON                TONLinker
+	Nowpayments        NowpaymentsInvoicer
+	Files              FileURLResolver
+	Archives           OrderArchives
+	StarsOnlyPayments  bool
+	USDToRUBRate       float64 // Fallback for callers without a shared exchange service.
+	Exchange           *service.ExchangeService
 
 	// The *Available flags are the config-level rail availability rendered
 	// into the cart payload as *_enabled booleans. main computes them with
@@ -206,6 +210,13 @@ func New(deps Deps, logger *slog.Logger) *Server {
 // Handler returns the /api/ router, ready to mount on the root mux.
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/admin/{resource}", s.withAdmin(s.handleAdminRead))
+	mux.HandleFunc("GET /api/admin/{resource}/{id}", s.withAdmin(s.handleAdminRead))
+	mux.HandleFunc("POST /api/admin/{resource}", s.withAdmin(s.handleAdminWrite))
+	mux.HandleFunc("POST /api/admin/{resource}/{id}", s.withAdmin(s.handleAdminWrite))
+	mux.HandleFunc("POST /api/admin/products/{id}/upload/{kind}", s.withAdmin(s.handleAdminUpload))
+	mux.HandleFunc("GET /api/media/{name}", s.handleAdminMedia)
+	mux.HandleFunc("GET /api/archive-download", s.handleArchiveDownload)
 	mux.HandleFunc("GET /api/i18n", s.handleI18n)
 	mux.HandleFunc("GET /api/me", s.withAuth(s.handleMe))
 	mux.HandleFunc("GET /api/catalog", s.withAuth(s.handleCatalog))

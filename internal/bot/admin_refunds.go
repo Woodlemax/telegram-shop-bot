@@ -318,6 +318,11 @@ func (b *Bot) onAdminRefundCallback(ctx context.Context, chatID int64, msgID int
 // TOCTOU discipline as the payreview confirm), then execute provider-first
 // and record second.
 func (b *Bot) onAdminRefundConfirm(ctx context.Context, chatID int64, msgID int, adminID, orderID, amountMinor int64, lang string) {
+	b.sendOrEditStyled(chatID, msgID, b.executeAdminRefund(ctx, adminID, orderID, amountMinor, lang), "", StyledKeyboard{})
+}
+
+// executeAdminRefund is shared by the legacy bot and the separate administrator Mini App.
+func (b *Bot) executeAdminRefund(ctx context.Context, adminID, orderID, amountMinor int64, lang string) string {
 	// Serialize confirm executions process-wide. Telegram can deliver a
 	// double-tap as two concurrent updates; the replay check below is only
 	// authoritative when no sibling confirm is mid-flight — critical on the
@@ -325,63 +330,49 @@ func (b *Bot) onAdminRefundConfirm(ctx context.Context, chatID int64, msgID int,
 	b.refundMu.Lock()
 	defer b.refundMu.Unlock()
 
-	render := func(text string) {
-		b.sendOrEditStyled(chatID, msgID, text, "", StyledKeyboard{})
-	}
-
 	order, err := b.order.GetOrder(ctx, orderID)
 	if err != nil {
 		if !errors.Is(err, storage.ErrNotFound) {
 			b.loggerFor(ctx).Error("refund confirm: load order", "order_id", orderID, "error", err)
 		}
-		render(b.t(lang, "admin_refund_conflict"))
-		return
+		return b.t(lang, "admin_refund_conflict")
 	}
 	rail := storage.CanonicalPaymentProvider(order.PaymentMethod)
 	if refundIsManualRail(rail) {
 		// The card never offers a confirm button for manual rails; a crafted
 		// callback re-renders the instructions and executes nothing.
-		render(b.i18n.Tf(lang, "admin_refund_manual", rail))
-		return
+		return b.i18n.Tf(lang, "admin_refund_manual", rail)
 	}
 	// Replay BEFORE the refundable gate: a successful first confirm flips the
 	// payment state, so the double-confirm must answer with the recorded
 	// refund (the provider is NEVER called again) instead of a bare
 	// not-refundable rejection.
 	if recorded, hit := b.findRecordedRefund(ctx, order, rail, amountMinor); hit {
-		render(b.i18n.Tf(lang, "admin_refund_done", recorded.ExternalID, orderID, refundPaymentStateLabel(order)))
-		return
+		return b.i18n.Tf(lang, "admin_refund_done", recorded.ExternalID, orderID, refundPaymentStateLabel(order))
 	}
 	if !refundableOrder(order) {
-		render(b.i18n.Tf(lang, "admin_refund_not_paid", orderID, refundOrderStateLabel(order)))
-		return
+		return b.i18n.Tf(lang, "admin_refund_not_paid", orderID, refundOrderStateLabel(order))
 	}
 	fullMinor, currency, scale, ok := refundRailMoney(order, rail)
 	if !ok {
-		render(b.i18n.Tf(lang, "admin_refund_not_paid", orderID, refundOrderStateLabel(order)))
-		return
+		return b.i18n.Tf(lang, "admin_refund_not_paid", orderID, refundOrderStateLabel(order))
 	}
 	if rail == storage.PaymentMethodStars && amountMinor != fullMinor {
-		render(b.i18n.Tf(lang, "admin_refund_partial_stars", orderID, int64(order.TotalStars)))
-		return
+		return b.i18n.Tf(lang, "admin_refund_partial_stars", orderID, int64(order.TotalStars))
 	}
 	if amountMinor <= 0 || amountMinor > fullMinor {
-		render(b.t(lang, "admin_refund_conflict"))
-		return
+		return b.t(lang, "admin_refund_conflict")
 	}
 
 	plan, outcome, err := b.prepareRefund(ctx, order, rail, amountMinor, currency, scale)
 	if err != nil {
-		render(b.refundFailureText(lang, orderID, err))
-		return
+		return b.refundFailureText(lang, orderID, err)
 	}
 	if outcome == storage.PaymentIngressReplay {
-		render(b.i18n.Tf(lang, "admin_refund_done", plan.fact.ExternalID, orderID, refundPaymentStateLabel(order)))
-		return
+		return b.i18n.Tf(lang, "admin_refund_done", plan.fact.ExternalID, orderID, refundPaymentStateLabel(order))
 	}
 	if outcome != storage.PaymentIngressApply {
-		render(b.t(lang, "admin_refund_conflict"))
-		return
+		return b.t(lang, "admin_refund_conflict")
 	}
 
 	// Ordering ruling: the provider refund executes FIRST. A failure here
@@ -390,8 +381,7 @@ func (b *Bot) onAdminRefundConfirm(ctx context.Context, chatID int64, msgID int,
 	if err != nil {
 		b.loggerFor(ctx).Error("refund: provider execution failed",
 			"order_id", orderID, "rail", rail, "amount_minor", amountMinor, "error", err)
-		render(b.i18n.Tf(lang, "admin_refund_provider_failed", orderID, err.Error()))
-		return
+		return b.i18n.Tf(lang, "admin_refund_provider_failed", orderID, err.Error())
 	}
 	plan.fact.ExternalID = refundID
 
@@ -453,12 +443,11 @@ func (b *Bot) onAdminRefundConfirm(ctx context.Context, chatID int64, msgID int,
 				"order_id", orderID, "rail", rail, "refund_id", refundID, "error", recordErr)
 		}
 		if rail == storage.PaymentMethodStars {
-			render(b.i18n.Tf(lang, "admin_refund_ledger_failed_stars", refundID, orderID, err.Error(), refundCLIRecordLine))
+			return b.i18n.Tf(lang, "admin_refund_ledger_failed_stars", refundID, orderID, err.Error(), refundCLIRecordLine)
 		} else {
-			render(b.i18n.Tf(lang, "admin_refund_ledger_failed_rerun", refundID, orderID, err.Error(),
-				orderID, refundAmountDecimal(amountMinor, scale)))
+			return b.i18n.Tf(lang, "admin_refund_ledger_failed_rerun", refundID, orderID, err.Error(),
+				orderID, refundAmountDecimal(amountMinor, scale))
 		}
-		return
 	}
 	// Settlement attribution (docs/payment-operations.md §12): the log actor
 	// matches the durable payment_ingress_audits row written above.
@@ -476,7 +465,7 @@ func (b *Bot) onAdminRefundConfirm(ctx context.Context, chatID int64, msgID int,
 	if state == "" {
 		state = "-"
 	}
-	render(b.i18n.Tf(lang, "admin_refund_done", refundID, orderID, state))
+	return b.i18n.Tf(lang, "admin_refund_done", refundID, orderID, state)
 }
 
 // prepareRefund rebuilds the refund fact for one execution attempt and

@@ -29,6 +29,7 @@ type Config struct {
 	USDToStarsRate        int
 	StarsOnlyPayments     bool
 	BotAdminOnly          bool
+	AdminMiniAppOnly      bool
 	LocalesDir            string
 	OutboundWebhookURL    string
 	OutboundWebhookSecret string
@@ -115,6 +116,13 @@ func load(lookup lookupFunc) (*Config, error) {
 	}
 
 	botAdminOnly := false
+	adminMiniAppOnly := true
+	if raw := strings.TrimSpace(value(lookup, "ADMIN_MINIAPP_ONLY")); raw != "" {
+		adminMiniAppOnly, err = strconv.ParseBool(raw)
+		if err != nil {
+			return nil, fmt.Errorf("ADMIN_MINIAPP_ONLY: %w", err)
+		}
+	}
 	if raw := strings.TrimSpace(value(lookup, "BOT_ADMIN_ONLY")); raw != "" {
 		botAdminOnly, err = strconv.ParseBool(raw)
 		if err != nil {
@@ -229,6 +237,7 @@ func load(lookup lookupFunc) (*Config, error) {
 		USDToStarsRate:        usdToStars,
 		StarsOnlyPayments:     starsOnly,
 		BotAdminOnly:          botAdminOnly,
+		AdminMiniAppOnly:      adminMiniAppOnly,
 		LocalesDir:            getEnv(lookup, "LOCALES_DIR", "locales"),
 		OutboundWebhookURL:    value(lookup, "OUTBOUND_WEBHOOK_URL"),
 		OutboundWebhookSecret: value(lookup, "OUTBOUND_WEBHOOK_SECRET"),

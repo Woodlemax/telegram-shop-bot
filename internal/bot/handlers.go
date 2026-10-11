@@ -35,6 +35,9 @@ func (b *Bot) routeMessage(ctx context.Context, msg *tgbotapi.Message) {
 		b.handleSuccessfulPayment(ctx, msg)
 		return
 	}
+	if b.routeAdminMiniAppMessage(msg) {
+		return
+	}
 	if b.adminOnly() && b.routeAdminOnlyMessage(msg) {
 		return
 	}
@@ -224,6 +227,11 @@ func (b *Bot) handleCallback(ctx context.Context, cb *tgbotapi.CallbackQuery) {
 	msgID := cb.Message.MessageID
 	userID := cb.From.ID
 	lang := cb.From.LanguageCode
+	if b.adminMiniAppOnly() && adminCallback(data) {
+		b.ack(cb.ID)
+		b.sendAdminMiniApp(&tgbotapi.Message{Chat: cb.Message.Chat, From: cb.From})
+		return
+	}
 
 	if b.adminOnly() && !(b.isAdmin(userID) && chatID == userID && adminCallback(data)) {
 		b.toast(cb.ID, b.t(lang, "bot_miniapp_only"))

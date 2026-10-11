@@ -542,5 +542,7 @@
   "admin_author_usage": "/editproduct %d author @username — activar compra al autor\n/editproduct %d author - — desactivar\n/editproduct %d price - — consultar el precio al autor",
   "admin_author_invalid": "Usa el @username personal del autor o https://t.me/username. No se admiten suscripciones. Desactivar: author -.",
   "product_author_price_on_request": "Consultar el precio al autor",
-  "admin_author_price_required": "Establece un precio numérico con price antes de desactivar la compra al autor."
+  "admin_author_price_required": "Establece un precio numérico con price antes de desactivar la compra al autor.",
+  "admin_app_open": "Abrir administración",
+  "admin_app_entry": "Gestiona productos, pedidos y ajustes en la Mini App de administración."
 }

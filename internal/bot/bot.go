@@ -67,35 +67,38 @@ type payLedgerStore interface {
 
 // Bot is the main Telegram bot that routes updates to handlers.
 type Bot struct {
-	api             *tgbotapi.BotAPI
-	cfg             *config.Config
-	exchange        *service.ExchangeService
-	telegramInput   sync.Map
-	catalog         *shop.CatalogService
-	cart            *shop.CartService
-	order           *shop.OrderService
-	users           storage.UserStore
-	products        storage.ProductStore
-	adminProducts   storage.AdminProductLister
-	promos          storage.PromoStore
-	analytics       storage.AnalyticsStore
-	photos          storage.ProductPhotoStore
-	reviews         storage.ReviewStore
-	payLedger       payLedgerStore
-	balances        storage.BalanceStore
-	referrals       *storage.ReferralStore
-	referralService *service.ReferralService
-	stars           *payment.StarsPayment
-	crypto          *payment.CryptoBotPayment
-	yookassa        *payment.YooKassaCheckout
-	stripe          *payment.StripePayment
-	ton             *payment.TONPayment
-	nowpayments     *payment.NowpaymentsPayment
-	logger          *slog.Logger
-	metrics         *service.MetricsService
-	fsm             storage.FSMStore
-	i18n            *service.I18nService
-	outWebhook      *service.OutboundWebhookService
+	api                *tgbotapi.BotAPI
+	cfg                *config.Config
+	exchange           *service.ExchangeService
+	telegramInput      sync.Map
+	catalog            *shop.CatalogService
+	cart               *shop.CartService
+	order              *shop.OrderService
+	users              storage.UserStore
+	products           storage.ProductStore
+	adminProducts      storage.AdminProductLister
+	adminDB            *storage.DB
+	adminAppMu         sync.Mutex
+	adminConfirmations map[string]adminConfirmation
+	promos             storage.PromoStore
+	analytics          storage.AnalyticsStore
+	photos             storage.ProductPhotoStore
+	reviews            storage.ReviewStore
+	payLedger          payLedgerStore
+	balances           storage.BalanceStore
+	referrals          *storage.ReferralStore
+	referralService    *service.ReferralService
+	stars              *payment.StarsPayment
+	crypto             *payment.CryptoBotPayment
+	yookassa           *payment.YooKassaCheckout
+	stripe             *payment.StripePayment
+	ton                *payment.TONPayment
+	nowpayments        *payment.NowpaymentsPayment
+	logger             *slog.Logger
+	metrics            *service.MetricsService
+	fsm                storage.FSMStore
+	i18n               *service.I18nService
+	outWebhook         *service.OutboundWebhookService
 
 	wishlist      *storage.WishlistStore
 	uiSettings    storage.UISettingsStore
@@ -215,6 +218,7 @@ func NewWithAPI(cfg *config.Config, api *tgbotapi.BotAPI, db *storage.DB, metric
 		users:           us,
 		products:        cachedPS,
 		adminProducts:   ps,
+		adminDB:         db,
 		promos:          promoStore,
 		analytics:       analyticsStore,
 		referrals:       referralStore,
@@ -347,6 +351,7 @@ func (b *Bot) registerCommands() {
 	if _, err := b.api.Request(cmds); err != nil {
 		b.logger.Warn("setMyCommands failed", "error", err)
 	}
+	b.registerAdminAppCommand()
 
 	// Set the chat menu button: the Mini App when WEBAPP_URL is configured,
 	// otherwise the commands list (visible as "/" button in input field).

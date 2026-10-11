@@ -542,5 +542,7 @@
   "admin_author_usage": "/editproduct %d author @username — enable author purchase\n/editproduct %d author - — disable\n/editproduct %d price - — ask the author for the price",
   "admin_author_invalid": "Use the author’s personal @username or https://t.me/username. Subscriptions are not supported. To disable: author -.",
   "product_author_price_on_request": "Ask the author for the price",
-  "admin_author_price_required": "Set a numeric price with price before disabling author purchase."
+  "admin_author_price_required": "Set a numeric price with price before disabling author purchase.",
+  "admin_app_open": "Open admin app",
+  "admin_app_entry": "Manage products, orders and settings in the separate administrator Mini App."
 }

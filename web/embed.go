@@ -7,3 +7,7 @@ import "embed"
 //
 //go:embed app
 var AppFS embed.FS
+
+// AdminFS is the separate administrator Mini App; its API requires signed admin identity.
+//go:embed admin
+var AdminFS embed.FS

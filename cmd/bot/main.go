@@ -310,26 +310,30 @@ func runBot() {
 		exchangeSvc := b.ExchangeService()
 		productStore := storage.NewSQLProductStore(db)
 		apiServer = webapi.New(webapi.Deps{
-			Auth:              webapi.NewAuthenticator(cfg.BotToken, webapi.DefaultAuthTTL),
-			Catalog:           shop.NewCatalogService(productStore, exchangeSvc),
-			ProductGroups:     storage.NewProductGroupStore(db.Conn()),
-			Cart:              shop.NewCartService(cartStore, productStore, exchangeSvc),
-			Orders:            b.OrderService(),
-			Users:             userStore,
-			Promos:            promoStore,
-			Reviews:           storage.NewSQLReviewStore(db),
-			Photos:            storage.NewSQLProductPhotoStore(db),
-			I18n:              i18n,
-			Tg:                b.API(),
-			Crypto:            cryptoPayments,
-			YooKassa:          yookassaPayments,
-			Stripe:            stripePayments,
-			TON:               tonPayments,
-			Nowpayments:       nowpaymentsPayments,
-			Files:             b.API(),
-			Archives:          storage.NewDigitalArchiveStore(db),
-			StarsOnlyPayments: cfg.StarsOnlyPayments,
-			Exchange:          exchangeSvc,
+			AdminIDs:           cfg.AdminIDs,
+			Admin:              b,
+			AdminMediaDir:      b.AdminMediaDirectory(),
+			ArchiveDownloadKey: cfg.BotToken,
+			Auth:               webapi.NewAuthenticator(cfg.BotToken, webapi.DefaultAuthTTL),
+			Catalog:            shop.NewCatalogService(productStore, exchangeSvc),
+			ProductGroups:      storage.NewProductGroupStore(db.Conn()),
+			Cart:               shop.NewCartService(cartStore, productStore, exchangeSvc),
+			Orders:             b.OrderService(),
+			Users:              userStore,
+			Promos:             promoStore,
+			Reviews:            storage.NewSQLReviewStore(db),
+			Photos:             storage.NewSQLProductPhotoStore(db),
+			I18n:               i18n,
+			Tg:                 b.API(),
+			Crypto:             cryptoPayments,
+			YooKassa:           yookassaPayments,
+			Stripe:             stripePayments,
+			TON:                tonPayments,
+			Nowpayments:        nowpaymentsPayments,
+			Files:              b.API(),
+			Archives:           storage.NewDigitalArchiveStore(db),
+			StarsOnlyPayments:  cfg.StarsOnlyPayments,
+			Exchange:           exchangeSvc,
 			// Rendered-availability flags for the Mini App cart payload —
 			// the exact predicates of the bot's payment keyboard (bot.go:
 			// yooKassaPaymentsEnabled & co.): configured credentials, plus
@@ -374,6 +378,13 @@ func runBot() {
 			mux.Handle("/app/", http.StripPrefix("/app/", http.FileServer(http.FS(appFiles))))
 			mux.Handle("/app", http.RedirectHandler("/app/", http.StatusMovedPermanently))
 			mux.Handle("/api/", apiServer.Handler())
+			adminFiles, err := fs.Sub(web.AdminFS, "admin")
+			if err != nil {
+				slog.Error("Admin App assets missing")
+				os.Exit(1)
+			}
+			mux.Handle("/admin/", http.StripPrefix("/admin/", http.FileServer(http.FS(adminFiles))))
+			mux.Handle("/admin", http.RedirectHandler("/admin/", http.StatusMovedPermanently))
 			slog.Info("Mini App mounted", "url", cfg.WebAppURL)
 		} else {
 			slog.Warn("WEBAPP_URL is not set — Mini App and REST API are disabled")
