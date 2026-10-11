@@ -84,6 +84,9 @@ func NormalizeAuthorPurchaseURL(raw string) (string, error) {
 }
 
 func validateProduct(p *Product) error {
+	if p.SortOrder < -1000000000 || p.SortOrder > 1000000000 {
+		return ErrInvalidMoney
+	}
 	link, err := NormalizeTelegramURL(p.TelegramURL)
 	if err != nil {
 		return err

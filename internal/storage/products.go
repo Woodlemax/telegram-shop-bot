@@ -19,7 +19,7 @@ func NewSQLProductStore(d *DB) *SQLProductStore {
 
 // GetCategories returns all active categories.
 func (s *SQLProductStore) GetCategories(ctx context.Context) ([]Category, error) {
-	rows, err := s.db.QueryContext(ctx, "SELECT id, name, COALESCE(emoji, ''), COALESCE(custom_emoji_id, ''), sort_order, is_active FROM categories WHERE is_active = 1 ORDER BY sort_order ASC")
+	rows, err := s.db.QueryContext(ctx, "SELECT id, name, COALESCE(emoji, ''), COALESCE(custom_emoji_id, ''), sort_order, is_active FROM categories WHERE is_active = 1 ORDER BY sort_order ASC, id ASC")
 	if err != nil {
 		return nil, fmt.Errorf("product store: get categories: %w", err)
 	}
@@ -40,8 +40,8 @@ func (s *SQLProductStore) GetCategories(ctx context.Context) ([]Category, error)
 func (s *SQLProductStore) GetProductsByCategory(ctx context.Context, categoryID int64) ([]Product, error) {
 	rows, err := s.db.QueryContext(ctx,
 		`SELECT id, category_id, name, COALESCE(description, ''), COALESCE(photo_url, ''),
-		        price_usd, COALESCE(price_stars, 0), stock, is_digital, COALESCE(digital_content, ''), is_active, sub_period_days, open_price, price_rub, infinite_stock, single_in_cart, telegram_url, coming_soon, author_telegram_url, created_at
-		 FROM products WHERE category_id = ? AND is_active = 1 AND deleted_at IS NULL`, categoryID)
+		        price_usd, COALESCE(price_stars, 0), stock, is_digital, COALESCE(digital_content, ''), is_active, sub_period_days, open_price, price_rub, infinite_stock, single_in_cart, telegram_url, coming_soon, author_telegram_url, created_at, sort_order
+		 FROM products WHERE category_id = ? AND is_active = 1 AND deleted_at IS NULL ORDER BY sort_order,id`, categoryID)
 	if err != nil {
 		return nil, fmt.Errorf("product store: get products by category: %w", err)
 	}
@@ -51,7 +51,7 @@ func (s *SQLProductStore) GetProductsByCategory(ctx context.Context, categoryID 
 	for rows.Next() {
 		var p Product
 		if err := rows.Scan(&p.ID, &p.CategoryID, &p.Name, &p.Description, &p.PhotoURL,
-			&p.PriceUSD, &p.PriceStars, &p.Stock, &p.IsDigital, &p.DigitalContent, &p.IsActive, &p.SubPeriodDays, &p.OpenPrice, &p.PriceRUB, &p.InfiniteStock, &p.SingleInCart, &p.TelegramURL, &p.ComingSoon, &p.AuthorTelegramURL, &p.CreatedAt); err != nil {
+			&p.PriceUSD, &p.PriceStars, &p.Stock, &p.IsDigital, &p.DigitalContent, &p.IsActive, &p.SubPeriodDays, &p.OpenPrice, &p.PriceRUB, &p.InfiniteStock, &p.SingleInCart, &p.TelegramURL, &p.ComingSoon, &p.AuthorTelegramURL, &p.CreatedAt, &p.SortOrder); err != nil {
 			return nil, fmt.Errorf("product store: scan product: %w", err)
 		}
 		products = append(products, p)
@@ -71,9 +71,9 @@ func (s *SQLProductStore) GetProductsByCategoryPaged(ctx context.Context, catego
 
 	rows, err := s.db.QueryContext(ctx,
 		`SELECT id, category_id, name, COALESCE(description, ''), COALESCE(photo_url, ''),
-		        price_usd, COALESCE(price_stars, 0), stock, is_digital, COALESCE(digital_content, ''), is_active, sub_period_days, open_price, price_rub, infinite_stock, single_in_cart, telegram_url, coming_soon, author_telegram_url, created_at
+		        price_usd, COALESCE(price_stars, 0), stock, is_digital, COALESCE(digital_content, ''), is_active, sub_period_days, open_price, price_rub, infinite_stock, single_in_cart, telegram_url, coming_soon, author_telegram_url, created_at, sort_order
 		 FROM products WHERE category_id = ? AND is_active = 1 AND deleted_at IS NULL AND (stock > 0 OR infinite_stock = 1 OR coming_soon = 1 OR author_telegram_url <> '')
-		 ORDER BY id LIMIT ? OFFSET ?`, categoryID, limit, offset)
+		 ORDER BY sort_order,id LIMIT ? OFFSET ?`, categoryID, limit, offset)
 	if err != nil {
 		return nil, 0, fmt.Errorf("product store: get paged products: %w", err)
 	}
@@ -83,7 +83,7 @@ func (s *SQLProductStore) GetProductsByCategoryPaged(ctx context.Context, catego
 	for rows.Next() {
 		var p Product
 		if err := rows.Scan(&p.ID, &p.CategoryID, &p.Name, &p.Description, &p.PhotoURL,
-			&p.PriceUSD, &p.PriceStars, &p.Stock, &p.IsDigital, &p.DigitalContent, &p.IsActive, &p.SubPeriodDays, &p.OpenPrice, &p.PriceRUB, &p.InfiniteStock, &p.SingleInCart, &p.TelegramURL, &p.ComingSoon, &p.AuthorTelegramURL, &p.CreatedAt); err != nil {
+			&p.PriceUSD, &p.PriceStars, &p.Stock, &p.IsDigital, &p.DigitalContent, &p.IsActive, &p.SubPeriodDays, &p.OpenPrice, &p.PriceRUB, &p.InfiniteStock, &p.SingleInCart, &p.TelegramURL, &p.ComingSoon, &p.AuthorTelegramURL, &p.CreatedAt, &p.SortOrder); err != nil {
 			return nil, 0, fmt.Errorf("product store: scan paged product: %w", err)
 		}
 		products = append(products, p)
@@ -97,10 +97,10 @@ func (s *SQLProductStore) GetProduct(ctx context.Context, id int64) (*Product, e
 	var p Product
 	err := s.db.QueryRowContext(ctx,
 		`SELECT id, category_id, name, COALESCE(description, ''), COALESCE(photo_url, ''),
-		        price_usd, COALESCE(price_stars, 0), stock, is_digital, COALESCE(digital_content, ''), is_active, sub_period_days, open_price, price_rub, infinite_stock, single_in_cart, telegram_url, coming_soon, author_telegram_url, created_at
+		        price_usd, COALESCE(price_stars, 0), stock, is_digital, COALESCE(digital_content, ''), is_active, sub_period_days, open_price, price_rub, infinite_stock, single_in_cart, telegram_url, coming_soon, author_telegram_url, created_at, sort_order
 		 FROM products WHERE id = ? AND deleted_at IS NULL`, id).
 		Scan(&p.ID, &p.CategoryID, &p.Name, &p.Description, &p.PhotoURL,
-			&p.PriceUSD, &p.PriceStars, &p.Stock, &p.IsDigital, &p.DigitalContent, &p.IsActive, &p.SubPeriodDays, &p.OpenPrice, &p.PriceRUB, &p.InfiniteStock, &p.SingleInCart, &p.TelegramURL, &p.ComingSoon, &p.AuthorTelegramURL, &p.CreatedAt)
+			&p.PriceUSD, &p.PriceStars, &p.Stock, &p.IsDigital, &p.DigitalContent, &p.IsActive, &p.SubPeriodDays, &p.OpenPrice, &p.PriceRUB, &p.InfiniteStock, &p.SingleInCart, &p.TelegramURL, &p.ComingSoon, &p.AuthorTelegramURL, &p.CreatedAt, &p.SortOrder)
 	if err == sql.ErrNoRows {
 		return nil, ErrNotFound
 	}
@@ -120,9 +120,9 @@ func (s *SQLProductStore) CreateProduct(ctx context.Context, p *Product) (int64,
 		return 0, err
 	}
 	res, err := s.db.ExecContext(ctx,
-		`INSERT INTO products (category_id, name, description, photo_url, price_usd, price_stars, stock, is_digital, digital_content, is_active, sub_period_days, open_price, price_rub, infinite_stock, single_in_cart, telegram_url, coming_soon, author_telegram_url)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		p.CategoryID, p.Name, p.Description, p.PhotoURL, p.PriceUSD, p.PriceStars, p.Stock, p.IsDigital, p.DigitalContent, p.IsActive, p.SubPeriodDays, p.OpenPrice, p.PriceRUB, p.InfiniteStock, p.SingleInCart, p.TelegramURL, p.ComingSoon, p.AuthorTelegramURL)
+		`INSERT INTO products (category_id, name, description, photo_url, price_usd, price_stars, stock, is_digital, digital_content, is_active, sub_period_days, open_price, price_rub, infinite_stock, single_in_cart, telegram_url, coming_soon, author_telegram_url, sort_order)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		p.CategoryID, p.Name, p.Description, p.PhotoURL, p.PriceUSD, p.PriceStars, p.Stock, p.IsDigital, p.DigitalContent, p.IsActive, p.SubPeriodDays, p.OpenPrice, p.PriceRUB, p.InfiniteStock, p.SingleInCart, p.TelegramURL, p.ComingSoon, p.AuthorTelegramURL, p.SortOrder)
 	if err != nil {
 		return 0, fmt.Errorf("product store: create product: %w", err)
 	}
@@ -140,9 +140,9 @@ func (s *SQLProductStore) UpdateProduct(ctx context.Context, p *Product) error {
 	}
 	res, err := s.db.ExecContext(ctx,
 		`UPDATE products SET category_id = ?, name = ?, description = ?, photo_url = ?,
-		        price_usd = ?, price_stars = ?, stock = ?, is_digital = ?, digital_content = ?, is_active = ?, sub_period_days = ?, open_price = ?, price_rub = ?, infinite_stock = ?, single_in_cart = ?, telegram_url = ?, coming_soon = ?, author_telegram_url = ?
+		        price_usd = ?, price_stars = ?, stock = ?, is_digital = ?, digital_content = ?, is_active = ?, sub_period_days = ?, open_price = ?, price_rub = ?, infinite_stock = ?, single_in_cart = ?, telegram_url = ?, coming_soon = ?, author_telegram_url = ?, sort_order = ?
 		 WHERE id = ? AND deleted_at IS NULL`,
-		p.CategoryID, p.Name, p.Description, p.PhotoURL, p.PriceUSD, p.PriceStars, p.Stock, p.IsDigital, p.DigitalContent, p.IsActive, p.SubPeriodDays, p.OpenPrice, p.PriceRUB, p.InfiniteStock, p.SingleInCart, p.TelegramURL, p.ComingSoon, p.AuthorTelegramURL, p.ID)
+		p.CategoryID, p.Name, p.Description, p.PhotoURL, p.PriceUSD, p.PriceStars, p.Stock, p.IsDigital, p.DigitalContent, p.IsActive, p.SubPeriodDays, p.OpenPrice, p.PriceRUB, p.InfiniteStock, p.SingleInCart, p.TelegramURL, p.ComingSoon, p.AuthorTelegramURL, p.SortOrder, p.ID)
 	if err != nil {
 		return fmt.Errorf("product store: update product: %w", err)
 	}
@@ -241,10 +241,10 @@ func (s *SQLProductStore) SearchProducts(ctx context.Context, query string) ([]P
 	pattern := "%" + query + "%"
 	rows, err := s.db.QueryContext(ctx,
 		`SELECT id, category_id, name, COALESCE(description, ''), COALESCE(photo_url, ''),
-		        price_usd, COALESCE(price_stars, 0), stock, is_digital, COALESCE(digital_content, ''), is_active, sub_period_days, open_price, price_rub, infinite_stock, single_in_cart, telegram_url, coming_soon, author_telegram_url, created_at
+		        price_usd, COALESCE(price_stars, 0), stock, is_digital, COALESCE(digital_content, ''), is_active, sub_period_days, open_price, price_rub, infinite_stock, single_in_cart, telegram_url, coming_soon, author_telegram_url, created_at, sort_order
 		 FROM products
 		 WHERE is_active = 1 AND deleted_at IS NULL AND (stock > 0 OR infinite_stock = 1 OR coming_soon = 1 OR author_telegram_url <> '') AND (name LIKE ? OR description LIKE ?)
-		 ORDER BY name`,
+		 ORDER BY sort_order,id`,
 		pattern, pattern)
 	if err != nil {
 		return nil, fmt.Errorf("product store: search products: %w", err)
@@ -255,7 +255,7 @@ func (s *SQLProductStore) SearchProducts(ctx context.Context, query string) ([]P
 	for rows.Next() {
 		var p Product
 		if err := rows.Scan(&p.ID, &p.CategoryID, &p.Name, &p.Description, &p.PhotoURL,
-			&p.PriceUSD, &p.PriceStars, &p.Stock, &p.IsDigital, &p.DigitalContent, &p.IsActive, &p.SubPeriodDays, &p.OpenPrice, &p.PriceRUB, &p.InfiniteStock, &p.SingleInCart, &p.TelegramURL, &p.ComingSoon, &p.AuthorTelegramURL, &p.CreatedAt); err != nil {
+			&p.PriceUSD, &p.PriceStars, &p.Stock, &p.IsDigital, &p.DigitalContent, &p.IsActive, &p.SubPeriodDays, &p.OpenPrice, &p.PriceRUB, &p.InfiniteStock, &p.SingleInCart, &p.TelegramURL, &p.ComingSoon, &p.AuthorTelegramURL, &p.CreatedAt, &p.SortOrder); err != nil {
 			return nil, fmt.Errorf("product store: scan search product: %w", err)
 		}
 		products = append(products, p)
@@ -291,8 +291,8 @@ func (s *SQLProductStore) ListProductsAdmin(ctx context.Context, limit, offset i
 	}
 	rows, err := s.db.QueryContext(ctx, `SELECT id,category_id,name,COALESCE(description,''),COALESCE(photo_url,''),
  price_usd,COALESCE(price_stars,0),stock,is_digital,is_active,sub_period_days,open_price,price_rub,
- infinite_stock,single_in_cart,telegram_url,coming_soon,author_telegram_url,created_at
- FROM products WHERE deleted_at IS NULL ORDER BY id LIMIT ? OFFSET ?`, limit, offset)
+ infinite_stock,single_in_cart,telegram_url,coming_soon,author_telegram_url,created_at,sort_order
+ FROM products WHERE deleted_at IS NULL ORDER BY sort_order,id LIMIT ? OFFSET ?`, limit, offset)
 	if err != nil {
 		return nil, 0, fmt.Errorf("product store: list inventory: %w", err)
 	}
@@ -302,7 +302,7 @@ func (s *SQLProductStore) ListProductsAdmin(ctx context.Context, limit, offset i
 		var p Product
 		if err := rows.Scan(&p.ID, &p.CategoryID, &p.Name, &p.Description, &p.PhotoURL,
 			&p.PriceUSD, &p.PriceStars, &p.Stock, &p.IsDigital, &p.IsActive, &p.SubPeriodDays, &p.OpenPrice, &p.PriceRUB,
-			&p.InfiniteStock, &p.SingleInCart, &p.TelegramURL, &p.ComingSoon, &p.AuthorTelegramURL, &p.CreatedAt); err != nil {
+			&p.InfiniteStock, &p.SingleInCart, &p.TelegramURL, &p.ComingSoon, &p.AuthorTelegramURL, &p.CreatedAt, &p.SortOrder); err != nil {
 			return nil, 0, fmt.Errorf("product store: scan inventory: %w", err)
 		}
 		products = append(products, p)

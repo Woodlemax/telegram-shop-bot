@@ -15,7 +15,7 @@ func NewCatalogStore(db *sql.DB) *CatalogStore {
 }
 
 func (s *CatalogStore) ListCategories(ctx context.Context) ([]Category, error) {
-	query := `SELECT id, name, emoji, custom_emoji_id, sort_order, is_active FROM categories WHERE is_active = 1 ORDER BY sort_order ASC`
+	query := `SELECT id, name, emoji, custom_emoji_id, sort_order, is_active FROM categories WHERE is_active = 1 ORDER BY sort_order ASC,id ASC`
 	rows, err := s.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("list categories: %w", err)
@@ -35,7 +35,7 @@ func (s *CatalogStore) ListCategories(ctx context.Context) ([]Category, error) {
 
 func (s *CatalogStore) GetProductsByCategory(ctx context.Context, categoryID int64, limit, offset int) ([]Product, error) {
 	query := `SELECT id, category_id, name, description, photo_url, price_usd, stock, infinite_stock, single_in_cart, is_digital, is_active, created_at
-	          FROM products WHERE category_id = ? AND is_active = 1 AND deleted_at IS NULL LIMIT ? OFFSET ?`
+	          FROM products WHERE category_id = ? AND is_active = 1 AND deleted_at IS NULL ORDER BY sort_order,id LIMIT ? OFFSET ?`
 	rows, err := s.db.QueryContext(ctx, query, categoryID, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("get products by category: %w", err)
@@ -55,7 +55,7 @@ func (s *CatalogStore) GetProductsByCategory(ctx context.Context, categoryID int
 
 func (s *CatalogStore) SearchProducts(ctx context.Context, queryText string, limit, offset int) ([]Product, error) {
 	query := `SELECT id, category_id, name, description, photo_url, price_usd, stock, infinite_stock, single_in_cart, is_digital, is_active, created_at
-	          FROM products WHERE (name LIKE ? OR description LIKE ?) AND is_active = 1 AND deleted_at IS NULL LIMIT ? OFFSET ?`
+	          FROM products WHERE (name LIKE ? OR description LIKE ?) AND is_active = 1 AND deleted_at IS NULL ORDER BY sort_order,id LIMIT ? OFFSET ?`
 	searchPattern := "%" + queryText + "%"
 	rows, err := s.db.QueryContext(ctx, query, searchPattern, searchPattern, limit, offset)
 	if err != nil {

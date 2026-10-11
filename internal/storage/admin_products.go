@@ -90,7 +90,7 @@ func (s *SQLProductStore) SaveAdminProduct(ctx context.Context, p *Product, pare
 	}
 	if p.ID > 0 {
 		var old Product
-		err = tx.QueryRowContext(ctx, `SELECT id,category_id,name,COALESCE(description,''),COALESCE(photo_url,''),price_usd,COALESCE(price_stars,0),stock,is_digital,COALESCE(digital_content,''),is_active,sub_period_days,open_price,price_rub,infinite_stock,single_in_cart,telegram_url,coming_soon,author_telegram_url,created_at FROM products WHERE id=? AND deleted_at IS NULL`, p.ID).Scan(&old.ID, &old.CategoryID, &old.Name, &old.Description, &old.PhotoURL, &old.PriceUSD, &old.PriceStars, &old.Stock, &old.IsDigital, &old.DigitalContent, &old.IsActive, &old.SubPeriodDays, &old.OpenPrice, &old.PriceRUB, &old.InfiniteStock, &old.SingleInCart, &old.TelegramURL, &old.ComingSoon, &old.AuthorTelegramURL, &old.CreatedAt)
+		err = tx.QueryRowContext(ctx, `SELECT id,category_id,name,COALESCE(description,''),COALESCE(photo_url,''),price_usd,COALESCE(price_stars,0),stock,is_digital,COALESCE(digital_content,''),is_active,sub_period_days,open_price,price_rub,infinite_stock,single_in_cart,telegram_url,coming_soon,author_telegram_url,created_at,sort_order FROM products WHERE id=? AND deleted_at IS NULL`, p.ID).Scan(&old.ID, &old.CategoryID, &old.Name, &old.Description, &old.PhotoURL, &old.PriceUSD, &old.PriceStars, &old.Stock, &old.IsDigital, &old.DigitalContent, &old.IsActive, &old.SubPeriodDays, &old.OpenPrice, &old.PriceRUB, &old.InfiniteStock, &old.SingleInCart, &old.TelegramURL, &old.ComingSoon, &old.AuthorTelegramURL, &old.CreatedAt, &old.SortOrder)
 		if err != nil {
 			return 0, ErrNotFound
 		}
@@ -108,12 +108,12 @@ func (s *SQLProductStore) SaveAdminProduct(ctx context.Context, p *Product, pare
 		if _, err = tx.ExecContext(ctx, `DELETE FROM product_modifications WHERE product_id=?`, p.ID); err != nil {
 			return 0, err
 		}
-		_, err = tx.ExecContext(ctx, `UPDATE products SET category_id=?,name=?,description=?,price_usd=?,price_stars=?,stock=?,is_active=?,sub_period_days=?,open_price=?,price_rub=?,infinite_stock=?,single_in_cart=?,telegram_url=?,coming_soon=?,author_telegram_url=? WHERE id=? AND deleted_at IS NULL`, p.CategoryID, p.Name, p.Description, p.PriceUSD, p.PriceStars, p.Stock, p.IsActive, p.SubPeriodDays, p.OpenPrice, p.PriceRUB, p.InfiniteStock, p.SingleInCart, p.TelegramURL, p.ComingSoon, p.AuthorTelegramURL, p.ID)
+		_, err = tx.ExecContext(ctx, `UPDATE products SET category_id=?,name=?,description=?,price_usd=?,price_stars=?,stock=?,is_active=?,sub_period_days=?,open_price=?,price_rub=?,infinite_stock=?,single_in_cart=?,telegram_url=?,coming_soon=?,author_telegram_url=?,sort_order=? WHERE id=? AND deleted_at IS NULL`, p.CategoryID, p.Name, p.Description, p.PriceUSD, p.PriceStars, p.Stock, p.IsActive, p.SubPeriodDays, p.OpenPrice, p.PriceRUB, p.InfiniteStock, p.SingleInCart, p.TelegramURL, p.ComingSoon, p.AuthorTelegramURL, p.SortOrder, p.ID)
 	} else {
 		p.IsDigital = false
 		p.DigitalContent = ""
 		p.PhotoURL = ""
-		res, e := tx.ExecContext(ctx, `INSERT INTO products(category_id,name,description,price_usd,price_stars,stock,is_active,sub_period_days,open_price,price_rub,infinite_stock,single_in_cart,telegram_url,coming_soon,author_telegram_url) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, p.CategoryID, p.Name, p.Description, p.PriceUSD, p.PriceStars, p.Stock, p.IsActive, p.SubPeriodDays, p.OpenPrice, p.PriceRUB, p.InfiniteStock, p.SingleInCart, p.TelegramURL, p.ComingSoon, p.AuthorTelegramURL)
+		res, e := tx.ExecContext(ctx, `INSERT INTO products(category_id,name,description,price_usd,price_stars,stock,is_active,sub_period_days,open_price,price_rub,infinite_stock,single_in_cart,telegram_url,coming_soon,author_telegram_url,sort_order) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, p.CategoryID, p.Name, p.Description, p.PriceUSD, p.PriceStars, p.Stock, p.IsActive, p.SubPeriodDays, p.OpenPrice, p.PriceRUB, p.InfiniteStock, p.SingleInCart, p.TelegramURL, p.ComingSoon, p.AuthorTelegramURL, p.SortOrder)
 		if e != nil {
 			return 0, e
 		}

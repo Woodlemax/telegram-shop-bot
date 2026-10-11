@@ -119,6 +119,7 @@ type Category struct {
 }
 
 type Product struct {
+	SortOrder         int       `db:"sort_order"`
 	ID                int64     `db:"id"`
 	CategoryID        int64     `db:"category_id"`
 	Name              string    `db:"name"`

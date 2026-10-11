@@ -60,7 +60,7 @@ func (s *ProductGroupStore) ListRoots(ctx context.Context, categoryID int64, lim
 		return nil, 0, err
 	}
 	rows, err := s.db.QueryContext(ctx, `SELECT p.id,(SELECT COUNT(*) FROM product_modifications m JOIN products child ON child.id=m.product_id
- WHERE m.parent_id=p.id AND child.category_id=p.category_id AND `+catalogVisible("child")+`) FROM products p WHERE `+where+` ORDER BY p.id LIMIT ? OFFSET ?`, categoryID, limit, offset)
+ WHERE m.parent_id=p.id AND child.category_id=p.category_id AND `+catalogVisible("child")+`) FROM products p WHERE `+where+` ORDER BY p.sort_order,p.id LIMIT ? OFFSET ?`, categoryID, limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -85,7 +85,7 @@ func (s *ProductGroupStore) ListModifications(ctx context.Context, parentID int6
 	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*)`+from, parentID).Scan(&total); err != nil {
 		return nil, 0, err
 	}
-	rows, err := s.db.QueryContext(ctx, `SELECT child.id`+from+` ORDER BY child.id LIMIT ? OFFSET ?`, parentID, limit, offset)
+	rows, err := s.db.QueryContext(ctx, `SELECT child.id`+from+` ORDER BY child.sort_order,child.id LIMIT ? OFFSET ?`, parentID, limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}
