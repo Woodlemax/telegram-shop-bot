@@ -35,6 +35,11 @@ func (b *Bot) routeMessage(ctx context.Context, msg *tgbotapi.Message) {
 		b.handleSuccessfulPayment(ctx, msg)
 		return
 	}
+	// Only a private administrator upload explicitly started from the admin
+	// app (or legacy setup) passes this handler; customer commands stay gated.
+	if b.handleArchiveUpload(ctx, msg) {
+		return
+	}
 	if b.routeAdminMiniAppMessage(msg) {
 		return
 	}
@@ -42,9 +47,6 @@ func (b *Bot) routeMessage(ctx context.Context, msg *tgbotapi.Message) {
 		return
 	}
 	if b.handleProductTelegramInput(ctx, msg) {
-		return
-	}
-	if b.handleArchiveUpload(ctx, msg) {
 		return
 	}
 	if !b.adminOnly() && b.handlePriceInput(ctx, msg) {

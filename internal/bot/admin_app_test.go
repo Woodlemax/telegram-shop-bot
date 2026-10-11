@@ -18,7 +18,6 @@ import (
 	"time"
 
 	"shop_bot/internal/config"
-	"shop_bot/internal/service"
 	"shop_bot/internal/storage"
 )
 
@@ -188,23 +187,28 @@ func TestAdminAppEightyMegabyteArchiveAndPriorPurchases(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer file.Close()
-	if _, err = e.bot.AdminUpload(ctx, e2eAdminID, e.prodReg, "archive", "plane.zip", file); err != nil {
-		t.Fatal(err)
+	if _, err = e.bot.AdminUpload(ctx, e2eAdminID, e.prodReg, "archive", "plane.zip", file); err == nil {
+		t.Fatal("large browser upload accepted")
+	}
+	if e.qInt("SELECT count(*) FROM digital_archives") != 1 {
+		t.Fatal("rejected upload changed archive")
+	}
+	e.bot.cfg.BotAdminOnly = true
+	e.bot.cfg.AdminMiniAppOnly = true
+	if _, err = e.bot.AdminWrite(ctx, 55, "archive-telegram", e.prodReg, adminJSON(t, map[string]any{})); err == nil {
+		t.Fatal("buyer started upload")
+	}
+	guide := adminWriteTest(t, e, "archive-telegram", e.prodReg, map[string]any{}).(map[string]any)
+	if !strings.Contains(guide["chat_url"].(string), "t.me/") {
+		t.Fatal("missing bot chat")
+	}
+	calls := digitalDocument(e, e2eAdminID, "plane.zip", "new-telegram-file-80mb")
+	if !strings.Contains(tgText(calls), "ZIP прикреплён") {
+		t.Fatal("admin-only mode blocked configured upload", tgText(calls))
 	}
 	owned, err := e.bot.archives.Owned(ctx, buyer, deliveryID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.HasPrefix(owned.FileID, "local:") || owned.FileName != "plane.zip" {
-		t.Fatalf("prior buyer archive not updated: %+v", owned)
-	}
-	stored, isLocal := service.LocalArchivePath(e.bot.AdminMediaDirectory(), owned.FileID)
-	if !isLocal {
-		t.Fatal("not local")
-	}
-	stat, err := os.Stat(stored)
-	if err != nil || stat.Size() < 80<<20 {
-		t.Fatal("archive bytes lost")
+	if err != nil || owned.FileID != "new-telegram-file-80mb" || owned.FileName != "plane.zip" {
+		t.Fatal("previous purchase not updated", owned, err)
 	}
 	for _, invalid := range []struct{ kind, name, body string }{{"archive", "bad.zip", "not zip"}, {"photo", "script.svg", "<svg onload='x'/>"}} {
 		if _, err = e.bot.AdminUpload(ctx, e2eAdminID, e.prodReg, invalid.kind, invalid.name, strings.NewReader(invalid.body)); err == nil {
@@ -220,16 +224,17 @@ func TestAdminAppEightyMegabyteArchiveAndPriorPurchases(t *testing.T) {
 		t.Fatal(err)
 	}
 	e.bot.ProcessDigitalDeliveries(ctx)
-	calls := e.tg.since(beforeCalls)
-	found := false
+	calls = e.tg.since(beforeCalls)
+	docs := documentCalls(calls)
+	if len(docs) != 1 || docs[0].Params.Get("document") != "new-telegram-file-80mb" {
+		t.Fatal("archive not sent as Telegram document", docs)
+	}
 	for _, call := range calls {
 		if call.Method == "sendMessage" && strings.Contains(call.markup(), "archive-download") {
-			found = true
+			t.Fatal("download link sent")
 		}
 	}
-	if !found || len(documentCalls(calls)) > 0 {
-		t.Fatal("local archive not delivered by signed link")
-	}
+
 }
 
 func TestAdminAppFinancialConfirmationsAreActorBoundAndSingleUse(t *testing.T) {

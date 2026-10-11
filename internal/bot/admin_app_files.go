@@ -10,10 +10,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/google/uuid"
-	"shop_bot/internal/service"
 	"shop_bot/internal/storage"
 )
 
@@ -68,13 +66,16 @@ func (b *Bot) AdminUpload(ctx context.Context, actor, id int64, kind, name strin
 	defer f.Close()
 	limit := int64(16 << 20)
 	if kind == "archive" {
-		limit = 128 << 20
+		limit = storage.MaxTelegramArchiveUploadBytes
 	}
 	count, err := io.Copy(f, io.LimitReader(reader, limit+1))
 	if err != nil {
 		return nil, err
 	}
 	if count == 0 || count > limit {
+		if kind == "archive" && count > limit {
+			return nil, adminInvalid("ZIP больше 50 МБ прикрепите через Telegram: используйте кнопку на вкладке «Архив».")
+		}
 		return nil, adminInvalid("Пустой или слишком большой файл.")
 	}
 	if err = ctx.Err(); err != nil {
@@ -153,8 +154,4 @@ func (b *Bot) AdminUpload(ctx context.Context, actor, id int64, kind, name strin
 	b.invalidateAdminProduct(ctx, id)
 	_, _ = b.adminDB.Conn().ExecContext(ctx, `INSERT INTO admin_app_audit(admin_id,action,target_id) VALUES(?,'photo-upload',?)`, actor, id)
 	return b.adminProduct(ctx, id)
-}
-
-func (b *Bot) localDigitalDownloadURL(d *storage.DigitalDelivery) string {
-	return service.ArchiveDownloadURL(b.cfg.WebAppURL, b.cfg.BotToken, d.UserID, d.ID, time.Now())
 }

@@ -29,6 +29,18 @@ type DigitalDelivery struct {
 
 type DigitalArchiveStore struct{ db *sql.DB }
 
+const MaxTelegramArchiveUploadBytes int64 = 50 << 20
+
+// Keep the archive version and existing entitlements when Telegram stores a
+// browser-uploaded ZIP. A concurrent upload of the same bytes may win first.
+func (s *DigitalArchiveStore) RememberTelegramFile(ctx context.Context, archiveID int64, source, fileID string) error {
+	if !strings.HasPrefix(source, "local:") || fileID == "" || strings.ContainsAny(fileID, ":/ \t\r\n") {
+		return ErrDigitalArchiveNotReady
+	}
+	_, err := s.db.ExecContext(ctx, `UPDATE digital_archives SET file_id=? WHERE id=? AND file_id=?`, fileID, archiveID, source)
+	return err
+}
+
 func NewDigitalArchiveStore(db *DB) *DigitalArchiveStore { return &DigitalArchiveStore{db.Conn()} }
 
 // Add stores the new version and updates existing purchases to this archive.

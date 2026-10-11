@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -90,17 +91,30 @@ func (c deliveryHTTPClient) Do(r *http.Request) (*http.Response, error) {
 }
 
 func (b *Bot) sendDigitalDocument(ctx context.Context, d *storage.DigitalDelivery, lang string) (int, error) {
-	sendCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	timeout := 30 * time.Second
+	var document tgbotapi.RequestFileData = tgbotapi.FileID(d.FileID)
+	if path, local := service.LocalArchivePath(b.AdminMediaDirectory(), d.FileID); local {
+		file, err := os.Open(path)
+		if err != nil {
+			return 0, err
+		}
+		defer file.Close()
+		stat, err := file.Stat()
+		if err != nil {
+			return 0, err
+		}
+		if !stat.Mode().IsRegular() || stat.Size() <= 0 || stat.Size() > storage.MaxTelegramArchiveUploadBytes {
+			return 0, storage.ErrDigitalArchiveNotReady
+		}
+		document = tgbotapi.FileReader{Name: d.FileName, Reader: file}
+		// Stay below the durable queue's two-minute lease.
+		timeout = 90 * time.Second
+	}
+	sendCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	api := *b.api
 	api.Client = sanitizedTelegramClient{client: deliveryHTTPClient{b.api.Client, sendCtx}}
-	if _, local := service.LocalArchivePath(b.AdminMediaDirectory(), d.FileID); local {
-		message := tgbotapi.NewMessage(d.UserID, fmt.Sprintf(b.t(lang, "digital_delivery_caption"), d.ProductName, d.ArchiveID, d.OrderID))
-		message.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonURL(b.t(lang, "webapp_order_download"), b.localDigitalDownloadURL(d))))
-		msg, err := api.Send(message)
-		return msg.MessageID, err
-	}
-	doc := tgbotapi.NewDocument(d.UserID, tgbotapi.FileID(d.FileID))
+	doc := tgbotapi.NewDocument(d.UserID, document)
 	name := []rune(d.ProductName)
 	if len(name) > 300 {
 		name = name[:300]
@@ -112,6 +126,11 @@ func (b *Bot) sendDigitalDocument(ctx context.Context, d *storage.DigitalDeliver
 		))
 	}
 	msg, err := api.Send(doc)
+	if err == nil && strings.HasPrefix(d.FileID, "local:") && msg.Document != nil && msg.Document.FileID != "" {
+		if cacheErr := b.archives.RememberTelegramFile(ctx, d.ArchiveID, d.FileID, msg.Document.FileID); cacheErr != nil {
+			b.logger.Warn("archive Telegram file cache failed", "archive_id", d.ArchiveID)
+		}
+	}
 	return msg.MessageID, err
 }
 

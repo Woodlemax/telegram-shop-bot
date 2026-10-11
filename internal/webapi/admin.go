@@ -128,7 +128,9 @@ func (s *Server) handleAdminUpload(w http.ResponseWriter, r *http.Request, a *Au
 	}
 	kind := r.PathValue("kind")
 	limit := int64(16 << 20)
-	if kind == "archive" || kind == "reference" {
+	if kind == "archive" {
+		limit = storage.MaxTelegramArchiveUploadBytes
+	} else if kind == "reference" {
 		limit = 128 << 20
 	} else if kind != "photo" {
 		s.writeError(w, 404, "Неизвестный тип файла.")

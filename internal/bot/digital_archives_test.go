@@ -91,7 +91,7 @@ func TestDigitalArchivePaymentAndReplacement(t *testing.T) {
 	calls = e.cb(buyer, fmt.Sprintf("digital:download:%d", deliveryID), "ru")
 	docs = documentCalls(calls)
 	if len(docs) != 1 || docs[0].Params.Get("document") != "zip-80mb-v2" {
-		t.Fatalf("updated download=%+v", docs)
+		t.Fatalf("updated download=%+v; callbacks=%+v; payment=%s; status=%s; archive=%s", docs, calls, e.qStr("SELECT payment_state FROM orders WHERE id=?", orderID), e.qStr("SELECT status FROM orders WHERE id=?", orderID), e.qStr("SELECT file_id FROM digital_archives ORDER BY id DESC LIMIT 1"))
 	}
 	// The Mini App queues repeat downloads through the same delivery worker.
 	for i := 0; i < 2; i++ {
