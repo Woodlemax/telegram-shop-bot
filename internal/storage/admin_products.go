@@ -11,6 +11,27 @@ import (
 
 var ErrAdminEditConflict = errors.New("product changed; reload before saving")
 
+// AdminProductGroups describes both sides of existing links, including hidden models.
+func (s *SQLProductStore) AdminProductGroups(ctx context.Context) (map[int64]int64, map[int64]int, error) {
+	parents, counts := make(map[int64]int64), make(map[int64]int)
+	rows, err := s.db.QueryContext(ctx, `SELECT m.product_id,m.parent_id FROM product_modifications m
+ JOIN products child ON child.id=m.product_id JOIN products main ON main.id=m.parent_id
+ WHERE child.deleted_at IS NULL AND main.deleted_at IS NULL`)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var child, parent int64
+		if err := rows.Scan(&child, &parent); err != nil {
+			return nil, nil, err
+		}
+		parents[child] = parent
+		counts[parent]++
+	}
+	return parents, counts, rows.Err()
+}
+
 // ProductRevision also covers the grouping, which is saved together with the product.
 func ProductRevision(p *Product, parent int64) string {
 	data, _ := json.Marshal(struct {

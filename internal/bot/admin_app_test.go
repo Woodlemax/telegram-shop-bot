@@ -297,6 +297,72 @@ func TestAdminAppSectionsAndPromoScopes(t *testing.T) {
 	}
 }
 
+func TestAdminAppInventorySupportsModificationEditor(t *testing.T) {
+	e := adminTestEnv(t)
+	ctx := context.Background()
+	price := 500.0
+	makeProduct := func(name string, parent int64) map[string]any {
+		t.Helper()
+		return adminWriteTest(t, e, "products", 0, map[string]any{"product": storage.Product{
+			Name: name, Description: "Описание модели", CategoryID: e.catID,
+			PriceRUB: &price, Stock: 0, IsActive: false, ComingSoon: true,
+			InfiniteStock: true, SingleInCart: true, TelegramURL: "https://t.me/plane_group",
+		}, "parent_id": parent}).(map[string]any)
+	}
+	main := makeProduct("Основная модель", 0)["product"].(*storage.Product)
+	childData := makeProduct("Модификация", main.ID)
+	child := childData["product"].(*storage.Product)
+	adminWriteTest(t, e, "photos", main.ID, map[string]any{"photos": []string{"https://example.com/cover.png"}})
+	if _, err := e.db.Conn().Exec(`UPDATE products SET is_digital=1,digital_content='private-file-id' WHERE id=?`, main.ID); err != nil {
+		t.Fatal(err)
+	}
+	data, err := e.bot.AdminRead(ctx, e2eAdminID, "products", 0, url.Values{"category": {strconv.FormatInt(e.catID, 10)}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	list := data.(map[string]any)
+	parents := list["parent_ids"].(map[int64]int64)
+	counts := list["modification_counts"].(map[int64]int)
+	if parents[child.ID] != main.ID || counts[main.ID] != 1 {
+		t.Fatal("group metadata missing")
+	}
+	found := false
+	for _, item := range list["products"].([]storage.Product) {
+		if item.ID != main.ID {
+			continue
+		}
+		found = true
+		if item.CategoryID != e.catID || item.PriceRUB == nil || *item.PriceRUB != 500 || item.PhotoURL != "https://example.com/cover.png" || item.Description != "Описание модели" || !item.IsDigital || item.IsActive || !item.ComingSoon || !item.InfiniteStock || !item.SingleInCart || item.TelegramURL != "https://t.me/plane_group" {
+			t.Fatalf("inventory omitted editor fields: %+v", item)
+		}
+		if item.DigitalContent != "" {
+			t.Fatal("private content exposed in inventory")
+		}
+	}
+	if !found {
+		t.Fatal("main model missing from category-filtered inventory")
+	}
+	// Editing an already linked child must preserve its parent after reload/save.
+	child.Name = "Обновлённая модификация"
+	adminWriteTest(t, e, "products", child.ID, map[string]any{"product": child, "parent_id": main.ID, "revision": childData["revision"]})
+	if parent, err := e.bot.productGroups.Parent(ctx, child.ID); err != nil || parent != main.ID {
+		t.Fatal("existing link lost on save", parent, err)
+	}
+	// Selecting another real main model moves the child, selecting zero detaches it.
+	other := makeProduct("Вторая основная модель", 0)["product"].(*storage.Product)
+	for _, parent := range []int64{other.ID, 0} {
+		card, err := e.bot.adminProduct(ctx, child.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		current := card.(map[string]any)
+		adminWriteTest(t, e, "products", child.ID, map[string]any{"product": current["product"], "parent_id": parent, "revision": current["revision"]})
+		if saved, err := e.bot.productGroups.Parent(ctx, child.ID); err != nil || saved != parent {
+			t.Fatal("parent selection not saved", saved, err)
+		}
+	}
+}
+
 func TestAdminAppRefundReceiptAndReviewUseExistingLedger(t *testing.T) {
 	e := adminTestEnv(t)
 	order := seedRefundOrder(t, e, storage.PaymentMethodStars, refundStarsCharge)

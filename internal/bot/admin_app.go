@@ -133,7 +133,11 @@ func (b *Bot) AdminRead(ctx context.Context, actor int64, resource string, id in
 		if end > total {
 			end = total
 		}
-		return map[string]any{"products": all[start:end], "total": total, "page": page, "per_page": perPage}, nil
+		parents, counts, err := store.AdminProductGroups(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]any{"products": all[start:end], "total": total, "page": page, "per_page": perPage, "parent_ids": parents, "modification_counts": counts}, nil
 	case "categories":
 		items, err := b.adminStore().ListCategoriesAdmin(ctx)
 		return map[string]any{"categories": items}, err

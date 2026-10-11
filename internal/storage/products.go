@@ -280,7 +280,7 @@ func (s *SQLProductStore) GetCategory(ctx context.Context, id int64) (*Category,
 }
 
 // ListProductsAdmin includes inactive and sold-out products, even in hidden categories.
-// Only inventory labels are read; archive file identifiers are not exposed.
+// Include catalog metadata for admin forms; private digital content stays omitted.
 func (s *SQLProductStore) ListProductsAdmin(ctx context.Context, limit, offset int) ([]Product, int, error) {
 	if limit < 1 || limit > 100 || offset < 0 {
 		return nil, 0, fmt.Errorf("product store: invalid inventory page")
@@ -289,7 +289,10 @@ func (s *SQLProductStore) ListProductsAdmin(ctx context.Context, limit, offset i
 	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM products WHERE deleted_at IS NULL`).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("product store: count inventory: %w", err)
 	}
-	rows, err := s.db.QueryContext(ctx, `SELECT id,name,is_active FROM products WHERE deleted_at IS NULL ORDER BY id LIMIT ? OFFSET ?`, limit, offset)
+	rows, err := s.db.QueryContext(ctx, `SELECT id,category_id,name,COALESCE(description,''),COALESCE(photo_url,''),
+ price_usd,COALESCE(price_stars,0),stock,is_digital,is_active,sub_period_days,open_price,price_rub,
+ infinite_stock,single_in_cart,telegram_url,coming_soon,author_telegram_url,created_at
+ FROM products WHERE deleted_at IS NULL ORDER BY id LIMIT ? OFFSET ?`, limit, offset)
 	if err != nil {
 		return nil, 0, fmt.Errorf("product store: list inventory: %w", err)
 	}
@@ -297,7 +300,9 @@ func (s *SQLProductStore) ListProductsAdmin(ctx context.Context, limit, offset i
 	var products []Product
 	for rows.Next() {
 		var p Product
-		if err := rows.Scan(&p.ID, &p.Name, &p.IsActive); err != nil {
+		if err := rows.Scan(&p.ID, &p.CategoryID, &p.Name, &p.Description, &p.PhotoURL,
+			&p.PriceUSD, &p.PriceStars, &p.Stock, &p.IsDigital, &p.IsActive, &p.SubPeriodDays, &p.OpenPrice, &p.PriceRUB,
+			&p.InfiniteStock, &p.SingleInCart, &p.TelegramURL, &p.ComingSoon, &p.AuthorTelegramURL, &p.CreatedAt); err != nil {
 			return nil, 0, fmt.Errorf("product store: scan inventory: %w", err)
 		}
 		products = append(products, p)
