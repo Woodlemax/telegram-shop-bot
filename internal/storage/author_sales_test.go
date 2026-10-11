@@ -6,6 +6,24 @@ import (
 	"testing"
 )
 
+func TestAuthorWebsitePurchaseValidation(t *testing.T) {
+	for raw, want := range map[string]string{
+		"": "", " @plane_author ": "https://t.me/plane_author",
+		"https://sectorfpv.ru/sample-page/microsector/": "https://sectorfpv.ru/sample-page/microsector/",
+		"https://AUTHOR.example/buy?id=42#details":      "https://author.example/buy?id=42#details",
+	} {
+		got, err := NormalizeAuthorPurchaseURL(raw)
+		if err != nil || got != want {
+			t.Fatalf("purchase link %q: %q %v", raw, got, err)
+		}
+	}
+	for _, raw := range []string{"http://author.example/buy", "javascript:alert(1)", "//author.example/buy", "https:///buy", "https://user:pass@author.example/buy", "https://author.example\\@evil.example", "https://author.example/\nbuy", "https://t.me/+invite", "https://t.me/author/123", "https://telegram.me/author?start=x"} {
+		if _, err := NormalizeAuthorPurchaseURL(raw); !errors.Is(err, ErrInvalidAuthorSale) {
+			t.Fatalf("unsafe purchase link accepted %q: %v", raw, err)
+		}
+	}
+}
+
 func TestAuthorSaleVisibilityCartRemovalAndCheckoutGuard(t *testing.T) {
 	db := newTestDB(t)
 	ctx := context.Background()

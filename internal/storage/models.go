@@ -119,13 +119,13 @@ type Category struct {
 }
 
 type Product struct {
-	ID                int64  `db:"id"`
-	CategoryID        int64  `db:"category_id"`
-	Name              string `db:"name"`
-	Description       string `db:"description"`
-	PhotoURL          string `db:"photo_url"`
-	TelegramURL       string `db:"telegram_url"`
-	AuthorTelegramURL string
+	ID                int64     `db:"id"`
+	CategoryID        int64     `db:"category_id"`
+	Name              string    `db:"name"`
+	Description       string    `db:"description"`
+	PhotoURL          string    `db:"photo_url"`
+	TelegramURL       string    `db:"telegram_url"`
+	AuthorTelegramURL string    // Legacy field name: personal Telegram profile or HTTPS purchase page.
 	PriceUSD          float64   `db:"price_usd"`
 	PriceStars        int       `db:"price_stars"`
 	OpenPrice         bool      `db:"open_price"`
@@ -365,5 +365,5 @@ func (p *Product) CanPurchase() bool {
 	return p.IsActive && !p.IsAuthorSale() && !p.IsComingSoon() && (p.InfiniteStock || p.Stock > 0)
 }
 
-// IsAuthorSale indicates a purchase in the author's private Telegram chat.
+// IsAuthorSale indicates a purchase through the author's Telegram or website.
 func (p *Product) IsAuthorSale() bool { return p.AuthorTelegramURL != "" }

@@ -48,7 +48,7 @@ func NormalizeTelegramURL(raw string) (string, error) {
 	return "https://t.me/" + path, nil
 }
 
-var ErrInvalidAuthorSale = errors.New("author sale requires a personal Telegram username, no open price and no subscription")
+var ErrInvalidAuthorSale = errors.New("author sale requires a personal Telegram username or HTTPS website, no open price and no subscription")
 
 // NormalizeAuthorTelegramURL accepts public usernames only, not channel invitations or posts.
 func NormalizeAuthorTelegramURL(raw string) (string, error) {
@@ -62,12 +62,33 @@ func NormalizeAuthorTelegramURL(raw string) (string, error) {
 	return link, nil
 }
 
+// NormalizeAuthorPurchaseURL also supports purchases on the author's HTTPS website.
+// Keep Telegram usernames subject to their existing personal-profile validation.
+func NormalizeAuthorPurchaseURL(raw string) (string, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" || strings.HasPrefix(raw, "@") || strings.HasPrefix(raw, "t.me/") || strings.HasPrefix(raw, "telegram.me/") {
+		return NormalizeAuthorTelegramURL(raw)
+	}
+	if len(raw) > 2048 || strings.ContainsAny(raw, "\r\n\t\\ ") {
+		return "", ErrInvalidAuthorSale
+	}
+	u, err := url.Parse(raw)
+	if err != nil || u.Scheme != "https" || u.Hostname() == "" || u.User != nil || u.Opaque != "" {
+		return "", ErrInvalidAuthorSale
+	}
+	u.Host = strings.ToLower(u.Host)
+	if u.Hostname() == "t.me" || u.Hostname() == "telegram.me" {
+		return NormalizeAuthorTelegramURL(u.String())
+	}
+	return u.String(), nil
+}
+
 func validateProduct(p *Product) error {
 	link, err := NormalizeTelegramURL(p.TelegramURL)
 	if err != nil {
 		return err
 	}
-	author, err := NormalizeAuthorTelegramURL(p.AuthorTelegramURL)
+	author, err := NormalizeAuthorPurchaseURL(p.AuthorTelegramURL)
 	if err != nil {
 		return err
 	}

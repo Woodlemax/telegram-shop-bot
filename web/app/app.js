@@ -443,11 +443,15 @@
         screenEl.appendChild(community);
       }
       if (p.buy_from_author) {
-        if (/^https:\/\/t\.me\/[A-Za-z][A-Za-z0-9_]*$/.test(p.author_telegram_url || '')) {
+        if (/^https:\/\//.test(p.author_telegram_url || '')) {
           var author = el('a', 'btn primary product-author', t('product_buy_from_author'));
           author.href = p.author_telegram_url; author.target = '_blank'; author.rel = 'noopener noreferrer';
           author.onclick = function (event) {
-            if (tg && tg.openTelegramLink) { event.preventDefault(); tg.openTelegramLink(p.author_telegram_url); }
+            if (/^https:\/\/t\.me\//.test(p.author_telegram_url) && tg && tg.openTelegramLink) {
+              event.preventDefault(); tg.openTelegramLink(p.author_telegram_url);
+            } else if (tg && tg.openLink) {
+              event.preventDefault(); tg.openLink(p.author_telegram_url);
+            }
           };
           screenEl.appendChild(author);
         }

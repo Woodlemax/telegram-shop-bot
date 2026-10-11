@@ -68,7 +68,7 @@ func (s *Server) adminResult(w http.ResponseWriter, v any, err error) {
 	} else if errors.Is(err, storage.ErrInvalidProductGroup) {
 		message = "Основная модель должна быть из той же категории. Вложенные модификации недопустимы."
 	} else if errors.Is(err, storage.ErrInvalidAuthorSale) || errors.Is(err, storage.ErrInvalidTelegramURL) {
-		message = "Проверьте Telegram-ссылку и тип товара."
+		message = "Проверьте ссылку покупки, Telegram-ссылку и тип товара."
 	} else if errors.Is(err, storage.ErrTooManyPhotos) {
 		message = "Можно добавить не больше 10 фотографий."
 	} else if errors.Is(err, storage.ErrPromoExists) {

@@ -275,7 +275,7 @@ func (b *Bot) handleEditProductField(ctx context.Context, msg *tgbotapi.Message,
 		if raw == "-" {
 			raw = ""
 		}
-		link, err := storage.NormalizeAuthorTelegramURL(raw)
+		link, err := storage.NormalizeAuthorPurchaseURL(raw)
 		if err != nil || (link != "" && product.SubPeriodDays > 0) {
 			b.send(tgbotapi.NewMessage(msg.Chat.ID, b.t(lang, "admin_author_invalid")))
 			return

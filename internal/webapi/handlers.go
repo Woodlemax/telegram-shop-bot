@@ -338,7 +338,7 @@ type productJSON struct {
 
 func toProductJSON(p *storage.Product) productJSON {
 	link, _ := storage.NormalizeTelegramURL(p.TelegramURL)
-	author, _ := storage.NormalizeAuthorTelegramURL(p.AuthorTelegramURL)
+	author, _ := storage.NormalizeAuthorPurchaseURL(p.AuthorTelegramURL)
 	return productJSON{
 		ID:                p.ID,
 		CategoryID:        p.CategoryID,

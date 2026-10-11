@@ -8,6 +8,51 @@ import (
 	"testing"
 )
 
+func TestAuthorWebsiteMiniAppAndCartBlocked(t *testing.T) {
+	f, db, _, id := realOpenPriceFixture(t)
+	ctx := context.Background()
+	products := storage.NewSQLProductStore(db)
+	p, err := products.GetProduct(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p.AuthorTelegramURL = "https://sectorfpv.ru/sample-page/microsector/"
+	p.TelegramURL = "https://t.me/subZero_fans"
+	p.Stock = 0
+	if err = products.UpdateProduct(ctx, p); err != nil {
+		t.Fatal(err)
+	}
+	f.server.deps.ProductGroups = storage.NewProductGroupStore(db.Conn())
+	for _, path := range []string{fmt.Sprintf("/api/products/%d", id), fmt.Sprintf("/api/products?category=%d", p.CategoryID)} {
+		r := f.request(t, http.MethodGet, path, "", true)
+		if r.Code != 200 {
+			t.Fatal(r.Body.String())
+		}
+		data := decodeJSON(t, r)
+		var item map[string]any
+		if data["product"] != nil {
+			item = data["product"].(map[string]any)
+		} else {
+			for _, raw := range data["products"].([]any) {
+				candidate := raw.(map[string]any)
+				if candidate["id"] == float64(id) {
+					item = candidate
+				}
+			}
+		}
+		if item == nil || item["buy_from_author"] != true || item["author_telegram_url"] != p.AuthorTelegramURL || item["telegram_url"] != p.TelegramURL || item["price_rub"] != float64(200) || item["price_stars"] != float64(0) {
+			t.Fatalf("website offer missing or changed: %v", item)
+		}
+	}
+	r := f.request(t, http.MethodPost, "/api/cart", fmt.Sprintf(`{"product_id":%d,"delta":1}`, id), true)
+	if r.Code < 400 {
+		t.Fatal("website offer entered cart", r.Body.String())
+	}
+	if f.tg.endpoint != "" || f.yookassa.called {
+		t.Fatal("website offer started a shop payment")
+	}
+}
+
 func TestAuthorSaleMiniAppRUBOnlyAndCartBlocked(t *testing.T) {
 	f, db, _, id := realOpenPriceFixture(t)
 	ctx := context.Background()
