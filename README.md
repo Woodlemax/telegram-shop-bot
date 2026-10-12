@@ -81,6 +81,7 @@ A full-featured e-commerce bot for Telegram — catalog, cart, Telegram Stars & 
 - Redis FSM (falls back to in-memory)
 - Automatic daily backups (`VACUUM INTO`, keeps 7) — no sqlite3 binary needed
 - Graceful shutdown of all workers
+- Automatic marketing messages are disabled: delayed welcome, abandoned-cart reminders (and their automatic 10% promo codes), and wishlist price/stock alerts. Payment confirmations, archive delivery, and replies to `/start` remain enabled.
 - Prometheus + Grafana metrics
 - Health check at `:8080/health`
 - Polling or Webhook (auto-detected)

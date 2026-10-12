@@ -205,12 +205,14 @@ func runBot() {
 	backupW := worker.NewBackupWorkerAt(db.Conn(), 24*time.Hour, cfg.BackupDir)
 	workers.Start(ctx, "backup", backupW.Start)
 
-	// We need the stores for the worker
+	// Shared stores for checkout, manual promo codes and buyer accounts.
 	cartStore := storage.NewCartStore(db.Conn())
 	promoStore := storage.NewSQLPromoStore(db)
 	userStore := storage.NewUserStore(db.Conn())
-	cartW := worker.NewCartRecoveryWorker(b.API(), cartStore, promoStore, userStore, i18n, metrics, time.Hour)
-	workers.Start(ctx, "cart_recovery", cartW.Start)
+	// Marketing workers are intentionally not started: no delayed welcome,
+	// abandoned-cart discount or wishlist price/stock messages. Payment
+	// confirmations and the durable archive delivery queue stay independent.
+	slog.Info("Automatic marketing messages disabled", "workers", "onboarding,cart_recovery,wishlist_watcher")
 
 	if redisClient != nil && cfg.PurchaseRewardsEnabled {
 		loyaltyStore := storage.NewLoyaltyStore(db.Conn())
@@ -218,14 +220,6 @@ func runBot() {
 		loyaltyW := worker.NewLoyaltyWorker(loyaltyStore, loyaltySvc, redisClient, b.API(), i18n, userStore)
 		workers.Start(ctx, "loyalty", loyaltyW.Start)
 	}
-
-	wishlistStore := storage.NewWishlistStore(db.Conn())
-	wishlistW := worker.NewWishlistWatcherWorker(b.API(), wishlistStore, i18n, 30*time.Minute)
-	workers.Start(ctx, "wishlist_watcher", wishlistW.Start)
-
-	onboardingW := worker.NewOnboardingWorker(b.API(), userStore, i18n, cfg.BotUsername, 24*time.Hour)
-	onboardingW.SetReferralEnabled(cfg.PurchaseRewardsEnabled)
-	workers.Start(ctx, "onboarding", onboardingW.Start)
 
 	// Hourly subscription maintenance: expire overdue Stars subscriptions and
 	// send the one-shot "expiring soon" reminders through the bot layer.
